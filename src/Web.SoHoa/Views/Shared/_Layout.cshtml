@@ -1,0 +1,114 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@(ViewBag.Title ?? "Số Hóa Tài Liệu") - SHTL</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <link rel="stylesheet" href="/css/site.css" />
+    @RenderSection("Styles", required: false)
+</head>
+<body class="d-flex flex-column min-vh-100">
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="/">
+                <i class="fas fa-file-alt me-2"></i>SHTL - Số Hóa
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navMenu">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/scan"><i class="fas fa-upload me-1"></i>Scan / Upload</a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                            <i class="fas fa-check-circle me-1"></i>Kiểm tra
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="/scan/check-scan1-list">Kiểm tra scan 1</a></li>
+                            <li><a class="dropdown-item" href="/scan/check-scan2-list">Kiểm tra scan 2</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="/check/check1">Kiểm tra lần 1</a></li>
+                            <li><a class="dropdown-item" href="/check/check2">Kiểm tra lần 2</a></li>
+                            <li><a class="dropdown-item" href="/check/check-final">Kiểm tra cuối</a></li>
+                            <li><a class="dropdown-item" href="/check/check-logic">Kiểm tra logic</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/extract"><i class="fas fa-keyboard me-1"></i>Nhập liệu</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/export"><i class="fas fa-file-export me-1"></i>Export</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                                <i class="fas fa-user-circle me-1"></i>@User.FindFirst("full_name")?.Value
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="/account/profile">Hồ sơ</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <form method="post" action="/account/logout">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="dropdown-item text-danger">
+                                            <i class="fas fa-sign-out-alt me-1"></i>Đăng xuất
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Alerts -->
+    <div class="container-fluid mt-2">
+        @if (TempData["Success"] is string sMsg)
+        {
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="fas fa-check-circle me-2"></i>@sMsg
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+        @if (TempData["Error"] is string eMsg)
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-circle me-2"></i>@eMsg
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+        @if (TempData["Warning"] is string wMsg)
+        {
+            <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-triangle me-2"></i>@wMsg
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+    </div>
+
+    <!-- Content -->
+    <main class="flex-grow-1">
+        @RenderBody()
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-light border-top py-2 text-center text-muted small mt-auto">
+        &copy; @DateTime.Now.Year SHTL - Hệ thống số hóa tài liệu
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/site.js"></script>
+    @RenderSection("Scripts", required: false)
+</body>
+</html>

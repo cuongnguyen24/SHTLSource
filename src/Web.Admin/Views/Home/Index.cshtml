@@ -1,0 +1,47 @@
+﻿@model Core.Application.Services.WorkflowProgressReport
+@{
+    ViewData["Title"] = "Admin Dashboard";
+}
+
+<h2 class="mb-4">Tổng quan tiến độ số hóa</h2>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-bg-primary mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Tổng tài liệu</h5>
+                <p class="card-text display-6">@Model.TotalDocuments</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-bg-success mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Đã hoàn thành</h5>
+                <p class="card-text display-6">@Model.Completed</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<table class="table table-bordered table-sm">
+    <thead class="table-light">
+        <tr>
+            <th>Bước</th>
+            <th class="text-end">Số lượng</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr><td>Scan/Upload</td><td class="text-end">@Model.AtScan</td></tr>
+        <tr><td>Check Scan 1</td><td class="text-end">@Model.AtCheckScan1</td></tr>
+        <tr><td>Check Scan 2</td><td class="text-end">@Model.AtCheckScan2</td></tr>
+        <tr><td>Khoanh vùng</td><td class="text-end">@Model.AtZone</td></tr>
+        <tr><td>OCR</td><td class="text-end">@Model.AtOcr</td></tr>
+        <tr><td>Nhập liệu</td><td class="text-end">@Model.AtExtract</td></tr>
+        <tr><td>Check 1</td><td class="text-end">@Model.AtCheck1</td></tr>
+        <tr><td>Check 2</td><td class="text-end">@Model.AtCheck2</td></tr>
+        <tr><td>Check Final</td><td class="text-end">@Model.AtCheckFinal</td></tr>
+        <tr><td>Check Logic</td><td class="text-end">@Model.AtCheckLogic</td></tr>
+        <tr><td>Đang/Chờ Export</td><td class="text-end">@Model.AtExport</td></tr>
+    </tbody>
+</table>

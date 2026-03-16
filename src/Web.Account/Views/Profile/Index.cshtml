@@ -1,0 +1,30 @@
+@model Shared.Contracts.Dtos.ProfileVm
+@{
+    ViewData["Title"] = "Hồ sơ cá nhân";
+}
+
+<h2>Hồ sơ cá nhân</h2>
+
+<div class="card mt-3">
+    <div class="card-body">
+        <div><strong>UserId:</strong> @Model.UserId</div>
+        <div><strong>ChannelId:</strong> @Model.ChannelId</div>
+        <div><strong>UserName:</strong> @Model.UserName</div>
+        <div><strong>FullName:</strong> @Model.FullName</div>
+        <div><strong>IsAdmin:</strong> @Model.IsAdmin</div>
+        <div class="mt-2">
+            <strong>Roles:</strong>
+            @if (Model.Roles?.Any() == true)
+            {
+                <ul>
+                    @foreach (var r in Model.Roles) { <li>@r</li> }
+                </ul>
+            }
+            else
+            {
+                <span>(none)</span>
+            }
+        </div>
+    </div>
+</div>
+

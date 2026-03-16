@@ -1,0 +1,46 @@
+@model Shared.Contracts.Dtos.LoginRequest
+@{
+    ViewData["Title"] = "Đăng nhập quản trị";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-4">
+        <h3 class="text-center mb-4">Đăng nhập hệ thống Admin</h3>
+
+        <form asp-action="Login" method="post">
+            <input type="hidden" name="returnUrl" value="@(ViewBag.ReturnUrl ?? string.Empty)" />
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <div class="mb-3">
+                <label asp-for="UserName" class="form-label"></label>
+                <input asp-for="UserName" class="form-control" />
+                <span asp-validation-for="UserName" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Password" class="form-label"></label>
+                <input asp-for="Password" class="form-control" type="password" />
+                <span asp-validation-for="Password" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="ChannelId" class="form-label">Channel/Tenant</label>
+                <input asp-for="ChannelId" class="form-control" />
+                <span asp-validation-for="ChannelId" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3 form-check">
+                <input asp-for="RememberMe" class="form-check-input" />
+                <label asp-for="RememberMe" class="form-check-label"></label>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100">Đăng nhập</button>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="~/Views/Shared/_ValidationScriptsPartial.cshtml" />
+}
+

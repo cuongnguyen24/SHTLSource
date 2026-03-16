@@ -1,0 +1,99 @@
+# Build output
+bin/
+obj/
+**/bin/
+**/obj/
+
+# .NET artifacts
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# IDE / Editor
+.vs/
+.vscode/
+.idea/
+*.code-workspace
+.cursor/
+**/.cursor/
+
+# Logs
+*.log
+logs/
+log/
+
+# Temporary files
+*.tmp
+*.temp
+~$*
+*.bak
+*.swp
+*.swn
+*.swo
+*.swm
+
+# NuGet
+*.nupkg
+*.snupkg
+**/packages/*
+!**/packages/build/
+.nuget/
+*.nuget.props
+*.nuget.targets
+
+# Publish output
+**/publish/
+**/out/
+
+# Generated web assets
+**/wwwroot/lib/
+**/wwwroot/dist/
+**/wwwroot/bundle*
+**/wwwroot/*.map
+
+# ReSharper / Rider
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+
+# Test results
+TestResults/
+*.TestResults/
+*.trx
+*.coverage
+*.coveragexml
+
+# Azure / IIS
+.publishsettings
+*.pubxml
+*.pubxml.user
+
+# OS-specific
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+*.icloud
+
+# Dev config overrides
+**/appsettings.Development.json
+**/appsettings.Local.json
+secrets.json
+
+# Plugin Desktop build artifacts (redundant with bin/obj but explicit)
+src/Plugin.Desktop/bin/
+src/Plugin.Desktop/obj/
+

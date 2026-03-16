@@ -1,0 +1,35 @@
+/* SHTL - Site CSS */
+body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-size: 0.9rem;
+}
+
+.navbar-brand { font-size: 1.1rem; letter-spacing: .5px; }
+
+.btn-xs { padding: .2rem .5rem; font-size: .75rem; }
+
+.hover-shadow:hover { transform: translateY(-2px); transition: .2s; box-shadow: 0 8px 25px rgba(0,0,0,.15) !important; }
+
+/* Table improvements */
+.table-sm th { font-size: .8rem; font-weight: 600; white-space: nowrap; }
+.table-sm td { vertical-align: middle; }
+
+/* Cards */
+.card { border-radius: 12px; }
+.card-header { border-radius: 12px 12px 0 0 !important; }
+
+/* Sidebar */
+.sidebar { background: #1e293b; min-height: 100vh; }
+.sidebar .nav-link { color: #94a3b8; border-radius: 8px; margin: 2px 8px; }
+.sidebar .nav-link:hover, .sidebar .nav-link.active { background: rgba(255,255,255,.1); color: #fff; }
+
+/* Status badges */
+.badge { font-size: .75rem; font-weight: 500; }
+
+/* Form section */
+.form-section-title { font-size: .8rem; text-transform: uppercase; letter-spacing: 1px; color: #6c757d; }
+
+/* Responsive table */
+@media (max-width: 768px) {
+    .table-responsive { font-size: .8rem; }
+}

@@ -1,0 +1,170 @@
+@model Shared.Contracts.Dtos.DocumentDto
+@{
+    ViewData["Title"] = "Nhập liệu - " + Model.Name;
+    var cells = ViewBag.Cells as IEnumerable<Core.Domain.Entities.Stg.FormCell>;
+}
+
+<div class="container-fluid py-3">
+    <div class="row">
+        <!-- Cột trái: xem file -->
+        <div class="col-md-6 col-lg-7">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <span class="fw-semibold"><i class="fas fa-file-pdf me-2 text-danger"></i>@Model.FileName</span>
+                    <div>
+                        <a href="/files/@Model.FilePath" target="_blank" class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-external-link-alt me-1"></i>Mở file
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body p-0" style="height: 75vh; overflow: auto;">
+                    @if (Model.Extension?.ToLower() is ".pdf")
+                    {
+                        <iframe src="/files/@Model.FilePath" width="100%" height="100%" frameborder="0"></iframe>
+                    }
+                    else
+                    {
+                        <img src="/files/@Model.FilePath" class="img-fluid" alt="@Model.FileName" />
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Cột phải: form nhập liệu -->
+        <div class="col-md-6 col-lg-5">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0"><i class="fas fa-keyboard me-2"></i>Form nhập liệu</h6>
+                    <small>Tài liệu ID: @Model.Id</small>
+                </div>
+                <div class="card-body" style="max-height: 75vh; overflow-y: auto;">
+                    <form id="extractForm">
+                        <input type="hidden" id="docId" value="@Model.Id" />
+
+                        <!-- Thông tin chính -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small">Tên tài liệu</label>
+                            <input type="text" name="Name" value="@Model.Name" class="form-control form-control-sm" />
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-6">
+                                <label class="form-label fw-semibold small">Số hiệu</label>
+                                <input type="text" name="Field1" value="@Model.SymbolNo" class="form-control form-control-sm" />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fw-semibold small">Số hồ sơ</label>
+                                <input type="text" name="Field2" value="@Model.RecordNo" class="form-control form-control-sm" />
+                            </div>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label fw-semibold small">Cơ quan ban hành</label>
+                            <input type="text" name="Field3" value="@Model.IssuedBy" class="form-control form-control-sm" />
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-6">
+                                <label class="form-label fw-semibold small">Ngày ban hành</label>
+                                <input type="date" name="Field4" class="form-control form-control-sm"
+                                       value="@(Model.Issued?.ToString("yyyy-MM-dd"))" />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fw-semibold small">Năm</label>
+                                <input type="number" name="Field5" value="@Model.IssuedYear" class="form-control form-control-sm" />
+                            </div>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label fw-semibold small">Tác giả / Người ký</label>
+                            <input type="text" name="Field6" value="@Model.Author" class="form-control form-control-sm" />
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label fw-semibold small">Trường mở rộng 7</label>
+                            <input type="text" name="Field7" class="form-control form-control-sm" />
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label fw-semibold small">Trường mở rộng 8</label>
+                            <input type="text" name="Field8" class="form-control form-control-sm" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small">Ghi chú</label>
+                            <textarea name="Noted" class="form-control form-control-sm" rows="2">@Model.Noted</textarea>
+                        </div>
+
+                        <!-- Form cells nếu có -->
+                        @if (cells?.Any() == true)
+                        {
+                            <hr />
+                            <h6 class="small fw-bold text-primary">Các ô OCR Form</h6>
+                            @foreach (var cell in cells)
+                            {
+                                <div class="mb-2">
+                                    <label class="form-label small">@(cell.Title ?? cell.Field ?? $"Ô {cell.Cell}")</label>
+                                    <input type="text" class="form-control form-control-sm cell-input"
+                                           data-cell-id="@cell.Id"
+                                           value="@cell.ExtractedValue" />
+                                </div>
+                            }
+                        }
+
+                        <div class="d-grid gap-2 mt-3">
+                            <button type="button" class="btn btn-primary" onclick="submitExtract()">
+                                <i class="fas fa-save me-2"></i>Lưu nhập liệu
+                            </button>
+                            <a href="/extract" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Quay lại
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function submitExtract() {
+        const docId = parseInt(document.getElementById('docId').value);
+        const form = document.getElementById('extractForm');
+        const data = new FormData(form);
+
+        const payload = {
+            documentId: docId,
+            field1: data.get('Field1') || null,
+            field2: data.get('Field2') || null,
+            field3: data.get('Field3') || null,
+            field4: data.get('Field4') || null,
+            field5: data.get('Field5') || null,
+            field6: data.get('Field6') || null,
+            field7: data.get('Field7') || null,
+            field8: data.get('Field8') || null,
+            cells: []
+        };
+
+        // Collect cell values
+        document.querySelectorAll('.cell-input').forEach(input => {
+            payload.cells.push({
+                id: parseInt(input.dataset.cellId),
+                value: input.value
+            });
+        });
+
+        fetch('/extract/submit', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(r => r.json())
+        .then(res => {
+            if (res.success) {
+                alert('Nhập liệu thành công!');
+                window.location.href = '/extract';
+            } else {
+                alert('Lỗi: ' + res.message);
+            }
+        })
+        .catch(err => alert('Lỗi kết nối: ' + err));
+    }
+</script>
+}

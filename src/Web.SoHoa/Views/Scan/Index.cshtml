@@ -1,0 +1,195 @@
+@model Shared.Contracts.PaginatedResult<Shared.Contracts.Dtos.DocumentDto>
+@{
+    ViewData["Title"] = "Danh sách tài liệu Scan";
+}
+
+<div class="container-fluid py-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0 fw-bold"><i class="fas fa-upload me-2 text-primary"></i>Danh sách tài liệu Scan / Upload</h5>
+        <div>
+            <a href="/upload" class="btn btn-success btn-sm me-2">
+                <i class="fas fa-plus me-1"></i>Upload tài liệu
+            </a>
+            <a href="/plugin" class="btn btn-outline-primary btn-sm">
+                <i class="fas fa-desktop me-1"></i>Plugin Scanner
+            </a>
+        </div>
+    </div>
+
+    <!-- Bộ lọc -->
+    <div class="card mb-3 border-0 shadow-sm">
+        <div class="card-body py-2">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <input type="text" name="q" value="@Context.Request.Query["q"]" class="form-control form-control-sm" placeholder="Tìm kiếm tên, số hiệu..." />
+                </div>
+                <div class="col-md-2">
+                    <input type="date" name="from" value="@Context.Request.Query["from"]" class="form-control form-control-sm" />
+                </div>
+                <div class="col-md-2">
+                    <input type="date" name="to" value="@Context.Request.Query["to"]" class="form-control form-control-sm" />
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search me-1"></i>Tìm</button>
+                    <a href="/scan" class="btn btn-outline-secondary btn-sm ms-1">Reset</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bảng -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-sm mb-0">
+                    <thead class="table-primary">
+                        <tr>
+                            <th style="width:50px">#</th>
+                            <th>Tên tài liệu</th>
+                            <th>Số hiệu</th>
+                            <th>Bước hiện tại</th>
+                            <th>Loại TL</th>
+                            <th>Ngày tạo</th>
+                            <th>Người tạo</th>
+                            <th style="width:120px">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!Model.Items.Any())
+                        {
+                            <tr>
+                                <td colspan="8" class="text-center text-muted py-4">
+                                    <i class="fas fa-inbox fa-2x d-block mb-2"></i>
+                                    Không có tài liệu nào
+                                </td>
+                            </tr>
+                        }
+                        @foreach (var (doc, i) in Model.Items.Select((d, idx) => (d, idx + 1 + (Model.PageIndex - 1) * Model.PageSize)))
+                        {
+                            <tr>
+                                <td class="text-muted small">@i</td>
+                                <td>
+                                    <a href="/scan/detail/@doc.Id" class="text-decoration-none fw-semibold">@doc.Name</a>
+                                    @if (!string.IsNullOrEmpty(doc.Extension))
+                                    {
+                                        <span class="badge bg-secondary ms-1">@doc.Extension.ToUpper()</span>
+                                    }
+                                </td>
+                                <td class="small">@doc.SymbolNo</td>
+                                <td>
+                                    <span class="badge @GetStepBadge(doc.CurrentStep)">@GetStepName(doc.CurrentStep)</span>
+                                </td>
+                                <td class="small text-muted">@doc.DocTypeName</td>
+                                <td class="small">@doc.Created.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td class="small text-muted">@doc.CreatedByName</td>
+                                <td>
+                                    <a href="/scan/detail/@doc.Id" class="btn btn-xs btn-outline-info" title="Xem chi tiết">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    @if (doc.CurrentStep == Core.Domain.Enums.WorkflowStep.Scan)
+                                    {
+                                        <button class="btn btn-xs btn-outline-danger ms-1" onclick="confirmDelete(@doc.Id)" title="Xóa">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    @if (Model.TotalPages > 1)
+    {
+        <nav class="mt-3">
+            <ul class="pagination pagination-sm justify-content-center">
+                @if (Model.HasPreviousPage)
+                {
+                    <li class="page-item">
+                        <a class="page-link" href="?page=@(Model.PageIndex - 1)&q=@Context.Request.Query["q"]">«</a>
+                    </li>
+                }
+                @for (var p = Math.Max(1, Model.PageIndex - 2); p <= Math.Min(Model.TotalPages, Model.PageIndex + 2); p++)
+                {
+                    <li class="page-item @(p == Model.PageIndex ? "active" : "")">
+                        <a class="page-link" href="?page=@p&q=@Context.Request.Query["q"]">@p</a>
+                    </li>
+                }
+                @if (Model.HasNextPage)
+                {
+                    <li class="page-item">
+                        <a class="page-link" href="?page=@(Model.PageIndex + 1)&q=@Context.Request.Query["q"]">»</a>
+                    </li>
+                }
+            </ul>
+            <p class="text-center text-muted small">
+                Tổng: <strong>@Model.TotalCount</strong> tài liệu
+            </p>
+        </nav>
+    }
+</div>
+
+@section Scripts {
+<script>
+    function confirmDelete(id) {
+        if (!confirm('Bạn có chắc muốn xóa tài liệu này?')) return;
+        fetch('/scan/delete/' + id, {
+            method: 'POST',
+            headers: { 'RequestVerificationToken': getAntiForgeryToken() }
+        })
+        .then(r => r.json())
+        .then(res => {
+            if (res.success) {
+                showToast('success', res.message);
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showToast('error', res.message);
+            }
+        });
+    }
+    function getAntiForgeryToken() {
+        return document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+    }
+    function showToast(type, msg) {
+        // Simple alert fallback
+        if (type === 'error') alert('Lỗi: ' + msg);
+        else alert(msg);
+    }
+</script>
+}
+
+@functions {
+    string GetStepBadge(Core.Domain.Enums.WorkflowStep step) => step switch {
+        Core.Domain.Enums.WorkflowStep.Scan => "bg-secondary",
+        Core.Domain.Enums.WorkflowStep.CheckScan1 => "bg-warning text-dark",
+        Core.Domain.Enums.WorkflowStep.CheckScan2 => "bg-warning text-dark",
+        Core.Domain.Enums.WorkflowStep.Zone => "bg-info text-dark",
+        Core.Domain.Enums.WorkflowStep.Ocr => "bg-info",
+        Core.Domain.Enums.WorkflowStep.Extract => "bg-primary",
+        Core.Domain.Enums.WorkflowStep.Check1 => "bg-primary",
+        Core.Domain.Enums.WorkflowStep.Check2 => "bg-primary",
+        Core.Domain.Enums.WorkflowStep.CheckFinal => "bg-success",
+        Core.Domain.Enums.WorkflowStep.CheckLogic => "bg-success",
+        Core.Domain.Enums.WorkflowStep.Export => "bg-dark",
+        Core.Domain.Enums.WorkflowStep.Completed => "bg-success",
+        _ => "bg-secondary"
+    };
+    string GetStepName(Core.Domain.Enums.WorkflowStep step) => step switch {
+        Core.Domain.Enums.WorkflowStep.Scan => "Mới upload",
+        Core.Domain.Enums.WorkflowStep.CheckScan1 => "KT scan 1",
+        Core.Domain.Enums.WorkflowStep.CheckScan2 => "KT scan 2",
+        Core.Domain.Enums.WorkflowStep.Zone => "Khoanh vùng",
+        Core.Domain.Enums.WorkflowStep.Ocr => "OCR",
+        Core.Domain.Enums.WorkflowStep.Extract => "Nhập liệu",
+        Core.Domain.Enums.WorkflowStep.Check1 => "Kiểm tra 1",
+        Core.Domain.Enums.WorkflowStep.Check2 => "Kiểm tra 2",
+        Core.Domain.Enums.WorkflowStep.CheckFinal => "KT cuối",
+        Core.Domain.Enums.WorkflowStep.CheckLogic => "KT logic",
+        Core.Domain.Enums.WorkflowStep.Export => "Chờ export",
+        Core.Domain.Enums.WorkflowStep.Completed => "Hoàn thành",
+        _ => step.ToString()
+    };
+}
