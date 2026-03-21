@@ -33,7 +33,7 @@ public class AccountController : Controller
             return View(model);
 
         var (success, message, principal) = await _authService.LoginAsync(
-            model.UserName, model.Password, model.ChannelId);
+            model.UserName, model.Password);
 
         if (!success || principal is null)
         {

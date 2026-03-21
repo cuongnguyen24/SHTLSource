@@ -1,11 +1,10 @@
 using System.Data;
-using Npgsql;
+using Microsoft.Data.SqlClient;
 
 namespace Infrastructure.Data;
 
 /// <summary>
-/// Tạo connection riêng cho từng database (bounded context).
-/// Không dùng DI container để tránh ambiguous — inject IDbConnectionFactory.
+/// Tạo connection theo bounded context (mỗi context có thể là một database riêng).
 /// </summary>
 public interface IDbConnectionFactory
 {
@@ -27,22 +26,22 @@ public class DbConnectionFactory : IDbConnectionFactory
     }
 
     public IDbConnection CreateAccConnection()
-        => new NpgsqlConnection(_options.CoreAcc);
+        => new SqlConnection(_options.CoreAcc);
 
     public IDbConnection CreateCnfConnection()
-        => new NpgsqlConnection(_options.CoreCnf);
+        => new SqlConnection(_options.CoreCnf);
 
     public IDbConnection CreateStgConnection()
-        => new NpgsqlConnection(_options.CoreStg);
+        => new SqlConnection(_options.CoreStg);
 
     public IDbConnection CreateLogConnection()
-        => new NpgsqlConnection(_options.CoreLog);
+        => new SqlConnection(_options.CoreLog);
 
     public IDbConnection CreateMsgConnection()
-        => new NpgsqlConnection(_options.CoreMsg);
+        => new SqlConnection(_options.CoreMsg);
 
     public IDbConnection CreateCatalogConnection()
-        => new NpgsqlConnection(_options.CoreCatalog);
+        => new SqlConnection(_options.CoreCatalog);
 }
 
 public class DbConnectionOptions

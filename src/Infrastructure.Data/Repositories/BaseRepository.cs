@@ -36,11 +36,11 @@ public abstract class BaseRepository
         return await conn.ExecuteAsync(sql, param, tx);
     }
 
-    /// <summary>Pagination helper — append LIMIT/OFFSET</summary>
+    /// <summary>Pagination helper — T-SQL OFFSET/FETCH (cần ORDER BY trong câu sql).</summary>
     protected static string WithPaging(string sql, int pageIndex, int pageSize)
     {
         var offset = (pageIndex - 1) * pageSize;
-        return $"{sql} LIMIT {pageSize} OFFSET {offset}";
+        return $"{sql} OFFSET {offset} ROWS FETCH NEXT {pageSize} ROWS ONLY";
     }
 
     protected static string CountSql(string fromAndWhere)

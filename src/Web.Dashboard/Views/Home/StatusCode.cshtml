@@ -1,0 +1,9 @@
+@model int
+@{
+    ViewData["Title"] = "Lỗi " + Model;
+}
+<div class="text-center py-5">
+    <h1 class="display-4 text-muted">@Model</h1>
+    <p class="lead">Yêu cầu không thể hoàn tất (mã HTTP @Model).</p>
+    <a class="btn btn-primary" asp-controller="Home" asp-action="Index">Về tổng quan</a>
+</div>

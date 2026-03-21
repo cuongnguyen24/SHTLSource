@@ -1,46 +1,88 @@
-﻿<!DOCTYPE html>
-<html lang="en">
+@inject Microsoft.Extensions.Options.IOptions<DashboardModuleLinks> DashboardOpts
+@inject Microsoft.Extensions.Options.IOptions<DashboardAuthOptions> AuthOpts
+@{
+    var dash = DashboardOpts.Value;
+    var auth = AuthOpts.Value;
+    var returnAfterLogout = Uri.EscapeDataString(Context.Request.PathBase + Context.Request.Path + Context.Request.QueryString);
+    var logoutHref = $"{auth.ExternalLogoutUrl.TrimEnd('/')}?returnUrl={returnAfterLogout}";
+}
+<!DOCTYPE html>
+<html lang="vi">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - Web.Dashboard</title>
+    <title>@(ViewData["Title"] ?? dash.ProductTitle)</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/Web.Dashboard.styles.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/dashboard.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
 </head>
-<body>
+<body class="d-flex flex-column min-vh-100 bg-light">
     <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+        <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
             <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">Web.Dashboard</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
+                <a class="navbar-brand fw-semibold" asp-controller="Home" asp-action="Index">
+                    <i class="fas fa-th-large me-2"></i>@dash.ProductTitle
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#dashNav" aria-controls="dashNav" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
+                <div class="collapse navbar-collapse" id="dashNav">
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
+                            <a class="nav-link" asp-controller="Home" asp-action="Index"><i class="fas fa-home me-1"></i>Tổng quan</a>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-external-link-alt me-1"></i>Ứng dụng
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="@dash.AdminUrl" target="_blank" rel="noopener"><i class="fas fa-cogs me-2 text-secondary"></i>Quản trị</a></li>
+                                <li><a class="dropdown-item" href="@dash.SoHoaUrl" target="_blank" rel="noopener"><i class="fas fa-file-alt me-2 text-primary"></i>Số hóa</a></li>
+                                <li><a class="dropdown-item" href="@dash.UploaderUrl" target="_blank" rel="noopener"><i class="fas fa-cloud-upload-alt me-2 text-info"></i>Uploader</a></li>
+                                <li><hr class="dropdown-divider" /></li>
+                                <li><a class="dropdown-item" href="@dash.AccountUrl" target="_blank" rel="noopener"><i class="fas fa-user-cog me-2 text-muted"></i>Tài khoản (web)</a></li>
+                                <li><a class="dropdown-item" href="@dash.ProfileUrl" target="_blank" rel="noopener"><i class="fas fa-id-card me-2 text-success"></i>Hồ sơ</a></li>
+                            </ul>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+                            <a class="nav-link" asp-controller="Home" asp-action="Privacy">Privacy</a>
                         </li>
+                    </ul>
+                    <ul class="navbar-nav">
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-user-circle me-1"></i>@(User.FindFirst("full_name")?.Value ?? User.Identity?.Name)
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="@dash.ProfileUrl" target="_blank" rel="noopener"><i class="fas fa-id-card me-2"></i>Hồ sơ</a></li>
+                                    <li><hr class="dropdown-divider" /></li>
+                                    <li>
+                                        <a class="dropdown-item text-danger" href="@logoutHref"><i class="fas fa-sign-out-alt me-2"></i>Đăng xuất</a>
+                                    </li>
+                                </ul>
+                            </li>
+                        }
                     </ul>
                 </div>
             </div>
         </nav>
     </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
-    </div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2026 - Web.Dashboard - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+    <main class="container-fluid flex-grow-1 py-4">
+        @RenderBody()
+    </main>
+
+    <footer class="border-top bg-white py-3 mt-auto text-muted small">
+        <div class="container-fluid d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <span>&copy; @DateTime.UtcNow.Year SHTL — @dash.ProductTitle</span>
+            <a asp-controller="Home" asp-action="Privacy" class="text-decoration-none">Privacy</a>
         </div>
     </footer>
+
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>

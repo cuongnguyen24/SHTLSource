@@ -93,7 +93,3 @@ $RECYCLE.BIN/
 **/appsettings.Local.json
 secrets.json
 
-# Plugin Desktop build artifacts (redundant with bin/obj but explicit)
-src/Plugin.Desktop/bin/
-src/Plugin.Desktop/obj/
-

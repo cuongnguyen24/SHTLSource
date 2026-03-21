@@ -45,7 +45,7 @@ public class FormCellRepository : BaseRepository, IFormCellRepository
                 (@ChannelId, @DocumentId, @Cell, @CellType, @GroupCell, @Field, @Title,
                  @X, @Y, @Width, @Height, @Page, @PageWidth, @PageHeight, @CroppedPath,
                  @Value, @Created, @CreatedBy)
-            RETURNING id";
+            OUTPUT INSERTED.id";
         return await ExecuteScalarAsync<long>(conn, sql, cell);
     }
 
@@ -55,13 +55,13 @@ public class FormCellRepository : BaseRepository, IFormCellRepository
         return step switch
         {
             WorkflowStep.Extract => await ExecuteAsync(conn,
-                "UPDATE core_stg.form_cells SET extracted_value = @Value, extracted_by = @By, extracted_at = now() WHERE id = @Id",
+                "UPDATE core_stg.form_cells SET extracted_value = @Value, extracted_by = @By, extracted_at = SYSUTCDATETIME() WHERE id = @Id",
                 new { Id = id, Value = value, By = updatedBy }),
             WorkflowStep.Check1 => await ExecuteAsync(conn,
-                "UPDATE core_stg.form_cells SET checked1_value = @Value, checked1_by = @By, checked1_at = now() WHERE id = @Id",
+                "UPDATE core_stg.form_cells SET checked1_value = @Value, checked1_by = @By, checked1_at = SYSUTCDATETIME() WHERE id = @Id",
                 new { Id = id, Value = value, By = updatedBy }),
             WorkflowStep.Check2 => await ExecuteAsync(conn,
-                "UPDATE core_stg.form_cells SET checked2_value = @Value, checked2_by = @By, checked2_at = now() WHERE id = @Id",
+                "UPDATE core_stg.form_cells SET checked2_value = @Value, checked2_by = @By, checked2_at = SYSUTCDATETIME() WHERE id = @Id",
                 new { Id = id, Value = value, By = updatedBy }),
             _ => 0
         };

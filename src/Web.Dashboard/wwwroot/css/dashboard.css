@@ -1,0 +1,43 @@
+/* Thẻ module — gợi nhớ databox AXE: icon trái, viền màu, hover nhẹ */
+.databox .databox-inner {
+  border-left: 4px solid var(--databox-accent, #6c757d);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.databox:hover .databox-inner {
+  transform: translateY(-2px);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.08) !important;
+}
+
+.databox-admin {
+  --databox-accent: #495057;
+}
+
+.databox-sohoa {
+  --databox-accent: #0d6efd;
+}
+
+.databox-uploader {
+  --databox-accent: #0dcaf0;
+}
+
+.databox-account {
+  --databox-accent: #198754;
+}
+
+.databox-icon {
+  flex-shrink: 0;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.35rem;
+  color: #fff;
+  background: var(--databox-accent);
+}
+
+.dashboard-hero {
+  padding: 0.25rem 0;
+}

@@ -1,8 +1,68 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+@model DashboardIndexVm
+@{
+    ViewData["Title"] = "Tổng quan";
+    var L = Model.Links;
+    var greet = Model.User is { } u && !string.IsNullOrWhiteSpace(u.FullName)
+        ? u.FullName
+        : User.Identity?.Name;
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="dashboard-hero mb-4">
+    <h1 class="h3 mb-1">Xin chào@(string.IsNullOrEmpty(greet) ? "" : $", {greet}")</h1>
+    <p class="text-muted mb-0">Chọn module để làm việc — cấu hình URL trong <code>appsettings.json</code> mục <code>Dashboard</code>.</p>
+</div>
+
+<div class="row g-4">
+    <div class="col-12 col-md-6 col-xl-3">
+        <a href="@L.AdminUrl" class="text-decoration-none databox databox-admin" target="_blank" rel="noopener">
+            <div class="card h-100 border-0 shadow-sm databox-inner">
+                <div class="card-body d-flex align-items-start gap-3">
+                    <div class="databox-icon"><i class="fas fa-cogs"></i></div>
+                    <div>
+                        <h2 class="h5 card-title text-dark mb-1">Quản trị</h2>
+                        <p class="card-text small text-muted mb-0">Người dùng, kênh, cấu hình hệ thống.</p>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+        <a href="@L.SoHoaUrl" class="text-decoration-none databox databox-sohoa" target="_blank" rel="noopener">
+            <div class="card h-100 border-0 shadow-sm databox-inner">
+                <div class="card-body d-flex align-items-start gap-3">
+                    <div class="databox-icon"><i class="fas fa-file-alt"></i></div>
+                    <div>
+                        <h2 class="h5 card-title text-dark mb-1">Số hóa</h2>
+                        <p class="card-text small text-muted mb-0">Scan, kiểm tra, nhập liệu, export.</p>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+        <a href="@L.UploaderUrl" class="text-decoration-none databox databox-uploader" target="_blank" rel="noopener">
+            <div class="card h-100 border-0 shadow-sm databox-inner">
+                <div class="card-body d-flex align-items-start gap-3">
+                    <div class="databox-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+                    <div>
+                        <h2 class="h5 card-title text-dark mb-1">Uploader</h2>
+                        <p class="card-text small text-muted mb-0">Tải tệp lên hệ thống lưu trữ.</p>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+        <a href="@L.ProfileUrl" class="text-decoration-none databox databox-account" target="_blank" rel="noopener">
+            <div class="card h-100 border-0 shadow-sm databox-inner">
+                <div class="card-body d-flex align-items-start gap-3">
+                    <div class="databox-icon"><i class="fas fa-id-card"></i></div>
+                    <div>
+                        <h2 class="h5 card-title text-dark mb-1">Hồ sơ</h2>
+                        <p class="card-text small text-muted mb-0">Thông tin tài khoản (Web.Account).</p>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
 </div>

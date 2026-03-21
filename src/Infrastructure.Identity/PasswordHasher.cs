@@ -2,15 +2,20 @@ namespace Infrastructure.Identity;
 
 public interface IPasswordHasher
 {
+    /// <summary>Lưu vào cột password_hash (plain).</summary>
     string Hash(string password);
     bool Verify(string password, string hash);
 }
 
-public class BcryptPasswordHasher : IPasswordHasher
+/// <summary>Mật khẩu lưu và so khớp dạng plain text trong DB (không hash).</summary>
+public sealed class PlaintextPasswordHasher : IPasswordHasher
 {
-    public string Hash(string password)
-        => BCrypt.Net.BCrypt.HashPassword(password, workFactor: 12);
+    public string Hash(string password) => password ?? string.Empty;
 
     public bool Verify(string password, string hash)
-        => BCrypt.Net.BCrypt.Verify(password, hash);
+    {
+        password = (password ?? string.Empty).Trim();
+        hash = (hash ?? string.Empty).Trim();
+        return string.Equals(password, hash, StringComparison.Ordinal);
+    }
 }

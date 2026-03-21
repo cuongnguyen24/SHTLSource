@@ -19,8 +19,8 @@ public class OcrJobRepository : BaseRepository, IOcrJobRepository
         using var conn = _factory.CreateStgConnection();
         var sql = @"
             INSERT INTO core_stg.ocr_jobs (channel_id, document_id, type, status, created_at, priority)
-            VALUES (@ChannelId, @DocumentId, @Type, @Status, @CreatedAt, @Priority)
-            RETURNING id";
+            OUTPUT INSERTED.id
+            VALUES (@ChannelId, @DocumentId, @Type, @Status, @CreatedAt, @Priority)";
         return await ExecuteScalarAsync<long>(conn, sql, job);
     }
 
@@ -28,7 +28,8 @@ public class OcrJobRepository : BaseRepository, IOcrJobRepository
     {
         using var conn = _factory.CreateStgConnection();
         return await QueryAsync<OcrJob>(conn,
-            "SELECT * FROM core_stg.ocr_jobs WHERE status = 0 ORDER BY priority DESC, id ASC LIMIT @Limit",
+            @"SELECT * FROM core_stg.ocr_jobs WHERE status = 0 ORDER BY priority DESC, id ASC
+              OFFSET 0 ROWS FETCH NEXT @Limit ROWS ONLY",
             new { Limit = limit });
     }
 
@@ -36,7 +37,7 @@ public class OcrJobRepository : BaseRepository, IOcrJobRepository
     {
         using var conn = _factory.CreateStgConnection();
         return await ExecuteAsync(conn,
-            "UPDATE core_stg.ocr_jobs SET status = @Status, message = @Message, processed_at = now() WHERE id = @Id",
+            "UPDATE core_stg.ocr_jobs SET status = @Status, message = @Message, processed_at = SYSUTCDATETIME() WHERE id = @Id",
             new { Id = id, Status = (byte)status, Message = message });
     }
 }
@@ -59,8 +60,8 @@ public class ExportJobRepository : BaseRepository, IExportJobRepository
         var sql = @"
             INSERT INTO core_stg.export_jobs
                 (channel_id, export_type, filter_json, status, created_at, requested_by)
-            VALUES (@ChannelId, @ExportType, @FilterJson, @Status, @CreatedAt, @RequestedBy)
-            RETURNING id";
+            OUTPUT INSERTED.id
+            VALUES (@ChannelId, @ExportType, @FilterJson, @Status, @CreatedAt, @RequestedBy)";
         return await ExecuteScalarAsync<long>(conn, sql, job);
     }
 
@@ -68,7 +69,8 @@ public class ExportJobRepository : BaseRepository, IExportJobRepository
     {
         using var conn = _factory.CreateStgConnection();
         return await QueryAsync<ExportJob>(conn,
-            "SELECT * FROM core_stg.export_jobs WHERE status = 0 ORDER BY id ASC LIMIT @Limit",
+            @"SELECT * FROM core_stg.export_jobs WHERE status = 0 ORDER BY id ASC
+              OFFSET 0 ROWS FETCH NEXT @Limit ROWS ONLY",
             new { Limit = limit });
     }
 
@@ -79,7 +81,7 @@ public class ExportJobRepository : BaseRepository, IExportJobRepository
             UPDATE core_stg.export_jobs SET
                 processed = @Processed, success = @Success, error = @Error,
                 status = @Status, download_path = @DownloadPath,
-                message = @Message, completed_at = CASE WHEN @Status IN (2,3) THEN now() ELSE NULL END
+                message = @Message, completed_at = CASE WHEN @Status IN (2,3) THEN SYSUTCDATETIME() ELSE NULL END
             WHERE id = @Id",
             new { Id = id, Processed = processed, Success = success, Error = error,
                   Status = (byte)status, DownloadPath = downloadPath, Message = message });

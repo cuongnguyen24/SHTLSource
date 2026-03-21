@@ -6,7 +6,7 @@ namespace Infrastructure.Identity;
 
 public interface IAuthService
 {
-    Task<(bool success, string message, ClaimsPrincipal? principal)> LoginAsync(string userName, string password, int channelId);
+    Task<(bool success, string message, ClaimsPrincipal? principal)> LoginAsync(string userName, string password);
     Task<User?> GetUserByTokenAsync(string token);
 }
 
@@ -22,17 +22,17 @@ public class AuthService : IAuthService
     }
 
     public async Task<(bool success, string message, ClaimsPrincipal? principal)> LoginAsync(
-        string userName, string password, int channelId)
+        string userName, string password)
     {
+        userName = (userName ?? string.Empty).Trim();
+        password = (password ?? string.Empty).Trim();
+
         var user = await _userRepo.GetByUserNameAsync(userName);
         if (user is null)
             return (false, "Tên đăng nhập không tồn tại", null);
 
         if (!user.IsActive)
             return (false, "Tài khoản đã bị vô hiệu hóa", null);
-
-        if (user.ChannelId != channelId && channelId != 0)
-            return (false, "Tài khoản không thuộc tenant này", null);
 
         if (!_hasher.Verify(password, user.PasswordHash))
             return (false, "Mật khẩu không chính xác", null);
@@ -56,7 +56,6 @@ public class AuthService : IAuthService
 
     public async Task<User?> GetUserByTokenAsync(string token)
     {
-        // Sẽ implement khi dùng JWT / bearer token cho API
         await Task.CompletedTask;
         return null;
     }

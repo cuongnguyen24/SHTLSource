@@ -35,16 +35,16 @@ public class DeptRepository : BaseRepository, IDeptRepository
     {
         using var conn = _factory.CreateAccConnection();
         return await ExecuteScalarAsync<long>(conn, @"
-            INSERT INTO core_acc.depts (channel_id, name, code, describe, parent, parents, weight, created, created_by)
-            VALUES (@ChannelId, @Name, @Code, @Describe, @Parent, @Parents, @Weight, @Created, @CreatedBy)
-            RETURNING id", dept);
+            INSERT INTO core_acc.depts (channel_id, name, code, [describe], parent, parents, weight, created, created_by)
+            OUTPUT INSERTED.id
+            VALUES (@ChannelId, @Name, @Code, @Describe, @Parent, @Parents, @Weight, @Created, @CreatedBy)", dept);
     }
 
     public async Task<int> UpdateAsync(Dept dept)
     {
         using var conn = _factory.CreateAccConnection();
         return await ExecuteAsync(conn, @"
-            UPDATE core_acc.depts SET name = @Name, code = @Code, describe = @Describe,
+            UPDATE core_acc.depts SET name = @Name, code = @Code, [describe] = @Describe,
                 parent = @Parent, parents = @Parents, weight = @Weight,
                 updated = @Updated, updated_by = @UpdatedBy
             WHERE id = @Id", dept);

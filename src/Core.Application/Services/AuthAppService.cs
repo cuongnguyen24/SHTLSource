@@ -28,7 +28,7 @@ public class AuthAppService : IAuthAppService
 
     public async Task<ApiResult> LoginAsync(LoginRequest req, HttpContext ctx)
     {
-        var (success, message, principal) = await _authService.LoginAsync(req.UserName, req.Password, req.ChannelId);
+        var (success, message, principal) = await _authService.LoginAsync(req.UserName, req.Password);
         if (!success || principal is null)
             return ApiResult.Fail(message);
 

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.Extensions.Configuration;
 
 namespace Web.Uploader.Security;
 
@@ -12,10 +13,6 @@ public class ApiKeyAuthAttribute : Attribute, IAuthorizationFilter
     {
         var cfg = context.HttpContext.RequestServices.GetService(typeof(IConfiguration)) as IConfiguration;
         var expected = cfg?["Uploader:ApiKey"];
-        var allowAnonymous = bool.TryParse(cfg?["Uploader:AllowAnonymousUpload"], out var b) && b;
-
-        if (allowAnonymous) return;
-
         if (string.IsNullOrWhiteSpace(expected))
         {
             context.Result = new StatusCodeResult(500);
@@ -30,4 +27,3 @@ public class ApiKeyAuthAttribute : Attribute, IAuthorizationFilter
         }
     }
 }
-

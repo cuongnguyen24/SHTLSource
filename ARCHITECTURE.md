@@ -10,7 +10,7 @@ Solution gồm các nhóm project chính:
   - `Core.Application`: Application services (Document, Workflow, User, Role, Dept, Config, Report, Log, Auth).
 - **Infrastructure**
   - `Infrastructure.Data`: Dapper repository cho từng bounded context (Acc/Cnf/Stg/Log/Msg/Catalog), `IDbConnectionFactory`.
-  - `Infrastructure.Identity`: password hashing (BCrypt), `AuthService`, `CurrentUser`, authorize attribute.
+  - `Infrastructure.Identity`: mật khẩu lưu plain trong DB (`PlaintextPasswordHasher`), `AuthService`, `CurrentUser`.
   - `Infrastructure.Storage`: `LocalFileStorageService` lưu file lên NAS/local, trả public url.
   - `Infrastructure.Search`: Elasticsearch (NEST) cho search metadata tài liệu.
 - **Web MVC**
@@ -18,14 +18,10 @@ Solution gồm các nhóm project chính:
   - `Web.Admin`: web quản trị hệ thống (user/role/dept/config/log).
   - `Web.Account`: web hồ sơ cá nhân / profile.
   - `Web.Dashboard`: web dashboard/báo cáo.
-- **API & Uploader**
-  - `Web.Uploader`: upload file thường (multipart), lưu file, trả metadata.
-  - `Web.ResumableUploader`: upload file lớn theo chunk.
-  - `Api.Gateway`: Web API (callback upload để tạo Document, tích hợp ngoài).
-- **Worker / Plugin**
-  - `Worker.Ocr`: xử lý OCR queue (stub – đánh dấu hoàn thành).
-  - `Worker.Export`: xử lý export queue, xuất CSV demo và lưu file.
-  - `Plugin.Desktop`: WinForms plugin desktop, expose local HTTP endpoint `http://localhost:81/plugin` cho browser gọi, upload file + callback Gateway.
+- **Uploader**
+  - `Web.Uploader`: upload file (multipart), lưu file, trả metadata; **API** `POST /api/upload/callback` tạo `Document` sau upload (thay cho Api.Gateway cũ).
+- **Service**
+  - `Service.Export`: worker xử lý hàng đợi export (CSV tối thiểu). Tham khảo mở rộng Excel: `E:\SourceCodeAXE\AXE-ServiceExport` (xem `src/Service.Export/README.md`).
 - **Database scripts**
   - Folder `db/`: `core_acc.sql`, `core_cnf.sql`, `core_stg.sql`, `core_log.sql`, `core_msg.sql`, `core_catalog.sql` (không FK).
 
@@ -33,34 +29,29 @@ Solution gồm các nhóm project chính:
 
 #### 2.1. ConnectionStrings dùng chung
 
-- File **duy nhất**: `config/connectionstrings.json`
+- **Một file gốc** cho cả solution: `src/Web.Dashboard/config/connectionstrings.json` (mẫu: `connectionstrings.example.json`, xem `README.md` cùng thư mục).
+- Trong file có **nhiều khóa** (`CoreAcc`, `CoreCnf`, `CoreStg`, …) — mỗi bounded context có thể trỏ tới database riêng; `Infrastructure.Data` bind toàn bộ section `ConnectionStrings`.
+- `src/Directory.Build.props` **copy** file gốc vào `config\connectionstrings.json` cạnh `.dll` của **mọi** project (Api, Admin, Worker, …) khi build/publish — không cần nhân bản thủ công.
 
 ```json
 {
   "ConnectionStrings": {
-    "CoreAcc": "Host=localhost;Port=5432;Database=Core_Acc;Username=postgres;Password=YourPassword",
-    "CoreCnf": "Host=localhost;Port=5432;Database=Core_Cnf;Username=postgres;Password=YourPassword",
-    "CoreStg": "Host=localhost;Port=5432;Database=Core_Stg;Username=postgres;Password=YourPassword",
-    "CoreLog": "Host=localhost;Port=5432;Database=Core_Log;Username=postgres;Password=YourPassword",
-    "CoreMsg": "Host=localhost;Port=5432;Database=Core_Msg;Username=postgres;Password=YourPassword",
-    "CoreCatalog": "Host=localhost;Port=5432;Database=Core_Catalog;Username=postgres;Password=YourPassword"
+    "CoreAcc": "Server=localhost\\\\INSTANCE;Database=Core_Acc;User Id=sa;Password=***;TrustServerCertificate=True;Encrypt=True;",
+    "CoreCnf": "...",
+    "CoreStg": "..."
   }
 }
 ```
 
-- Tất cả web/worker dùng DB đều load file này trong `Program.cs`:
+- Tất cả web/worker dùng DB đều load file đã copy trong `Program.cs`:
 
 ```csharp
-var builder = WebApplication.CreateBuilder(args);
-
 builder.Configuration
-    .AddJsonFile(Path.Combine("..", "config", "connectionstrings.json"),
+    .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "config", "connectionstrings.json"),
                  optional: false, reloadOnChange: true);
 ```
 
-Worker dùng `Host.CreateApplicationBuilder` thì thêm `.AddJsonFile(Path.Combine("..", "config", "connectionstrings.json"), ...)` trước `.AddEnvironmentVariables()`.
-
-- Thay đổi server DB / password chỉ cần sửa **một lần** ở `config/connectionstrings.json`.
+- Đổi server / mật khẩu: sửa **một lần** tại `Web.Dashboard/config/connectionstrings.json`.
 
 #### 2.2. Cấu hình từng ứng dụng (appsettings.json)
 
@@ -68,7 +59,7 @@ Các `appsettings.json` trong từng project **không còn chứa `ConnectionStr
 
 - `Storage`: root/virtual/thumbnail, kích thước file tối đa.
 - `Elasticsearch`: `Uri`, `IndexPrefix` (Web.SoHoa, Web.Account, Web.Dashboard).
-- `Uploader` / `Resumable` / `Gateway` / `Worker`: cấu hình riêng cho module.
+- `Uploader` / `Service.Export`: cấu hình riêng cho module.
 - `Logging`, `AllowedHosts`.
 
 Ví dụ `Web.SoHoa/appsettings.json`:
@@ -154,116 +145,13 @@ Ví dụ `Web.SoHoa/appsettings.json`:
     - Multipart `file`.
     - Header `X-Api-Key` nếu `AllowAnonymousUpload = false`.
     - Trả `UploadFileResponse` (Success, FileName, StoredPath, FileSize, Extension, PublicUrl).
+  - `POST /api/upload/callback` — body `UploadCallbackRequest`, header `X-Api-Key` = `Uploader:ApiKey`; gọi `DocumentService.CreateFromUploadAsync` (thay endpoint Gateway cũ).
 
-#### 3.6. Web.ResumableUploader
+#### 3.6. Service.Export
 
-- **Mục đích**: Upload file lớn theo chunk.
-- **Cấu hình**:
-
-```json
-"Storage": { ... },
-"Resumable": {
-  "TempPath": "E:\\SHTL\\TempUploads",
-  "ApiKey": "change_me",
-  "AllowAnonymousUpload": true
-}
-```
-
-- **API chính**:
-  - `POST /api/resumable/init` → `{ fileId }`.
-  - `POST /api/resumable/chunk?channelId=&fileId=&chunkIndex=` + `chunk` file.
-  - `POST /api/resumable/complete` → assemble + save storage → `StoredPath`, `PublicUrl`.
-
-#### 3.7. Api.Gateway
-
-- **Mục đích**: Gateway cho callback upload & tích hợp ngoài.
-- **Cấu hình**:
-
-```json
-"Gateway": {
-  "ApiKey": "change_me"
-}
-```
-
-- **Bảo mật**: header `X-Api-Key` qua `ApiKeyAuthAttribute`.
-- **API**:
-  - `POST /api/upload/callback`:
-    - Body: `UploadCallbackRequest`.
-    - Gọi `DocumentService.CreateFromUploadAsync` để tạo `Document` trong `Core_Stg`.
-
-#### 3.8. Worker.Ocr
-
-- **Mục đích**: Xử lý OCR queue (hiện là stub).
-- **Cấu hình**:
-
-```json
-"Worker": {
-  "IntervalSeconds": 5,
-  "BatchSize": 10
-}
-```
-
-- **Hành vi**:
-  - Hàng vòng lặp:
-    - Lấy `batchSize` job Pending từ `core_stg.ocr_jobs`.
-    - Set `Processing` → chờ ngắn → set `Done` với message `"Done (stub)"`.
-  - Sau này có thể thay `TODO` bằng call OCR engine, lưu kết quả vào bảng OCR result.
-
-#### 3.9. Worker.Export
-
-- **Mục đích**: Xử lý export queue.
-- **Cấu hình**:
-
-```json
-"Storage": { ... },
-"Worker": {
-  "IntervalSeconds": 5,
-  "BatchSize": 50,
-  "ExportSubPath": "exports"
-}
-```
-
-- **Hành vi (demo)**:
-  - Lấy các job Pending từ `core_stg.export_jobs`.
-  - Set `Processing`, gọi `IDocumentRepository` để lấy docs theo channel.
-  - Xuất CSV (một số trường cơ bản) vào `MemoryStream`, lưu NAS qua `IStorageService.SaveFileAsync`.
-  - Cập nhật `download_path`, status `Done`, message chứa publicUrl.
-
-#### 3.10. Plugin.Desktop (WinForms)
-
-- **Mục đích**:
-  - Chạy trên máy trạm, phục vụ:
-    - Các thao tác scan (sẽ thêm sau).
-    - Upload file → Web.Uploader → Api.Gateway callback.
-    - Expose endpoint local để browser gọi.
-
-- **Cấu hình** (`Plugin.Desktop/appsettings.json`):
-
-```json
-"Plugin": {
-  "ListenPrefix": "http://localhost:81/plugin/",
-  "UploaderUrl": "http://localhost:5005/api/upload/file",
-  "GatewayCallbackUrl": "http://localhost:5006/api/upload/callback",
-  "UploaderApiKey": "change_me",
-  "GatewayApiKey": "change_me",
-  "ChannelId": 1,
-  "CreatedBy": 1,
-  "DocTypeId": 1,
-  "FolderId": 0,
-  "SyncType": 2
-}
-```
-
-- **Thành phần**:
-  - `LocalPluginServer` (HttpListener):
-    - `GET /plugin/ping` → kiểm tra sống/chết.
-    - `POST /plugin/upload` body `{ filePath }`:
-      - Gửi file tới `UploaderUrl`.
-      - Gửi `UploadCallbackRequest` tới `GatewayCallbackUrl`.
-  - `Form1`:
-    - Nút Start local endpoint.
-    - Nút chọn file & upload (gọi `/plugin/upload`).
-    - Log ra TextBox.
+- **Mục đích**: Xử lý hàng đợi `export_jobs`, xuất CSV demo lên storage.
+- **Cấu hình**: giống `Worker.Export` trước đây (`Worker` + `Storage` trong `appsettings.json`).
+- **Mở rộng**: tham chiếu logic export Excel / factory theo kênh tại `E:\SourceCodeAXE\AXE-ServiceExport`.
 
 ### 4. Database scripts
 
@@ -279,16 +167,15 @@ Ví dụ `Web.SoHoa/appsettings.json`:
 ### 5. Luồng end-to-end (tóm tắt)
 
 1. **Upload**:
-   - Browser hoặc Plugin gọi `Web.Uploader` (`/api/upload/file`) hoặc `Web.ResumableUploader` (chunk).
+   - Client gọi `Web.Uploader` (`/api/upload/file`).
    - Service lưu file vào NAS, trả `StoredPath`, `PublicUrl`.
 2. **Callback**:
-   - Plugin hoặc service gọi `Api.Gateway /api/upload/callback` (API key).
+   - Client gọi `Web.Uploader` `POST /api/upload/callback` (header `X-Api-Key` = `Uploader:ApiKey`).
    - `DocumentService.CreateFromUploadAsync` tạo record `core_stg.documents` (step = Scan).
 3. **Nghiệp vụ số hóa**:
    - `Web.SoHoa` hiển thị tài liệu scan, cho phép nhập liệu, check, đổi workflow step.
 4. **Queue nền**:
-   - `Worker.Ocr` xử lý OCR queue (stub).
-   - `Worker.Export` xử lý export queue, xuất CSV demo.
+   - `Service.Export` xử lý export queue, xuất CSV demo.
 5. **Quản trị & báo cáo**:
    - `Web.Admin` quản trị user/role/dept/config/log.
    - `Web.Dashboard`/`Web.SoHoa` xem dashboard/report (workflow progress, productivity).

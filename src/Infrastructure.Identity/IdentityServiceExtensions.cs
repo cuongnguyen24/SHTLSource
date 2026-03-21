@@ -8,7 +8,7 @@ public static class IdentityServiceExtensions
 {
     public static IServiceCollection AddInfrastructureIdentity(this IServiceCollection services)
     {
-        services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
+        services.AddSingleton<IPasswordHasher, PlaintextPasswordHasher>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<ICurrentUser>(sp =>
         {

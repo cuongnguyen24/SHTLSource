@@ -1,0 +1,10 @@
+{
+    "ConnectionStrings": {
+        "CoreAcc": "Server=LAPTOP-4JB4PIQ7;Database=Core_Acc;User Id=dev;Password=123456;Encrypt=True;TrustServerCertificate=True;",
+        "CoreCnf": "Server=LAPTOP-4JB4PIQ7;Database=Core_Cnf;User Id=dev;Password=123456;Encrypt=True;TrustServerCertificate=True;",
+        "CoreStg": "Server=LAPTOP-4JB4PIQ7;Database=Core_Stg;User Id=dev;Password=123456;Encrypt=True;TrustServerCertificate=True;",
+        "CoreLog": "Server=LAPTOP-4JB4PIQ7;Database=Core_Log;User Id=dev;Password=123456;Encrypt=True;TrustServerCertificate=True;",
+        "CoreMsg": "Server=LAPTOP-4JB4PIQ7;Database=Core_Msg;User Id=dev;Password=123456;Encrypt=True;TrustServerCertificate=True;",
+        "CoreCatalog": "Server=LAPTOP-4JB4PIQ7;Database=Core_Catalog;User Id=dev;Password=123456;Encrypt=True;TrustServerCertificate=True;"
+    }
+}

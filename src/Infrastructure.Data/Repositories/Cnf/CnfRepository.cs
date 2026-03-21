@@ -40,7 +40,7 @@ public class CnfRepository : BaseRepository, ICnfRepository
     {
         using var conn = _factory.CreateCnfConnection();
         return await QueryAsync<ConfigItemDto>(conn,
-            "SELECT id, channel_id, key, value, group_name, description FROM core_cnf.configs WHERE channel_id = @ChannelId ORDER BY key",
+            "SELECT id, channel_id, [key], value, group_name, [description] FROM core_cnf.configs WHERE channel_id = @ChannelId ORDER BY [key]",
             new { ChannelId = channelId });
     }
 
@@ -48,9 +48,11 @@ public class CnfRepository : BaseRepository, ICnfRepository
     {
         using var conn = _factory.CreateCnfConnection();
         await ExecuteAsync(conn, @"
-            INSERT INTO core_cnf.configs (channel_id, key, value)
-            VALUES (@ChannelId, @Key, @Value)
-            ON CONFLICT (channel_id, key) DO UPDATE SET value = @Value",
+            MERGE core_cnf.configs WITH (HOLDLOCK) AS t
+            USING (SELECT @ChannelId AS cid, @Key AS cfg_key, @Value AS cfg_val) AS s
+            ON (t.channel_id = s.cid AND t.[key] = s.cfg_key)
+            WHEN MATCHED THEN UPDATE SET value = s.cfg_val
+            WHEN NOT MATCHED THEN INSERT (channel_id, [key], value) VALUES (s.cid, s.cfg_key, s.cfg_val);",
             new { ChannelId = channelId, Key = key, Value = value });
     }
 
@@ -67,7 +69,7 @@ public class CnfRepository : BaseRepository, ICnfRepository
     {
         using var conn = _factory.CreateCnfConnection();
         await ExecuteAsync(conn,
-            "INSERT INTO core_cnf.content_types (channel_id, name, code, is_active, created, created_by) VALUES (@ChannelId, @Name, @Code, true, now(), @CreatedBy)",
+            "INSERT INTO core_cnf.content_types (channel_id, name, code, is_active, created, created_by) VALUES (@ChannelId, @Name, @Code, 1, SYSUTCDATETIME(), @CreatedBy)",
             new { ChannelId = channelId, req.Name, req.Code, CreatedBy = createdBy });
     }
 
@@ -75,7 +77,7 @@ public class CnfRepository : BaseRepository, ICnfRepository
     {
         using var conn = _factory.CreateCnfConnection();
         await ExecuteAsync(conn,
-            "UPDATE core_cnf.content_types SET name = @Name, code = @Code, updated = now(), updated_by = @UpdatedBy WHERE id = @Id AND channel_id = @ChannelId",
+            "UPDATE core_cnf.content_types SET name = @Name, code = @Code, updated = SYSUTCDATETIME(), updated_by = @UpdatedBy WHERE id = @Id AND channel_id = @ChannelId",
             new { req.Id, req.Name, req.Code, ChannelId = channelId, UpdatedBy = updatedBy });
     }
 
@@ -92,7 +94,7 @@ public class CnfRepository : BaseRepository, ICnfRepository
     {
         using var conn = _factory.CreateCnfConnection();
         await ExecuteAsync(conn,
-            "INSERT INTO core_cnf.record_types (channel_id, name, code, is_active, created, created_by) VALUES (@ChannelId, @Name, @Code, true, now(), @CreatedBy)",
+            "INSERT INTO core_cnf.record_types (channel_id, name, code, is_active, created, created_by) VALUES (@ChannelId, @Name, @Code, 1, SYSUTCDATETIME(), @CreatedBy)",
             new { ChannelId = channelId, req.Name, req.Code, CreatedBy = createdBy });
     }
 
@@ -100,7 +102,7 @@ public class CnfRepository : BaseRepository, ICnfRepository
     {
         using var conn = _factory.CreateCnfConnection();
         await ExecuteAsync(conn,
-            "UPDATE core_cnf.record_types SET name = @Name, code = @Code, updated = now(), updated_by = @UpdatedBy WHERE id = @Id AND channel_id = @ChannelId",
+            "UPDATE core_cnf.record_types SET name = @Name, code = @Code, updated = SYSUTCDATETIME(), updated_by = @UpdatedBy WHERE id = @Id AND channel_id = @ChannelId",
             new { req.Id, req.Name, req.Code, ChannelId = channelId, UpdatedBy = updatedBy });
     }
 
@@ -117,7 +119,7 @@ public class CnfRepository : BaseRepository, ICnfRepository
     {
         using var conn = _factory.CreateCnfConnection();
         await ExecuteAsync(conn,
-            "INSERT INTO core_cnf.sync_types (channel_id, name, code, is_active, created, created_by) VALUES (@ChannelId, @Name, @Code, true, now(), @CreatedBy)",
+            "INSERT INTO core_cnf.sync_types (channel_id, name, code, is_active, created, created_by) VALUES (@ChannelId, @Name, @Code, 1, SYSUTCDATETIME(), @CreatedBy)",
             new { ChannelId = channelId, req.Name, req.Code, CreatedBy = createdBy });
     }
 
@@ -125,7 +127,7 @@ public class CnfRepository : BaseRepository, ICnfRepository
     {
         using var conn = _factory.CreateCnfConnection();
         await ExecuteAsync(conn,
-            "UPDATE core_cnf.sync_types SET name = @Name, code = @Code, updated = now(), updated_by = @UpdatedBy WHERE id = @Id AND channel_id = @ChannelId",
+            "UPDATE core_cnf.sync_types SET name = @Name, code = @Code, updated = SYSUTCDATETIME(), updated_by = @UpdatedBy WHERE id = @Id AND channel_id = @ChannelId",
             new { req.Id, req.Name, req.Code, ChannelId = channelId, UpdatedBy = updatedBy });
     }
 
@@ -142,7 +144,7 @@ public class CnfRepository : BaseRepository, ICnfRepository
     {
         using var conn = _factory.CreateCnfConnection();
         await ExecuteAsync(conn,
-            "INSERT INTO core_cnf.export_types (channel_id, name, code, exporter_class, is_active, created, created_by) VALUES (@ChannelId, @Name, @Code, @ExporterClass, true, now(), @CreatedBy)",
+            "INSERT INTO core_cnf.export_types (channel_id, name, code, exporter_class, is_active, created, created_by) VALUES (@ChannelId, @Name, @Code, @ExporterClass, 1, SYSUTCDATETIME(), @CreatedBy)",
             new { ChannelId = channelId, req.Name, req.Code, req.ExporterClass, CreatedBy = createdBy });
     }
 
@@ -150,7 +152,7 @@ public class CnfRepository : BaseRepository, ICnfRepository
     {
         using var conn = _factory.CreateCnfConnection();
         await ExecuteAsync(conn,
-            "UPDATE core_cnf.export_types SET name = @Name, code = @Code, exporter_class = @ExporterClass, updated = now(), updated_by = @UpdatedBy WHERE id = @Id AND channel_id = @ChannelId",
+            "UPDATE core_cnf.export_types SET name = @Name, code = @Code, exporter_class = @ExporterClass, updated = SYSUTCDATETIME(), updated_by = @UpdatedBy WHERE id = @Id AND channel_id = @ChannelId",
             new { req.Id, req.Name, req.Code, req.ExporterClass, ChannelId = channelId, UpdatedBy = updatedBy });
     }
 }
