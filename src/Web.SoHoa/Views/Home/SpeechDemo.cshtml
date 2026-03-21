@@ -1,0 +1,149 @@
+@{
+    ViewData["Title"] = "Demo Speech to Text";
+}
+
+<div class="container py-4" style="max-width: 720px;">
+    <h4 class="fw-bold text-dark mb-2">
+        <i class="fas fa-microphone me-2 text-primary"></i>Demo Speech to Text
+    </h4>
+    <p class="text-muted small mb-4">
+        Dùng trình duyệt Google Chrome. Cho phép truy cập micro khi được hỏi. Nói tiếng Việt (hoặc đổi ngôn ngữ bên dưới).
+    </p>
+
+    <div class="mb-3">
+        <label for="speechText" class="form-label fw-semibold">Nội dung</label>
+        <textarea id="speechText" class="form-control" rows="8" placeholder="Nhấn &quot;Bắt đầu nghe&quot; rồi nói vào micro…"></textarea>
+    </div>
+
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+        <button type="button" id="btnStart" class="btn btn-primary">
+            <i class="fas fa-play me-1"></i>Bắt đầu nghe
+        </button>
+        <button type="button" id="btnStop" class="btn btn-outline-secondary" disabled>
+            <i class="fas fa-stop me-1"></i>Dừng
+        </button>
+        <button type="button" id="btnClear" class="btn btn-outline-danger">
+            <i class="fas fa-eraser me-1"></i>Xóa ô
+        </button>
+    </div>
+
+    <div class="row g-2 align-items-end mb-3">
+        <div class="col-md-6">
+            <label for="langSelect" class="form-label small mb-0">Ngôn ngữ nhận dạng</label>
+            <select id="langSelect" class="form-select form-select-sm">
+                <option value="vi-VN" selected>Tiếng Việt (vi-VN)</option>
+                <option value="en-US">English US (en-US)</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="speechStatus" class="small text-muted mb-0">Sẵn sàng.</div>
+</div>
+
+@section Scripts {
+<script>
+(function () {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const statusEl = document.getElementById('speechStatus');
+    const textEl = document.getElementById('speechText');
+    const btnStart = document.getElementById('btnStart');
+    const btnStop = document.getElementById('btnStop');
+    const langSelect = document.getElementById('langSelect');
+
+    if (!SpeechRecognition) {
+        statusEl.textContent = 'Trình duyệt không hỗ trợ Web Speech API. Hãy dùng Google Chrome.';
+        statusEl.classList.add('text-danger');
+        btnStart.disabled = true;
+        return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+
+    let listening = false;
+
+    function setListening(on) {
+        listening = on;
+        btnStart.disabled = on;
+        btnStop.disabled = !on;
+        statusEl.textContent = on ? 'Đang nghe… (nói rõ ràng, gần micro)' : 'Đã dừng.';
+        statusEl.classList.toggle('text-success', on);
+    }
+
+    recognition.lang = langSelect.value;
+
+    langSelect.addEventListener('change', function () {
+        recognition.lang = this.value;
+        if (listening) {
+            recognition.stop();
+            recognition.start();
+        }
+    });
+
+    recognition.onresult = function (event) {
+        let finalText = '';
+        let interim = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+            const r = event.results[i];
+            if (r.isFinal) {
+                finalText += r[0].transcript;
+            } else {
+                interim += r[0].transcript;
+            }
+        }
+        if (finalText) {
+            const cur = textEl.value;
+            const sep = cur && !cur.endsWith(' ') && !cur.endsWith('\n') ? ' ' : '';
+            textEl.value = cur + sep + finalText.trim();
+        }
+        if (interim) {
+            statusEl.textContent = 'Đang nghe… ' + interim;
+        }
+    };
+
+    recognition.onerror = function (e) {
+        if (e.error === 'no-speech' || e.error === 'aborted') {
+            return;
+        }
+        statusEl.classList.add('text-danger');
+        statusEl.textContent = 'Lỗi: ' + e.error;
+        setListening(false);
+    };
+
+    recognition.onend = function () {
+        if (listening) {
+            try {
+                recognition.start();
+            } catch (_) {
+                setListening(false);
+            }
+        }
+    };
+
+    btnStart.addEventListener('click', function () {
+        recognition.lang = langSelect.value;
+        textEl.focus();
+        try {
+            recognition.start();
+            setListening(true);
+            statusEl.classList.remove('text-danger');
+        } catch (err) {
+            statusEl.classList.add('text-danger');
+            statusEl.textContent = 'Không thể bắt đầu: ' + (err && err.message ? err.message : err);
+        }
+    });
+
+    btnStop.addEventListener('click', function () {
+        listening = false;
+        recognition.stop();
+        setListening(false);
+    });
+
+    document.getElementById('btnClear').addEventListener('click', function () {
+        textEl.value = '';
+    });
+})();
+</script>
+}

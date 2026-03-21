@@ -42,6 +42,16 @@ public class HomeController : Controller
         return View();
     }
 
+    /// <summary>
+    /// Demo giọng nói nằm trên Web.SoHoa. Trên Dashboard chỉ chuyển hướng tới module Số hóa (vd /sohoa/... hoặc URL đầy đủ trong cấu hình).
+    /// </summary>
+    [AllowAnonymous]
+    public IActionResult SpeechDemo()
+    {
+        var url = DashboardModuleLinks.Join(_links.SoHoaUrl, "/home/speechdemo");
+        return Redirect(url);
+    }
+
     [AllowAnonymous]
     public IActionResult StatusCode(int? code)
     {

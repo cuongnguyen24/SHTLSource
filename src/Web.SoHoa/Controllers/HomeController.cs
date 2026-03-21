@@ -23,6 +23,12 @@ public class HomeController : Controller
         return View();
     }
 
+    /// <summary>Trang demo speech-to-text (Chrome Web Speech API).</summary>
+    public IActionResult SpeechDemo()
+    {
+        return View();
+    }
+
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
     public IActionResult Error()
     {
