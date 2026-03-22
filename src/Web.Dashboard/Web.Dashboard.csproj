@@ -11,6 +11,7 @@
     <ProjectReference Include="..\Infrastructure.Identity\Infrastructure.Identity.csproj" />
     <ProjectReference Include="..\Infrastructure.Storage\Infrastructure.Storage.csproj" />
     <ProjectReference Include="..\Shared.Contracts\Shared.Contracts.csproj" />
+    <ProjectReference Include="..\Web.Shared\Web.Shared.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

@@ -17,4 +17,9 @@ public class HomeController : BaseAdminController
         var progress = await _reportService.GetWorkflowProgressAsync(ChannelId);
         return View(progress);
     }
+
+    public IActionResult Privacy()
+    {
+        return View();
+    }
 }

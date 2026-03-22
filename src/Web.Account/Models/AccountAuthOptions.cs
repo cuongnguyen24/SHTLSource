@@ -9,4 +9,6 @@ public class AccountAuthOptions
 
     /// <summary>Tiền tố URL được phép (vd: http://localhost:2477, https://site.com).</summary>
     public string[] AllowedReturnUrlPrefixes { get; set; } = Array.Empty<string>();
+
+    public string DefaultLandingUrl { get; set; } = "/";
 }

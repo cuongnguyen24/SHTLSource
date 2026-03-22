@@ -61,6 +61,10 @@ public class SaveConfigRequest
 {
     [Required] public string Key { get; set; } = string.Empty;
     public string? Value { get; set; }
+    /// <summary>Chỉ dùng khi tạo mới (INSERT).</summary>
+    public string? GroupName { get; set; }
+    /// <summary>Mô tả hiển thị; tùy chọn khi tạo mới.</summary>
+    public string? Description { get; set; }
 }
 
 // ---------- Content Type ----------

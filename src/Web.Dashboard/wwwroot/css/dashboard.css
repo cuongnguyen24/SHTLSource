@@ -1,4 +1,4 @@
-/* Thẻ module — gợi nhớ databox AXE: icon trái, viền màu, hover nhẹ */
+/* Thẻ module — trang Home (databox); vỏ header nằm trong Web.Shared shell.css */
 .databox .databox-inner {
   border-left: 4px solid var(--databox-accent, #6c757d);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
@@ -40,4 +40,115 @@
 
 .dashboard-hero {
   padding: 0.25rem 0;
+}
+
+:root {
+  --axe-teal: #006d7e;
+}
+
+.axe-home-page .axe-home-greet {
+  margin-top: 0.25rem;
+}
+
+.axe-databox {
+  background: #fff;
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.axe-databox:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.axe-databox-body {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1rem 1rem 1.1rem;
+  min-height: 7.5rem;
+}
+
+.axe-databox-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.axe-databox-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin: 0 0 0.5rem 0;
+  line-height: 1.25;
+}
+
+.axe-databox-title a {
+  color: var(--axe-teal);
+  text-decoration: none;
+}
+
+.axe-databox-title a:hover {
+  text-decoration: underline;
+}
+
+.axe-databox-links {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: #333;
+}
+
+.axe-databox-links a {
+  color: #212529;
+  text-decoration: none;
+}
+
+.axe-databox-links a:hover {
+  color: var(--axe-teal);
+  text-decoration: underline;
+}
+
+.axe-databox-icon {
+  flex-shrink: 0;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 1.25rem;
+  align-self: center;
+}
+
+.axe-databox-icon--amber {
+  background: linear-gradient(135deg, #f0c040 0%, #e89420 100%);
+}
+
+.axe-databox-icon--orange {
+  background: linear-gradient(135deg, #f5a042 0%, #e07030 100%);
+}
+
+.axe-databox-icon--violet {
+  background: linear-gradient(135deg, #9b7fd4 0%, #6b4fb8 100%);
+}
+
+.axe-databox-icon--cyan {
+  background: linear-gradient(135deg, #4ecbd4 0%, #1fa8b8 100%);
+}
+
+.axe-databox-icon--rose {
+  background: linear-gradient(135deg, #e878a8 0%, #c04888 100%);
+}
+
+@media (max-width: 575.98px) {
+  .axe-databox-body {
+    min-height: auto;
+  }
 }

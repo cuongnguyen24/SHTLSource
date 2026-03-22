@@ -5,6 +5,7 @@
     <ProjectReference Include="..\Infrastructure.Data\Infrastructure.Data.csproj" />
     <ProjectReference Include="..\Infrastructure.Identity\Infrastructure.Identity.csproj" />
     <ProjectReference Include="..\Shared.Contracts\Shared.Contracts.csproj" />
+    <ProjectReference Include="..\Web.Shared\Web.Shared.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

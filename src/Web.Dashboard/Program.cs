@@ -8,18 +8,18 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using System.IO;
 using Web.Dashboard.Models;
+using Web.Shared;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Configuration
     .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "config", "connectionstrings.json"), optional: false, reloadOnChange: true);
 
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews()
+    .AddApplicationPart(typeof(WebSharedMarker).Assembly);
 
-builder.Services.Configure<DashboardModuleLinks>(
-    builder.Configuration.GetSection(DashboardModuleLinks.SectionName));
-builder.Services.Configure<DashboardAuthOptions>(
-    builder.Configuration.GetSection(DashboardAuthOptions.SectionName));
+builder.Services.Configure<ShellOptions>(
+    builder.Configuration.GetSection(ShellOptions.SectionName));
 builder.Services.Configure<ErrorHandlingOptions>(
     builder.Configuration.GetSection(ErrorHandlingOptions.SectionName));
 
@@ -28,17 +28,14 @@ builder.Services.AddInfrastructureIdentity();
 builder.Services.AddInfrastructureStorage(builder.Configuration);
 builder.Services.AddCoreApplication();
 
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(opts =>
-    {
-        opts.LoginPath = "/Account/Login";
-        opts.LogoutPath = "/Account/Logout";
-        opts.AccessDeniedPath = "/Account/Login";
-        opts.SlidingExpiration = true;
-        opts.ExpireTimeSpan = TimeSpan.FromHours(8);
-        opts.Events.OnRedirectToLogin = ctx => RedirectToAccountLogin(ctx);
-        opts.Events.OnRedirectToAccessDenied = ctx => RedirectToAccountLogin(ctx);
-    });
+builder.Services.AddShtlAuthenticationWithSharedCookie(builder.Configuration, opts =>
+{
+    opts.LoginPath = "/Account/Login";
+    opts.LogoutPath = "/Account/Logout";
+    opts.AccessDeniedPath = "/Account/Login";
+    opts.Events.OnRedirectToLogin = ctx => RedirectToAccountLogin(ctx);
+    opts.Events.OnRedirectToAccessDenied = ctx => RedirectToAccountLogin(ctx);
+});
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
@@ -72,6 +69,14 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapGet("/home.html", (HttpContext ctx) =>
+{
+    var basePath = ctx.Request.PathBase.Value?.TrimEnd('/') ?? "";
+    var target = string.IsNullOrEmpty(basePath) ? "/" : basePath + "/";
+    ctx.Response.Redirect(target);
+    return Task.CompletedTask;
+});
+
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
@@ -81,7 +86,7 @@ app.Run();
 static Task RedirectToAccountLogin(RedirectContext<CookieAuthenticationOptions> ctx)
 {
     var loginUrl = ctx.HttpContext.RequestServices
-        .GetRequiredService<IOptions<DashboardAuthOptions>>().Value.ExternalLoginUrl;
+        .GetRequiredService<IOptions<ShellOptions>>().Value.ExternalLoginUrl;
     if (string.IsNullOrWhiteSpace(loginUrl))
         loginUrl = "/account/Account/Login";
 

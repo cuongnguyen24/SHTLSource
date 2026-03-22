@@ -37,7 +37,7 @@ public class ConfigService : IConfigService
 
     public async Task<ApiResult> SaveConfigAsync(SaveConfigRequest req, int channelId, ICurrentUser currentUser)
     {
-        await _cnfRepo.UpsertConfigAsync(req.Key, req.Value, channelId, currentUser.Id);
+        await _cnfRepo.UpsertConfigAsync(req.Key, req.Value, channelId, currentUser.Id, req.GroupName, req.Description);
         return ApiResult.Ok("Đã lưu cấu hình");
     }
 

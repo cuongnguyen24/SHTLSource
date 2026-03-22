@@ -4,19 +4,20 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Web.Dashboard.Models;
+using Web.Shared;
 
 namespace Web.Dashboard.Controllers;
 
 public class HomeController : Controller
 {
     private readonly ILogger<HomeController> _logger;
-    private readonly DashboardModuleLinks _links;
+    private readonly ShellOptions _links;
     private readonly ICurrentUser _currentUser;
     private readonly ErrorHandlingOptions _errorHandling;
 
     public HomeController(
         ILogger<HomeController> logger,
-        IOptions<DashboardModuleLinks> links,
+        IOptions<ShellOptions> links,
         IOptions<ErrorHandlingOptions> errorHandling,
         ICurrentUser currentUser)
     {
@@ -42,13 +43,11 @@ public class HomeController : Controller
         return View();
     }
 
-    /// <summary>
-    /// Demo giọng nói nằm trên Web.SoHoa. Trên Dashboard chỉ chuyển hướng tới module Số hóa (vd /sohoa/... hoặc URL đầy đủ trong cấu hình).
-    /// </summary>
+    /// <summary>Demo giọng nói nằm trên Web.SoHoa.</summary>
     [AllowAnonymous]
     public IActionResult SpeechDemo()
     {
-        var url = DashboardModuleLinks.Join(_links.SoHoaUrl, "/home/speechdemo");
+        var url = ShellOptions.Join(_links.SoHoaUrl, "/home/speechdemo");
         return Redirect(url);
     }
 

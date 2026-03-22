@@ -17,6 +17,7 @@ public class ConfigController : BaseAdminController
     public async Task<IActionResult> Index()
     {
         var configs = await _configService.GetSystemConfigsAsync(ChannelId);
+        ViewData["Title"] = "Cấu hình thông số";
         return View(configs);
     }
 

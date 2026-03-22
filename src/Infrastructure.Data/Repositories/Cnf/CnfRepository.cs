@@ -8,7 +8,7 @@ public interface ICnfRepository
 {
     // Config
     Task<IEnumerable<ConfigItemDto>> GetConfigsAsync(int channelId);
-    Task UpsertConfigAsync(string key, string? value, int channelId, int updatedBy);
+    Task UpsertConfigAsync(string key, string? value, int channelId, int updatedBy, string? groupName = null, string? description = null);
 
     // Content type
     Task<IEnumerable<ContentTypeDto>> GetContentTypesAsync(int channelId);
@@ -40,20 +40,23 @@ public class CnfRepository : BaseRepository, ICnfRepository
     {
         using var conn = _factory.CreateCnfConnection();
         return await QueryAsync<ConfigItemDto>(conn,
-            "SELECT id, channel_id, [key], value, group_name, [description] FROM core_cnf.configs WHERE channel_id = @ChannelId ORDER BY [key]",
+            @"SELECT id AS Id, channel_id AS ChannelId, [key] AS [Key], value AS Value,
+                     group_name AS GroupName, [description] AS Description
+              FROM core_cnf.configs WHERE channel_id = @ChannelId ORDER BY group_name, [key]",
             new { ChannelId = channelId });
     }
 
-    public async Task UpsertConfigAsync(string key, string? value, int channelId, int updatedBy)
+    public async Task UpsertConfigAsync(string key, string? value, int channelId, int updatedBy, string? groupName = null, string? description = null)
     {
         using var conn = _factory.CreateCnfConnection();
         await ExecuteAsync(conn, @"
             MERGE core_cnf.configs WITH (HOLDLOCK) AS t
-            USING (SELECT @ChannelId AS cid, @Key AS cfg_key, @Value AS cfg_val) AS s
+            USING (SELECT @ChannelId AS cid, @Key AS cfg_key, @Value AS cfg_val, @GroupName AS gname, @Description AS descr) AS s
             ON (t.channel_id = s.cid AND t.[key] = s.cfg_key)
             WHEN MATCHED THEN UPDATE SET value = s.cfg_val
-            WHEN NOT MATCHED THEN INSERT (channel_id, [key], value) VALUES (s.cid, s.cfg_key, s.cfg_val);",
-            new { ChannelId = channelId, Key = key, Value = value });
+            WHEN NOT MATCHED THEN INSERT (channel_id, [key], value, group_name, [description])
+                VALUES (s.cid, s.cfg_key, s.cfg_val, s.gname, s.descr);",
+            new { ChannelId = channelId, Key = key, Value = value, GroupName = groupName, Description = description });
     }
 
     // ---------- Content Type ----------

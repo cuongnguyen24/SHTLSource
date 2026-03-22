@@ -27,6 +27,12 @@ public class AccountController : Controller
         _env = env;
     }
 
+    private string DefaultLandingUrl()
+    {
+        var u = _authOptions.Value.DefaultLandingUrl?.Trim();
+        return string.IsNullOrEmpty(u) ? "/" : u;
+    }
+
     private bool IsAllowedReturnUrl(string? returnUrl)
     {
         if (string.IsNullOrWhiteSpace(returnUrl)) return false;
@@ -46,7 +52,7 @@ public class AccountController : Controller
     public IActionResult Login(string? returnUrl)
     {
         if (User.Identity?.IsAuthenticated == true)
-            return RedirectToAction("Index", "Home");
+            return Redirect(DefaultLandingUrl());
         ViewBag.ReturnUrl = returnUrl;
         return View(new LoginRequest());
     }
@@ -67,7 +73,7 @@ public class AccountController : Controller
             }
             if (!string.IsNullOrEmpty(returnUrl) && IsAllowedReturnUrl(returnUrl))
                 return Redirect(returnUrl);
-            return RedirectToAction("Index", "Home");
+            return Redirect(DefaultLandingUrl());
         }
         catch (Exception ex)
         {

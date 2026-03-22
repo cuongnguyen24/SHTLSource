@@ -5,64 +5,231 @@
     var greet = Model.User is { } u && !string.IsNullOrWhiteSpace(u.FullName)
         ? u.FullName
         : User.Identity?.Name;
+    string J(string baseUrl, string path) => ShellOptions.Join(baseUrl, path);
 }
 
-<div class="dashboard-hero mb-4">
-    <h1 class="h3 mb-1">Xin chào@(string.IsNullOrEmpty(greet) ? "" : $", {greet}")</h1>
-    <p class="text-muted mb-0">Chọn module để làm việc — cấu hình URL trong <code>appsettings.json</code> mục <code>Dashboard</code>.</p>
-</div>
+@section Styles {
+    <link rel="stylesheet" href="~/css/dashboard.css" asp-append-version="true" />
+}
 
-<div class="row g-4">
-    <div class="col-12 col-md-6 col-xl-3">
-        <a href="@L.AdminUrl" class="text-decoration-none databox databox-admin" target="_blank" rel="noopener">
-            <div class="card h-100 border-0 shadow-sm databox-inner">
-                <div class="card-body d-flex align-items-start gap-3">
-                    <div class="databox-icon"><i class="fas fa-cogs"></i></div>
-                    <div>
-                        <h2 class="h5 card-title text-dark mb-1">Quản trị</h2>
-                        <p class="card-text small text-muted mb-0">Người dùng, kênh, cấu hình hệ thống.</p>
+<div class="axe-home-page">
+    <p class="axe-home-greet text-muted small mb-3 mb-md-4">
+        Xin chào@(string.IsNullOrEmpty(greet) ? "" : $", <strong>{greet}</strong>") — chọn chức năng bên dưới.
+    </p>
+
+    <div class="row g-3 g-md-4">
+        <!-- Quản trị hệ thống -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="axe-databox h-100">
+                <div class="axe-databox-body">
+                    <div class="axe-databox-text">
+                        <h2 class="axe-databox-title">
+                            <a href="@L.AdminUrl" target="_blank" rel="noopener">Quản trị hệ thống</a>
+                        </h2>
+                        <ul class="axe-databox-links">
+                            <li><a href="@J(L.AdminUrl, "/Log/Action")" target="_blank" rel="noopener">Nhật ký hệ thống</a></li>
+                            <li><a href="@J(L.AdminUrl, "/config.html")" target="_blank" rel="noopener">Cấu hình hệ thống</a></li>
+                            <li><a href="@J(L.AdminUrl, "/User")" target="_blank" rel="noopener">Người dùng</a></li>
+                            <li><a href="@J(L.AdminUrl, "/Role")" target="_blank" rel="noopener">Vai trò</a></li>
+                        </ul>
+                    </div>
+                    <div class="axe-databox-icon axe-databox-icon--amber" aria-hidden="true">
+                        <i class="fas fa-cog"></i>
                     </div>
                 </div>
             </div>
-        </a>
-    </div>
-    <div class="col-12 col-md-6 col-xl-3">
-        <a href="@L.SoHoaUrl" class="text-decoration-none databox databox-sohoa" target="_blank" rel="noopener">
-            <div class="card h-100 border-0 shadow-sm databox-inner">
-                <div class="card-body d-flex align-items-start gap-3">
-                    <div class="databox-icon"><i class="fas fa-file-alt"></i></div>
-                    <div>
-                        <h2 class="h5 card-title text-dark mb-1">Số hóa</h2>
-                        <p class="card-text small text-muted mb-0">Scan, kiểm tra, nhập liệu, export.</p>
+        </div>
+
+        <!-- Quản lý người dùng / phòng ban -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="axe-databox h-100">
+                <div class="axe-databox-body">
+                    <div class="axe-databox-text">
+                        <h2 class="axe-databox-title">
+                            <a href="@J(L.AdminUrl, "/User")" target="_blank" rel="noopener">Quản lý người dùng phòng ban</a>
+                        </h2>
+                        <ul class="axe-databox-links">
+                            <li><a href="@J(L.AdminUrl, "/User")" target="_blank" rel="noopener">Người dùng</a></li>
+                            <li><a href="@J(L.AdminUrl, "/Dept")" target="_blank" rel="noopener">Phòng ban</a></li>
+                        </ul>
+                    </div>
+                    <div class="axe-databox-icon axe-databox-icon--orange" aria-hidden="true">
+                        <i class="fas fa-layer-group"></i>
                     </div>
                 </div>
             </div>
-        </a>
-    </div>
-    <div class="col-12 col-md-6 col-xl-3">
-        <a href="@L.UploaderUrl" class="text-decoration-none databox databox-uploader" target="_blank" rel="noopener">
-            <div class="card h-100 border-0 shadow-sm databox-inner">
-                <div class="card-body d-flex align-items-start gap-3">
-                    <div class="databox-icon"><i class="fas fa-cloud-upload-alt"></i></div>
-                    <div>
-                        <h2 class="h5 card-title text-dark mb-1">Uploader</h2>
-                        <p class="card-text small text-muted mb-0">Tải tệp lên hệ thống lưu trữ.</p>
+        </div>
+
+        <!-- Quản lý danh mục (cấu hình nghiệp vụ trong Admin) -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="axe-databox h-100">
+                <div class="axe-databox-body">
+                    <div class="axe-databox-text">
+                        <h2 class="axe-databox-title">
+                            <a href="@J(L.AdminUrl, "/Config")" target="_blank" rel="noopener">Quản lý danh mục</a>
+                        </h2>
+                        <ul class="axe-databox-links">
+                            <li><a href="@J(L.AdminUrl, "/Config")" target="_blank" rel="noopener">Cấu hình &amp; danh mục</a></li>
+                        </ul>
+                    </div>
+                    <div class="axe-databox-icon axe-databox-icon--orange" aria-hidden="true">
+                        <i class="fas fa-list-ul"></i>
                     </div>
                 </div>
             </div>
-        </a>
-    </div>
-    <div class="col-12 col-md-6 col-xl-3">
-        <a href="@L.ProfileUrl" class="text-decoration-none databox databox-account" target="_blank" rel="noopener">
-            <div class="card h-100 border-0 shadow-sm databox-inner">
-                <div class="card-body d-flex align-items-start gap-3">
-                    <div class="databox-icon"><i class="fas fa-id-card"></i></div>
-                    <div>
-                        <h2 class="h5 card-title text-dark mb-1">Hồ sơ</h2>
-                        <p class="card-text small text-muted mb-0">Thông tin tài khoản (Web.Account).</p>
+        </div>
+
+        <!-- Quét tài liệu -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="axe-databox h-100">
+                <div class="axe-databox-body">
+                    <div class="axe-databox-text">
+                        <h2 class="axe-databox-title">
+                            <a href="@J(L.SoHoaUrl, "/scan")" target="_blank" rel="noopener">Quét tài liệu</a>
+                        </h2>
+                        <ul class="axe-databox-links">
+                            <li><a href="@J(L.SoHoaUrl, "/scan")" target="_blank" rel="noopener">Scan / Upload</a></li>
+                        </ul>
+                    </div>
+                    <div class="axe-databox-icon axe-databox-icon--violet" aria-hidden="true">
+                        <i class="fas fa-print"></i>
                     </div>
                 </div>
             </div>
-        </a>
+        </div>
+
+        <!-- Nhập liệu -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="axe-databox h-100">
+                <div class="axe-databox-body">
+                    <div class="axe-databox-text">
+                        <h2 class="axe-databox-title">
+                            <a href="@J(L.SoHoaUrl, "/extract")" target="_blank" rel="noopener">Nhập liệu</a>
+                        </h2>
+                        <ul class="axe-databox-links">
+                            <li><a href="@J(L.SoHoaUrl, "/extract")" target="_blank" rel="noopener">Bắt đầu — phiếu</a></li>
+                        </ul>
+                    </div>
+                    <div class="axe-databox-icon axe-databox-icon--violet" aria-hidden="true">
+                        <i class="fas fa-pen"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kiểm tra nhập lần 1 -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="axe-databox h-100">
+                <div class="axe-databox-body">
+                    <div class="axe-databox-text">
+                        <h2 class="axe-databox-title">
+                            <a href="@J(L.SoHoaUrl, "/check/check1")" target="_blank" rel="noopener">Kiểm tra nhập lần 1</a>
+                        </h2>
+                        <ul class="axe-databox-links">
+                            <li><a href="@J(L.SoHoaUrl, "/check/check1")" target="_blank" rel="noopener">Bắt đầu — phiếu</a></li>
+                        </ul>
+                    </div>
+                    <div class="axe-databox-icon axe-databox-icon--violet" aria-hidden="true">
+                        <i class="fas fa-check"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kiểm tra lần 2 -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="axe-databox h-100">
+                <div class="axe-databox-body">
+                    <div class="axe-databox-text">
+                        <h2 class="axe-databox-title">
+                            <a href="@J(L.SoHoaUrl, "/check/check2")" target="_blank" rel="noopener">Kiểm tra lần 2</a>
+                        </h2>
+                        <ul class="axe-databox-links">
+                            <li><a href="@J(L.SoHoaUrl, "/check/check2")" target="_blank" rel="noopener">Bắt đầu — phiếu</a></li>
+                        </ul>
+                    </div>
+                    <div class="axe-databox-icon axe-databox-icon--violet" aria-hidden="true">
+                        <i class="fas fa-check-double"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Thống kê số hóa -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="axe-databox h-100">
+                <div class="axe-databox-body">
+                    <div class="axe-databox-text">
+                        <h2 class="axe-databox-title">
+                            <a href="@J(L.SoHoaUrl, "/")" target="_blank" rel="noopener">Thống kê số hóa</a>
+                        </h2>
+                        <ul class="axe-databox-links">
+                            <li><a href="@J(L.SoHoaUrl, "/")" target="_blank" rel="noopener">Tiến độ (Dashboard Số hóa)</a></li>
+                        </ul>
+                    </div>
+                    <div class="axe-databox-icon axe-databox-icon--violet" aria-hidden="true">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Xuất dữ liệu -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="axe-databox h-100">
+                <div class="axe-databox-body">
+                    <div class="axe-databox-text">
+                        <h2 class="axe-databox-title">
+                            <a href="@J(L.SoHoaUrl, "/export")" target="_blank" rel="noopener">Xuất dữ liệu</a>
+                        </h2>
+                        <ul class="axe-databox-links">
+                            <li><a href="@J(L.SoHoaUrl, "/export")" target="_blank" rel="noopener">Danh sách</a></li>
+                        </ul>
+                    </div>
+                    <div class="axe-databox-icon axe-databox-icon--violet" aria-hidden="true">
+                        <i class="fas fa-folder-open"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Uploader -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="axe-databox h-100">
+                <div class="axe-databox-body">
+                    <div class="axe-databox-text">
+                        <h2 class="axe-databox-title">
+                            <a href="@L.UploaderUrl" target="_blank" rel="noopener">Uploader</a>
+                        </h2>
+                        <ul class="axe-databox-links">
+                            <li><a href="@L.UploaderUrl" target="_blank" rel="noopener">Tải tệp lên</a></li>
+                        </ul>
+                    </div>
+                    <div class="axe-databox-icon axe-databox-icon--cyan" aria-hidden="true">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hồ sơ / tài khoản -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="axe-databox h-100">
+                <div class="axe-databox-body">
+                    <div class="axe-databox-text">
+                        <h2 class="axe-databox-title">
+                            <a href="@L.ProfileUrl" target="_blank" rel="noopener">Tài khoản &amp; hồ sơ</a>
+                        </h2>
+                        <ul class="axe-databox-links">
+                            <li><a href="@L.AccountUrl" target="_blank" rel="noopener">Tài khoản</a></li>
+                            <li><a href="@L.ProfileUrl" target="_blank" rel="noopener">Hồ sơ</a></li>
+                        </ul>
+                    </div>
+                    <div class="axe-databox-icon axe-databox-icon--rose" aria-hidden="true">
+                        <i class="fas fa-id-card"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>

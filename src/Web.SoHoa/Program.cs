@@ -2,39 +2,39 @@ using Core.Application;
 using Infrastructure.Data;
 using Infrastructure.Identity;
 using Infrastructure.Storage;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.Extensions.Options;
 using System.IO;
+using Web.Shared;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Configuration
     .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "config", "connectionstrings.json"), optional: false, reloadOnChange: true);
 
-// Add MVC
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews()
+    .AddApplicationPart(typeof(WebSharedMarker).Assembly);
 
-// Infrastructure
+builder.Services.Configure<ShellOptions>(
+    builder.Configuration.GetSection(ShellOptions.SectionName));
+
 builder.Services.AddInfrastructureData(builder.Configuration);
 builder.Services.AddInfrastructureIdentity();
 builder.Services.AddInfrastructureStorage(builder.Configuration);
-
-// Application
 builder.Services.AddCoreApplication();
 
-// Cookie Authentication
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(opts =>
-    {
-        opts.LoginPath = "/account/login";
-        opts.LogoutPath = "/account/logout";
-        opts.AccessDeniedPath = "/account/access-denied";
-        opts.SlidingExpiration = true;
-        opts.ExpireTimeSpan = TimeSpan.FromHours(8);
-    });
+builder.Services.AddShtlAuthenticationWithSharedCookie(builder.Configuration, opts =>
+{
+    opts.LoginPath = "/account/Account/Login";
+    opts.LogoutPath = "/account/Account/Logout";
+    opts.AccessDeniedPath = "/account/Account/Login";
+    opts.Events.OnRedirectToLogin = ctx => RedirectToExternalLogin(ctx);
+    opts.Events.OnRedirectToAccessDenied = ctx => RedirectToExternalLogin(ctx);
+});
 
 builder.Services.AddAuthorization();
 
-// Session
 builder.Services.AddSession(opts =>
 {
     opts.IdleTimeout = TimeSpan.FromHours(2);
@@ -42,7 +42,6 @@ builder.Services.AddSession(opts =>
     opts.Cookie.IsEssential = true;
 });
 
-// Memory Cache
 builder.Services.AddMemoryCache();
 
 var app = builder.Build();
@@ -53,6 +52,7 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthentication();
@@ -64,3 +64,28 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();
+
+static Task RedirectToExternalLogin(RedirectContext<CookieAuthenticationOptions> ctx)
+{
+    var loginUrl = ctx.HttpContext.RequestServices
+        .GetRequiredService<IOptions<ShellOptions>>().Value.ExternalLoginUrl;
+    if (string.IsNullOrWhiteSpace(loginUrl))
+        loginUrl = "/account/Account/Login";
+
+    var req = ctx.HttpContext.Request;
+    string returnUrl;
+    if (loginUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+        || loginUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+    {
+        returnUrl = $"{req.Scheme}://{req.Host}{req.PathBase}{req.Path}{req.QueryString}";
+    }
+    else
+    {
+        returnUrl = $"{req.PathBase}{req.Path}{req.QueryString}";
+    }
+
+    var sep = loginUrl.Contains('?', StringComparison.Ordinal) ? "&" : "?";
+    var target = $"{loginUrl.TrimEnd('/')}{sep}returnUrl={Uri.EscapeDataString(returnUrl)}";
+    ctx.Response.Redirect(target);
+    return Task.CompletedTask;
+}

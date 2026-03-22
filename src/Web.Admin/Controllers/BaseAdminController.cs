@@ -1,7 +1,9 @@
 using Core.Domain.Contracts;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.Extensions.Options;
 using Shared.Contracts;
+using Web.Shared;
 
 namespace Web.Admin.Controllers;
 
@@ -12,13 +14,29 @@ public abstract class BaseAdminController : Controller
 
     public override async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
-        // Resolve ICurrentUser from request services (registered as scoped per request)
         var currentUser = context.HttpContext.RequestServices
             .GetService(typeof(ICurrentUser)) as ICurrentUser;
 
         if (currentUser == null || currentUser.Id == 0)
         {
-            context.Result = RedirectToAction("Login", "Account");
+            var shell = context.HttpContext.RequestServices.GetRequiredService<IOptions<ShellOptions>>().Value;
+            var loginUrl = string.IsNullOrWhiteSpace(shell.ExternalLoginUrl)
+                ? "/account/Account/Login"
+                : shell.ExternalLoginUrl.TrimEnd('/');
+            var req = context.HttpContext.Request;
+            string returnUrl;
+            if (loginUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                || loginUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                returnUrl = $"{req.Scheme}://{req.Host}{req.PathBase}{req.Path}{req.QueryString}";
+            }
+            else
+            {
+                returnUrl = $"{req.PathBase}{req.Path}{req.QueryString}";
+            }
+
+            var sep = loginUrl.Contains('?', StringComparison.Ordinal) ? "&" : "?";
+            context.Result = new RedirectResult($"{loginUrl}{sep}returnUrl={Uri.EscapeDataString(returnUrl)}");
             return;
         }
 

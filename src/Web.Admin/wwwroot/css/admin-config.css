@@ -1,0 +1,51 @@
+/* Trang cấu hình thông số — gần với AXE admin/config */
+:root {
+  --cfg-teal: #006d7e;
+  --cfg-teal-dark: #005a68;
+}
+
+.admin-config-page .cfg-navbar {
+  background: linear-gradient(90deg, var(--cfg-teal) 0%, var(--cfg-teal-dark) 100%);
+}
+
+.admin-config-page .cfg-card {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.admin-config-page .cfg-card-header {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  background: #fff;
+}
+
+.admin-config-page .cfg-title {
+  color: var(--cfg-teal);
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+}
+
+.admin-config-page .table-striped > tbody > tr:nth-of-type(odd) > * {
+  --bs-table-bg-type: rgba(0, 0, 0, 0.02);
+}
+
+.admin-config-page .cfg-group-row td {
+  background: #f0f4f6 !important;
+  font-weight: 600;
+  color: #333;
+}
+
+.admin-config-page .form-switch .form-check-input {
+  width: 2.5rem;
+  cursor: pointer;
+}
+
+.admin-config-page .btn-pencil {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
