@@ -1,0 +1,35 @@
+@model IEnumerable<Shared.Contracts.Dtos.RoleDto>
+@{
+    ViewData["Title"] = ViewData["PageTitle"];
+    var list = Model?.ToList() ?? new List<Shared.Contracts.Dtos.RoleDto>();
+}
+@section Styles {
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+}
+<partial name="_ShtlPageHeader" />
+
+<div class="table-responsive shtl-crud-card">
+    <table class="table table-sm table-hover mb-0 align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>Mã</th>
+                <th>Tên</th>
+                <th>Mô tả</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var r in list)
+            {
+                <tr>
+                    <td><code>@r.Code</code></td>
+                    <td>@r.Name</td>
+                    <td class="small text-muted">@r.Description</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+@if (list.Count == 0)
+{
+    <p class="text-muted mt-2">Chưa có vai trò.</p>
+}

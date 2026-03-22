@@ -1,0 +1,45 @@
+@model Shared.Contracts.Dtos.CreateUserRequest
+@{
+    ViewData["Title"] = ViewData["PageTitle"];
+}
+@section Styles {
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+}
+<partial name="_ShtlPageHeader" />
+
+<form asp-action="Create" method="post" class="card shtl-crud-card p-3 shadow-sm" style="max-width:520px;">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <input type="hidden" asp-for="ChannelId" />
+    <div class="mb-2">
+        <label asp-for="UserName" class="form-label"></label>
+        <input asp-for="UserName" class="form-control form-control-sm" />
+        <span asp-validation-for="UserName" class="text-danger small"></span>
+    </div>
+    <div class="mb-2">
+        <label asp-for="Email" class="form-label"></label>
+        <input asp-for="Email" class="form-control form-control-sm" />
+    </div>
+    <div class="mb-2">
+        <label asp-for="FullName" class="form-label"></label>
+        <input asp-for="FullName" class="form-control form-control-sm" />
+    </div>
+    <div class="mb-2">
+        <label asp-for="Password" class="form-label"></label>
+        <input asp-for="Password" type="password" class="form-control form-control-sm" />
+    </div>
+    <div class="mb-2">
+        <label asp-for="DeptId" class="form-label">Phòng ban (Id)</label>
+        <input asp-for="DeptId" type="number" class="form-control form-control-sm" value="0" />
+    </div>
+    <div class="mb-2">
+        <label asp-for="PositionId" class="form-label">Chức vụ (Id)</label>
+        <input asp-for="PositionId" type="number" class="form-control form-control-sm" value="0" />
+    </div>
+    <div class="form-check mb-3">
+        <input asp-for="IsAdmin" class="form-check-input" />
+        <label asp-for="IsAdmin" class="form-check-label">Quản trị</label>
+    </div>
+    <button type="submit" class="btn btn-primary btn-sm">Lưu</button>
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">Hủy</a>
+</form>

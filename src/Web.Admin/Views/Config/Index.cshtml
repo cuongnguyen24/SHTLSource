@@ -1,5 +1,6 @@
 @model IEnumerable<ConfigItemDto>
 @{
+    ViewData["Title"] = ViewData["PageTitle"];
     var list = Model?.ToList() ?? new List<ConfigItemDto>();
     var grouped = list
         .GroupBy(c => string.IsNullOrWhiteSpace(c.GroupName) ? "Khác" : c.GroupName!)
@@ -13,20 +14,10 @@
 }
 
 <div class="admin-config-page">
-    <nav class="navbar navbar-dark cfg-navbar mb-3 rounded px-3 py-2">
-        <div class="d-flex flex-wrap align-items-center gap-2 w-100 justify-content-between">
-            <ol class="breadcrumb mb-0 text-white small flex-grow-1">
-                <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index" class="text-white text-decoration-none"><i class="fas fa-home me-1"></i>Tổng quan</a></li>
-                <li class="breadcrumb-item active text-white-50" aria-current="page">Cấu hình thông số</li>
-            </ol>
-        </div>
-    </nav>
+    <partial name="_ShtlPageHeader" />
 
     <div class="card cfg-card">
-        <div class="cfg-card-header d-flex flex-wrap align-items-center justify-content-between gap-2 p-3">
-            <h1 class="cfg-title mb-0 text-uppercase">
-                <i class="fas fa-sliders-h me-2"></i>Cấu hình thông số
-            </h1>
+        <div class="cfg-card-header d-flex flex-wrap align-items-center justify-content-end gap-2 p-3">
             <div class="d-flex flex-wrap gap-2">
                 <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="Tính năng sẽ bổ sung">
                     <i class="fas fa-undo me-1"></i>Khôi phục mặc định

@@ -51,8 +51,51 @@
   margin-right: auto;
 }
 
-.axe-home-page .axe-home-greet {
-  margin-top: 0.25rem;
+/* Toàn chiều ngang (menu Admin sát mép trái, không bị max-width căn giữa) */
+.axe-main--flush {
+  max-width: none !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  width: 100%;
+}
+
+/* --- Trang danh sách / CRUD (dùng chung mọi app có Web.Shared) --- */
+.shtl-crud-breadcrumb {
+  background: linear-gradient(90deg, var(--axe-teal) 0%, var(--axe-teal-dark) 100%);
+  border-radius: 0.35rem;
+  padding: 0.5rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.shtl-crud-breadcrumb .breadcrumb {
+  margin-bottom: 0;
+}
+
+.shtl-crud-title {
+  color: var(--axe-teal);
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.shtl-crud-toolbar {
+  gap: 0.5rem;
+}
+
+.shtl-crud-card {
+  background: #fff;
+  border-radius: 0.35rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.shtl-crud-search .form-control {
+  border-color: rgba(0, 109, 126, 0.25);
+}
+
+.shtl-crud-search .btn-primary {
+  background-color: var(--axe-teal);
+  border-color: var(--axe-teal-dark);
 }
 
 .axe-hotline {

@@ -1,6 +1,7 @@
 using Core.Application.Services;
 using Microsoft.AspNetCore.Mvc;
 using Shared.Contracts.Dtos;
+using Web.Shared;
 
 namespace Web.Admin.Controllers;
 
@@ -38,7 +39,18 @@ public class DeptController : BaseAdminController
     {
         var dept = await _deptService.GetByIdAsync(id);
         if (dept is null) return NotFound();
-        return View(dept);
+        var model = new UpdateDeptRequest
+        {
+            Id = dept.Id,
+            Name = dept.Name,
+            Code = dept.Code,
+            ParentId = dept.ParentId
+        };
+        SetPageHeader("Sửa phòng ban", "edit",
+            new BreadcrumbItem { Text = "Tổng quan", Url = Url.Action("Index", "Home") },
+            new BreadcrumbItem { Text = "Cơ cấu", Url = Url.Action("Index", "Dept") },
+            new BreadcrumbItem { Text = dept.Name });
+        return View(model);
     }
 
     [HttpPost]

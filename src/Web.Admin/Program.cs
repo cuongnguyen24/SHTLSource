@@ -55,6 +55,64 @@ app.MapGet("/config.html", (HttpContext ctx) =>
     return Task.CompletedTask;
 });
 
+app.MapGet("/configversion.html", (HttpContext ctx) =>
+{
+    var pb = ctx.Request.PathBase.Value?.TrimEnd('/') ?? "";
+    var target = string.IsNullOrEmpty(pb) ? "/ConfigVersion" : pb + "/ConfigVersion";
+    ctx.Response.Redirect(target);
+    return Task.CompletedTask;
+});
+
+app.MapGet("/log.html", (HttpContext ctx) =>
+{
+    var pb = ctx.Request.PathBase.Value?.TrimEnd('/') ?? "";
+    var login = ctx.Request.Query["IsLogin"].ToString();
+    var sub = string.Equals(login, "1", StringComparison.Ordinal) ? "/Log/Login" : "/Log/Access";
+    var target = string.IsNullOrEmpty(pb) ? sub : pb + sub;
+    var q = ctx.Request.QueryString.Value;
+    ctx.Response.Redirect(target + (string.IsNullOrEmpty(q) ? "" : q));
+    return Task.CompletedTask;
+});
+
+app.MapGet("/log/detail.html", (HttpContext ctx) =>
+{
+    var pb = ctx.Request.PathBase.Value?.TrimEnd('/') ?? "";
+    var target = string.IsNullOrEmpty(pb) ? "/Log/Detail" : pb + "/Log/Detail";
+    var q = ctx.Request.QueryString.Value;
+    ctx.Response.Redirect(target + (string.IsNullOrEmpty(q) ? "" : q));
+    return Task.CompletedTask;
+});
+
+app.MapGet("/log/action.html", (HttpContext ctx) =>
+{
+    var pb = ctx.Request.PathBase.Value?.TrimEnd('/') ?? "";
+    var target = string.IsNullOrEmpty(pb) ? "/Log/Action" : pb + "/Log/Action";
+    var q = ctx.Request.QueryString.Value;
+    ctx.Response.Redirect(target + (string.IsNullOrEmpty(q) ? "" : q));
+    return Task.CompletedTask;
+});
+
+app.MapGet("/user.html", (HttpContext ctx) =>
+{
+    var pb = ctx.Request.PathBase.Value?.TrimEnd('/') ?? "";
+    ctx.Response.Redirect(string.IsNullOrEmpty(pb) ? "/User" : pb + "/User");
+    return Task.CompletedTask;
+});
+
+app.MapGet("/role.html", (HttpContext ctx) =>
+{
+    var pb = ctx.Request.PathBase.Value?.TrimEnd('/') ?? "";
+    ctx.Response.Redirect(string.IsNullOrEmpty(pb) ? "/Role" : pb + "/Role");
+    return Task.CompletedTask;
+});
+
+app.MapGet("/dept.html", (HttpContext ctx) =>
+{
+    var pb = ctx.Request.PathBase.Value?.TrimEnd('/') ?? "";
+    ctx.Response.Redirect(string.IsNullOrEmpty(pb) ? "/Dept" : pb + "/Dept");
+    return Task.CompletedTask;
+});
+
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");

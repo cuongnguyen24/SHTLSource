@@ -1,0 +1,40 @@
+@using Web.Shared
+@{
+    var title = ViewData["PageTitle"] as string ?? ViewData["Title"] as string ?? "";
+    var icon = ViewData["PageIcon"] as string ?? "file-alt";
+    var crumbs = ViewData["Breadcrumbs"] as IList<BreadcrumbItem>;
+    if (crumbs == null || crumbs.Count == 0)
+    {
+        crumbs = new List<BreadcrumbItem>
+        {
+            new() { Text = "Tổng quan", Url = Url.Action("Index", "Home", new { area = "" }) }
+        };
+    }
+    var primaryText = ViewData["PrimaryButtonText"] as string;
+    var primaryUrl = ViewData["PrimaryButtonUrl"] as string;
+}
+<nav class="shtl-crud-breadcrumb" aria-label="Breadcrumb">
+    <ol class="breadcrumb mb-0 small">
+        @foreach (var c in crumbs)
+        {
+            if (!string.IsNullOrEmpty(c.Url))
+            {
+                <li class="breadcrumb-item"><a href="@c.Url" class="text-white text-decoration-none">@c.Text</a></li>
+            }
+            else
+            {
+                <li class="breadcrumb-item active text-white-50" aria-current="page">@c.Text</li>
+            }
+        }
+    </ol>
+</nav>
+
+<div class="d-flex flex-wrap justify-content-between align-items-center shtl-crud-toolbar mb-3">
+    <h1 class="shtl-crud-title mb-0">
+        <i class="fas fa-@icon me-2"></i>@title
+    </h1>
+    @if (!string.IsNullOrEmpty(primaryText) && !string.IsNullOrEmpty(primaryUrl))
+    {
+        <a class="btn btn-primary btn-sm" href="@primaryUrl"><i class="fas fa-plus me-1"></i>@primaryText</a>
+    }
+</div>

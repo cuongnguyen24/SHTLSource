@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using Core.Domain.Contracts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -12,29 +11,22 @@ public class HomeController : Controller
 {
     private readonly ILogger<HomeController> _logger;
     private readonly ShellOptions _links;
-    private readonly ICurrentUser _currentUser;
     private readonly ErrorHandlingOptions _errorHandling;
 
     public HomeController(
         ILogger<HomeController> logger,
         IOptions<ShellOptions> links,
-        IOptions<ErrorHandlingOptions> errorHandling,
-        ICurrentUser currentUser)
+        IOptions<ErrorHandlingOptions> errorHandling)
     {
         _logger = logger;
         _links = links.Value;
         _errorHandling = errorHandling.Value;
-        _currentUser = currentUser;
     }
 
     [Authorize]
     public IActionResult Index()
     {
-        return View(new DashboardIndexVm
-        {
-            Links = _links,
-            User = _currentUser.Id != 0 ? _currentUser : null
-        });
+        return View(new DashboardIndexVm { Links = _links });
     }
 
     [Authorize]

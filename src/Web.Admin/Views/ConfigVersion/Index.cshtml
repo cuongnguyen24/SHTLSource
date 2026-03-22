@@ -1,0 +1,19 @@
+@{
+    ViewData["Title"] = ViewData["PageTitle"];
+}
+@section Styles {
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+}
+<partial name="_ShtlPageHeader" />
+
+<div class="card shtl-crud-card border-0 shadow-sm">
+    <div class="card-body">
+        <p class="text-muted">
+            Chức năng đầy đủ (xuất/nhập ZIP, lưu phiên bản, áp dụng) trong mã nguồn AXE-Admin gắn với bảng và thư mục lưu trữ riêng.
+            Dự án SHTL hiện chưa có bảng tương đương — cần thiết kế migration + service trước khi port logic export/import.
+        </p>
+        <p class="mb-0">
+            <a class="btn btn-primary btn-sm" asp-controller="Config" asp-action="Index"><i class="fas fa-sliders-h me-1"></i>Đi tới cấu hình thông số</a>
+        </p>
+    </div>
+</div>

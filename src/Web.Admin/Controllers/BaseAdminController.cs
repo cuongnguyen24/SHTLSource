@@ -1,5 +1,6 @@
 using Core.Domain.Contracts;
 using Microsoft.AspNetCore.Mvc;
+using System.Linq;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Options;
 using Shared.Contracts;
@@ -48,7 +49,19 @@ public abstract class BaseAdminController : Controller
 
         CurrentUser = currentUser;
         ViewBag.CurrentUser = CurrentUser;
+        ViewData["ShellMainFlush"] = true;
         await next();
+    }
+
+    /// <summary>Breadcrumb + tiêu đề trang cho partial _ShtlPageHeader.</summary>
+    protected void SetPageHeader(string title, string fontAwesomeIcon, params BreadcrumbItem[] crumbs)
+    {
+        ViewData["Title"] = title;
+        ViewData["PageTitle"] = title;
+        ViewData["PageIcon"] = fontAwesomeIcon;
+        ViewData["Breadcrumbs"] = crumbs.Length > 0
+            ? crumbs.ToList()
+            : new List<BreadcrumbItem> { new() { Text = "Tổng quan", Url = Url.Action("Index", "Home") } };
     }
 
     protected (int PageIndex, int PageSize, string Search) GetPageRequest()

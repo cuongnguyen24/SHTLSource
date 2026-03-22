@@ -1,0 +1,59 @@
+@{
+    var ctrl = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+    var act = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+    string Active(string c, string? a = null)
+    {
+        if (!string.Equals(ctrl, c, StringComparison.OrdinalIgnoreCase)) return "";
+        if (a == null) return "active";
+        return string.Equals(act, a, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+    }
+}
+<nav class="admin-menu flex-grow-1" aria-label="Menu quản trị">
+    <div class="admin-menu-brand px-3 py-3 text-white small text-uppercase fw-bold border-bottom border-white border-opacity-25">
+        <i class="fas fa-cog me-2 text-warning"></i>Quản trị hệ thống
+    </div>
+    <div class="accordion accordion-flush admin-menu-accordion" id="adminMenuAcc">
+        <div class="accordion-item bg-transparent border-0">
+            <h2 class="accordion-header">
+                <button class="accordion-button admin-acc-btn px-3 py-2 shadow-none @(ctrl is "Config" or "ConfigVersion" ? "" : "collapsed")" type="button" data-bs-toggle="collapse" data-bs-target="#mCfg" aria-expanded="@(ctrl is "Config" or "ConfigVersion" ? "true" : "false")">
+                    <i class="fas fa-tasks me-2 text-warning"></i>Cấu hình hệ thống
+                </button>
+            </h2>
+            <div id="mCfg" class="accordion-collapse collapse @(ctrl is "Config" or "ConfigVersion" ? "show" : "")">
+                <div class="list-group list-group-flush admin-sub">
+                    <a class="list-group-item list-group-item-action border-0 py-2 ps-4 @Active("Config", "Index")" asp-controller="Config" asp-action="Index">Cấu hình thông số</a>
+                    <a class="list-group-item list-group-item-action border-0 py-2 ps-4 @Active("ConfigVersion")" asp-controller="ConfigVersion" asp-action="Index">Phiên bản cấu hình</a>
+                </div>
+            </div>
+        </div>
+        <div class="accordion-item bg-transparent border-0">
+            <h2 class="accordion-header">
+                <button class="accordion-button admin-acc-btn px-3 py-2 shadow-none @(ctrl == "Log" ? "" : "collapsed")" type="button" data-bs-toggle="collapse" data-bs-target="#mLog" aria-expanded="@(ctrl == "Log" ? "true" : "false")">
+                    <i class="fas fa-list-alt me-2 text-warning"></i>Nhật ký hệ thống
+                </button>
+            </h2>
+            <div id="mLog" class="accordion-collapse collapse @(ctrl == "Log" ? "show" : "")">
+                <div class="list-group list-group-flush admin-sub">
+                    <a class="list-group-item list-group-item-action border-0 py-2 ps-4 @Active("Log", "Login")" asp-controller="Log" asp-action="Login">Log đăng nhập</a>
+                    <a class="list-group-item list-group-item-action border-0 py-2 ps-4 @Active("Log", "Access")" asp-controller="Log" asp-action="Access">Log truy cập</a>
+                    <a class="list-group-item list-group-item-action border-0 py-2 ps-4 @Active("Log", "Detail")" asp-controller="Log" asp-action="Detail">Log thay đổi nội dung</a>
+                    <a class="list-group-item list-group-item-action border-0 py-2 ps-4 @Active("Log", "Action")" asp-controller="Log" asp-action="Action">Log thao tác</a>
+                </div>
+            </div>
+        </div>
+        <div class="accordion-item bg-transparent border-0">
+            <h2 class="accordion-header">
+                <button class="accordion-button admin-acc-btn px-3 py-2 shadow-none @(ctrl is "Role" or "Dept" or "User" ? "" : "collapsed")" type="button" data-bs-toggle="collapse" data-bs-target="#mAcc" aria-expanded="@(ctrl is "Role" or "Dept" or "User" ? "true" : "false")">
+                    <i class="fas fa-user-cog me-2 text-warning"></i>Tài khoản hệ thống
+                </button>
+            </h2>
+            <div id="mAcc" class="accordion-collapse collapse @(ctrl is "Role" or "Dept" or "User" ? "show" : "")">
+                <div class="list-group list-group-flush admin-sub">
+                    <a class="list-group-item list-group-item-action border-0 py-2 ps-4 @Active("Role")" asp-controller="Role" asp-action="Index">Vai trò &amp; nhóm quyền</a>
+                    <a class="list-group-item list-group-item-action border-0 py-2 ps-4 @Active("Dept")" asp-controller="Dept" asp-action="Index">Cơ cấu tổ chức</a>
+                    <a class="list-group-item list-group-item-action border-0 py-2 ps-4 @Active("User")" asp-controller="User" asp-action="Index">Người dùng</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>

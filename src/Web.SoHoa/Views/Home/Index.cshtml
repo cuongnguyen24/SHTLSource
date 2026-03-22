@@ -1,16 +1,15 @@
+@using Web.Shared
 @{
     ViewData["Title"] = "Dashboard - Số Hóa";
+    ViewData["PageTitle"] = "Số hóa tài liệu";
+    ViewData["PageIcon"] = "file-alt";
+    ViewData["Breadcrumbs"] = new List<BreadcrumbItem> { new() { Text = "Tổng quan" } };
 }
 
-<div class="container-fluid py-4">
-    <div class="row mb-4">
-        <div class="col">
-            <h4 class="fw-bold text-dark">
-                <i class="fas fa-tachometer-alt me-2 text-primary"></i>Dashboard - Số Hóa Tài Liệu
-            </h4>
-            <p class="text-muted">Xin chào, <strong>@User.FindFirst("full_name")?.Value</strong>!</p>
-        </div>
-    </div>
+<partial name="_ShtlPageHeader" />
+
+<div class="container-fluid px-0 pb-4">
+    <p class="text-muted mb-4">Xin chào, <strong>@User.FindFirst("full_name")?.Value</strong>!</p>
 
     <!-- Workflow Steps Cards -->
     <div class="row g-3 mb-4">

@@ -1,6 +1,7 @@
 using Core.Application.Services;
 using Microsoft.AspNetCore.Mvc;
 using Shared.Contracts.Dtos;
+using Web.Shared;
 
 namespace Web.Admin.Controllers;
 
@@ -19,11 +20,25 @@ public class UserController : BaseAdminController
         var req = GetPageRequest();
         var result = await _userService.GetListAsync(ChannelId, req.PageIndex, req.PageSize, req.Search);
         ViewBag.Search = req.Search;
+        SetPageHeader("Người dùng", "users",
+            new BreadcrumbItem { Text = "Tổng quan", Url = Url.Action("Index", "Home") },
+            new BreadcrumbItem { Text = "Người dùng" });
+        ViewData["SearchQuery"] = req.Search;
+        ViewData["SearchPlaceholder"] = "Tìm theo tên, email, tài khoản...";
+        ViewData["PrimaryButtonText"] = "Tạo mới";
+        ViewData["PrimaryButtonUrl"] = Url.Action("Create", "User");
         return View(result);
     }
 
     [HttpGet]
-    public IActionResult Create() => View(new CreateUserRequest { ChannelId = ChannelId });
+    public IActionResult Create()
+    {
+        SetPageHeader("Tạo người dùng", "user-plus",
+            new BreadcrumbItem { Text = "Tổng quan", Url = Url.Action("Index", "Home") },
+            new BreadcrumbItem { Text = "Người dùng", Url = Url.Action("Index", "User") },
+            new BreadcrumbItem { Text = "Tạo mới" });
+        return View(new CreateUserRequest { ChannelId = ChannelId });
+    }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -45,6 +60,10 @@ public class UserController : BaseAdminController
     {
         var user = await _userService.GetByIdAsync(id);
         if (user is null) return NotFound();
+        SetPageHeader("Chi tiết người dùng", "user-edit",
+            new BreadcrumbItem { Text = "Tổng quan", Url = Url.Action("Index", "Home") },
+            new BreadcrumbItem { Text = "Người dùng", Url = Url.Action("Index", "User") },
+            new BreadcrumbItem { Text = user.UserName });
         return View(user);
     }
 

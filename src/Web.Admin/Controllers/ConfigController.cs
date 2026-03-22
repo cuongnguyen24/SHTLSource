@@ -1,6 +1,7 @@
 using Core.Application.Services;
 using Microsoft.AspNetCore.Mvc;
 using Shared.Contracts.Dtos;
+using Web.Shared;
 
 namespace Web.Admin.Controllers;
 
@@ -17,7 +18,9 @@ public class ConfigController : BaseAdminController
     public async Task<IActionResult> Index()
     {
         var configs = await _configService.GetSystemConfigsAsync(ChannelId);
-        ViewData["Title"] = "Cấu hình thông số";
+        SetPageHeader("Cấu hình thông số", "sliders-h",
+            new BreadcrumbItem { Text = "Tổng quan", Url = Url.Action("Index", "Home") },
+            new BreadcrumbItem { Text = "Cấu hình thông số" });
         return View(configs);
     }
 
