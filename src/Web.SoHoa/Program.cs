@@ -4,23 +4,29 @@ using Infrastructure.Identity;
 using Infrastructure.Storage;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.Options;
 using System.IO;
+using System.Text.Json;
 using Web.Shared;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.ConfigureKestrel(o => o.Limits.MaxRequestBodySize = 524_288_000); // 500 MB — upload đồng bộ batch
 
 builder.Configuration
     .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "config", "connectionstrings.json"), optional: false, reloadOnChange: true);
 
 builder.Services.AddControllersWithViews()
-    .AddApplicationPart(typeof(WebSharedMarker).Assembly);
+    .AddApplicationPart(typeof(WebSharedMarker).Assembly)
+    .AddJsonOptions(o => o.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase);
 
 builder.Services.Configure<ShellOptions>(
     builder.Configuration.GetSection(ShellOptions.SectionName));
 
 builder.Services.AddInfrastructureData(builder.Configuration);
 builder.Services.AddInfrastructureIdentity();
+builder.Services.AddShtlAccessLogging(builder.Configuration);
 builder.Services.AddInfrastructureStorage(builder.Configuration);
 builder.Services.AddCoreApplication();
 
@@ -46,6 +52,18 @@ builder.Services.AddMemoryCache();
 
 var app = builder.Build();
 
+// IIS virtual app: nếu request Path vẫn là /sohoa/scan/... thì cần UsePathBase (trừ khi ANCM đã tách PathBase).
+var shellForPath = builder.Configuration.GetSection(ShellOptions.SectionName).Get<ShellOptions>();
+var pathBase = shellForPath?.PublicPathBase?.Trim()
+               ?? Environment.GetEnvironmentVariable("ASPNETCORE_PATHBASE")?.Trim();
+if (!string.IsNullOrEmpty(pathBase) && pathBase != "/")
+{
+    if (!pathBase.StartsWith('/'))
+        pathBase = "/" + pathBase;
+    pathBase = pathBase.TrimEnd('/');
+    app.UsePathBase(pathBase);
+}
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/home/error");
@@ -53,10 +71,15 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseStaticFiles();
+// PDF.js l10n + cmaps: mặc định không map .properties / .bcmap → 404
+var staticCt = new FileExtensionContentTypeProvider();
+staticCt.Mappings[".properties"] = "text/plain; charset=utf-8";
+staticCt.Mappings[".bcmap"] = "application/octet-stream";
+app.UseStaticFiles(new StaticFileOptions { ContentTypeProvider = staticCt });
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseShtlAccessLogging();
 app.UseSession();
 
 app.MapControllerRoute(

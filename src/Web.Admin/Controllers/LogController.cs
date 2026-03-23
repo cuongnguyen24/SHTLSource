@@ -24,11 +24,14 @@ public class LogController : BaseAdminController
     {
         var req = GetPageRequest();
         var date = Request.Query["date"].ToString();
-        var list = await _logService.GetAccessLogsAsync(ChannelId, req.PageIndex, req.PageSize, date, req.Search, loginOnly: true);
+        var dateTo = Request.Query["to"].ToString();
+        var list = await _logService.GetAccessLogsAsync(ChannelId, req.PageIndex, req.PageSize, date, dateTo, req.Search, loginOnly: true);
         ViewBag.Date = date;
+        ViewBag.DateTo = dateTo;
         ViewBag.Search = req.Search;
         SetLogPage("Log đăng nhập", "sign-in-alt");
         ViewData["SearchQuery"] = req.Search;
+        ViewData["LogListHint"] = "Chỉ hiển thị các yêu cầu liên quan đăng nhập (đường dẫn chứa login, signin, account…).";
         return View("Access", list);
     }
 
@@ -36,11 +39,14 @@ public class LogController : BaseAdminController
     {
         var req = GetPageRequest();
         var date = Request.Query["date"].ToString();
-        var list = await _logService.GetAccessLogsAsync(ChannelId, req.PageIndex, req.PageSize, date, req.Search, loginOnly: false);
+        var dateTo = Request.Query["to"].ToString();
+        var list = await _logService.GetAccessLogsAsync(ChannelId, req.PageIndex, req.PageSize, date, dateTo, req.Search, loginOnly: false);
         ViewBag.Date = date;
+        ViewBag.DateTo = dateTo;
         ViewBag.Search = req.Search;
         SetLogPage("Log truy cập", "door-open");
         ViewData["SearchQuery"] = req.Search;
+        ViewData["LogListHint"] = "Mọi yêu cầu HTTP được ghi nhận (trừ file tĩnh và một số đường dẫn hệ thống).";
         return View(list);
     }
 

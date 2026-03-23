@@ -35,6 +35,8 @@ public interface IStorageService
 {
     Task<string> SaveFileAsync(Stream stream, string fileName, string subPath);
     Task<Stream?> GetFileAsync(string path);
+    /// <summary>Đọc trực tiếp từ đĩa (ưu tiên cho phát PDF có Range). Null nếu không tồn tại hoặc path không hợp lệ.</summary>
+    Stream? OpenRead(string relativePath);
     Task<bool> DeleteFileAsync(string path);
     Task<string> GetPublicUrlAsync(string path);
     Task<string?> SaveThumbnailAsync(string sourcePath, string thumbPath);

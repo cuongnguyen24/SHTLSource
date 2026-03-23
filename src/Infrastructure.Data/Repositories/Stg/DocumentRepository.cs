@@ -26,6 +26,9 @@ public class DocumentFilterParams
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
     public long? FolderId { get; set; }
+
+    /// <summary>Khi user.ChannelId &gt; 0: thêm bản ghi channel_id = 0 do chính user đó tạo (upload đồng bộ khi claim kênh = 0).</summary>
+    public int? AlsoIncludeChannelZeroCreatedBy { get; set; }
 }
 
 public class DocumentRepository : BaseRepository, IDocumentRepository
@@ -59,7 +62,7 @@ public class DocumentRepository : BaseRepository, IDocumentRepository
             VALUES
                 (@ChannelId, @DocTypeId, @RecordTypeId, @ContentTypeId, @SyncTypeId,
                  @FolderId, @DeptId, @Name, @Describe, @SymbolNo, @RecordNo, @IssuedBy,
-                 @Issued, @IssuedYear, @Author, @Signer, @Noted, @Summary, @SearchMeta,
+                 @Issued, ISNULL(@IssuedYear, 0), @Author, @Signer, @Noted, @Summary, @SearchMeta,
                  @FileName, @FilePath, @PathOriginal, @Extension, @FileSize, @PageCount,
                  @FileHash, @IsColorScan, @MinDpi, @MaxDpi, @WorkstationName,
                  @Status, @CurrentStep, @Version, @Weight,
@@ -87,7 +90,7 @@ public class DocumentRepository : BaseRepository, IDocumentRepository
                 field16 = @Field16, field17 = @Field17, field18 = @Field18,
                 field19 = @Field19, field20 = @Field20,
                 updated = @Updated, updated_by = @UpdatedBy
-            WHERE id = @Id AND channel_id = @ChannelId";
+            WHERE id = @Id";
         return await ExecuteAsync(conn, sql, doc);
     }
 
@@ -129,25 +132,27 @@ public class DocumentRepository : BaseRepository, IDocumentRepository
     {
         using var conn = _factory.CreateStgConnection();
         var sql = WithPaging(
-            "SELECT * FROM core_stg.documents WHERE channel_id = @ChannelId AND folder_id = @FolderId AND status != 2 ORDER BY id DESC",
+            "SELECT * FROM core_stg.documents WHERE folder_id = @FolderId AND status != 2 ORDER BY id DESC",
             pageIndex, pageSize);
-        return await QueryAsync<Document>(conn, sql, new { ChannelId = channelId, FolderId = folderId });
+        return await QueryAsync<Document>(conn, sql, new { FolderId = folderId });
     }
 
     public async Task<IEnumerable<Document>> GetPendingForStepAsync(int channelId, WorkflowStep step, int limit = 50)
     {
         using var conn = _factory.CreateStgConnection();
         return await QueryAsync<Document>(conn,
-            @"SELECT * FROM core_stg.documents WHERE channel_id = @ChannelId AND current_step = @Step AND status = 1
+            @"SELECT * FROM core_stg.documents WHERE current_step = @Step AND status = 1
               ORDER BY id DESC OFFSET 0 ROWS FETCH NEXT @Limit ROWS ONLY",
-            new { ChannelId = channelId, Step = (byte)step, Limit = limit });
+            new { Step = (byte)step, Limit = limit });
     }
 
     private static (string where, object param) BuildWhere(int channelId, DocumentFilterParams f)
     {
-        var conditions = new List<string> { "channel_id = @ChannelId", "status != 2" };
+        var conditions = new List<string>();
         var p = new Dapper.DynamicParameters();
-        p.Add("ChannelId", channelId);
+        _ = channelId;
+        _ = f.AlsoIncludeChannelZeroCreatedBy;
+        conditions.Add("status != 2");
 
         if (!string.IsNullOrWhiteSpace(f.Search))
         {
@@ -165,3 +170,4 @@ public class DocumentRepository : BaseRepository, IDocumentRepository
         return ($"WHERE {string.Join(" AND ", conditions)}", p);
     }
 }
+

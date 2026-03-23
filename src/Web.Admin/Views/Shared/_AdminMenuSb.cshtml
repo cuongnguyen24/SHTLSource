@@ -48,8 +48,9 @@
                 <h6 class="collapse-header">Nhật ký:</h6>
                 <a class="collapse-item @Active("Log", "Login")" asp-controller="Log" asp-action="Login">Log đăng nhập</a>
                 <a class="collapse-item @Active("Log", "Access")" asp-controller="Log" asp-action="Access">Log truy cập</a>
-                <a class="collapse-item @Active("Log", "Detail")" asp-controller="Log" asp-action="Detail">Log thay đổi nội dung</a>
-                <a class="collapse-item @Active("Log", "Action")" asp-controller="Log" asp-action="Action">Log thao tác</a>
+                @* Tạm ẩn — bật lại khi triển khai đầy đủ action_logs *@
+                @*<a class="collapse-item @Active("Log", "Detail")" asp-controller="Log" asp-action="Detail">Log thay đổi nội dung</a>
+                <a class="collapse-item @Active("Log", "Action")" asp-controller="Log" asp-action="Action">Log thao tác</a>*@
             </div>
         </div>
     </li>

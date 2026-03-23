@@ -22,6 +22,13 @@ public class ShellOptions
 
     public string AdminUrl { get; set; } = "/admin";
     public string SoHoaUrl { get; set; } = "/sohoa";
+
+    /// <summary>
+    /// Khi ứng dụng được publish dưới tiền tố URL (vd. IIS virtual app <c>/sohoa</c>) mà host không tách PathBase,
+    /// đặt giá trị này (vd. <c>/sohoa</c>) để route <c>/scan/...</c> khớp. Để trống nếu host đã set PathBase (ANCM thường đã xử lý).
+    /// </summary>
+    public string? PublicPathBase { get; set; }
+
     public string UploaderUrl { get; set; } = "/uploader";
     public string AccountUrl { get; set; } = "/account";
 

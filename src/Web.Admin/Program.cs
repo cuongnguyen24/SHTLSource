@@ -20,6 +20,7 @@ builder.Services.Configure<ShellOptions>(
 
 builder.Services.AddInfrastructureData(builder.Configuration);
 builder.Services.AddInfrastructureIdentity();
+builder.Services.AddShtlAccessLogging(builder.Configuration);
 builder.Services.AddCoreApplication();
 
 builder.Services.AddShtlAuthenticationWithSharedCookie(builder.Configuration, opts =>
@@ -46,6 +47,7 @@ app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseShtlAccessLogging();
 
 app.MapGet("/config.html", (HttpContext ctx) =>
 {

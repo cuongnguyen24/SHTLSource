@@ -4,6 +4,7 @@ using Core.Domain.Entities.Stg;
 using Core.Domain.Enums;
 using Infrastructure.Data.Repositories.Log;
 using Infrastructure.Data.Repositories.Stg;
+using Microsoft.Extensions.Logging;
 using Shared.Contracts;
 using Shared.Contracts.Dtos;
 
@@ -34,17 +35,23 @@ public class DocumentWorkflowService : IDocumentWorkflowService
     private readonly IFormCellRepository _cellRepo;
     private readonly IExportJobRepository _exportRepo;
     private readonly IActionLogRepository _logRepo;
+    private readonly IStorageService _storage;
+    private readonly ILogger<DocumentWorkflowService> _logger;
 
     public DocumentWorkflowService(
         IDocumentRepository docRepo,
         IFormCellRepository cellRepo,
         IExportJobRepository exportRepo,
-        IActionLogRepository logRepo)
+        IActionLogRepository logRepo,
+        IStorageService storage,
+        ILogger<DocumentWorkflowService> logger)
     {
         _docRepo = docRepo;
         _cellRepo = cellRepo;
         _exportRepo = exportRepo;
         _logRepo = logRepo;
+        _storage = storage;
+        _logger = logger;
     }
 
     public async Task<ApiResult> CheckScan1Async(CheckScanRequest req, ICurrentUser user)
@@ -227,13 +234,42 @@ public class DocumentWorkflowService : IDocumentWorkflowService
         if ((int)doc.CurrentStep >= (int)WorkflowStep.Extract)
             return ApiResult.Fail("Không thể xóa tài liệu đã được nhập liệu hoặc kiểm tra. Hãy liên hệ quản trị viên.");
 
-        if (!user.IsAdmin && doc.CreatedBy != user.Id)
-            return ApiResult.Fail("Bạn không có quyền xóa tài liệu này");
+        var filePath = doc.FilePath;
+        var thumbPath = doc.ThumbPath;
 
         await _docRepo.SoftDeleteAsync(documentId, user.Id);
         await LogActionAsync(user, "DELETE", "documents", documentId.ToString(), "Deleted", null);
 
-        return ApiResult.Ok("Đã xóa tài liệu");
+        await TryDeleteStoredFilesAsync(filePath, thumbPath);
+
+        return ApiResult.Ok("Đã xóa tài liệu và file trên storage");
+    }
+
+    private async Task TryDeleteStoredFilesAsync(string? filePath, string? thumbPath)
+    {
+        if (!string.IsNullOrWhiteSpace(filePath))
+        {
+            try
+            {
+                await _storage.DeleteFileAsync(filePath);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Không xóa được file chính: {Path}", filePath);
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(thumbPath))
+        {
+            try
+            {
+                await _storage.DeleteFileAsync(thumbPath);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Không xóa được thumbnail: {Path}", thumbPath);
+            }
+        }
     }
 
     // ----- Helpers -----

@@ -2,6 +2,7 @@ using Infrastructure.Data.Repositories.Acc;
 using Infrastructure.Data.Repositories.Cnf;
 using Infrastructure.Data.Repositories.Log;
 using Infrastructure.Data.Repositories.Stg;
+using Dapper;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -13,6 +14,9 @@ public static class DataServiceExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
+        // Map snake_case DB columns (file_path, channel_id, ...) to PascalCase properties.
+        DefaultTypeMap.MatchNamesWithUnderscores = true;
+
         var opts = new DbConnectionOptions();
         configuration.GetSection("ConnectionStrings").Bind(opts);
         services.AddSingleton(opts);

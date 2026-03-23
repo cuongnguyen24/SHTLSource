@@ -214,8 +214,9 @@ public class DocCatalogRepository : BaseRepository, IDocCatalogRepository
     public async Task<long> CountDocumentsBySyncTypeAsync(int channelId, int syncTypeId)
     {
         using var conn = _factory.CreateStgConnection();
+        _ = channelId; // giữ tham số vì interface; đếm mọi kênh dùng sync_type_id này
         return await ExecuteScalarAsync<long>(conn,
-            "SELECT COUNT(1) FROM core_stg.documents WHERE channel_id = @ChannelId AND sync_type_id = @SyncTypeId",
-            new { ChannelId = channelId, SyncTypeId = syncTypeId });
+            "SELECT COUNT(1) FROM core_stg.documents WHERE sync_type_id = @SyncTypeId",
+            new { SyncTypeId = syncTypeId });
     }
 }

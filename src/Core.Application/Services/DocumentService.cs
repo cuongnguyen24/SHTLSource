@@ -39,7 +39,6 @@ public class DocumentService : IDocumentService
             EndDate = req.EndDate,
             FolderId = req.FolderId
         };
-
         var items = await _docRepo.GetListAsync(user.ChannelId, filter, req.PageIndex, req.PageSize);
         var count = await _docRepo.CountAsync(user.ChannelId, filter);
 
@@ -55,7 +54,7 @@ public class DocumentService : IDocumentService
     public async Task<DocumentDto?> GetByIdAsync(long id, ICurrentUser user)
     {
         var doc = await _docRepo.GetByIdAsync(id);
-        if (doc is null || doc.ChannelId != user.ChannelId) return null;
+        if (doc is null) return null;
         return MapToDto(doc);
     }
 
@@ -88,7 +87,6 @@ public class DocumentService : IDocumentService
     {
         var doc = await _docRepo.GetByIdAsync(req.Id);
         if (doc is null) return ApiResult.Fail("Tài liệu không tồn tại");
-        if (doc.ChannelId != user.ChannelId) return ApiResult.Fail("Không có quyền truy cập");
 
         // Map fields
         doc.Name = req.Name;
@@ -163,3 +161,4 @@ public class DocumentService : IDocumentService
         ExportStatus = doc.ExportStatus
     };
 }
+

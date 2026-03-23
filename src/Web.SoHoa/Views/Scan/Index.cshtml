@@ -3,10 +3,15 @@
     ViewData["Title"] = "Danh sách tài liệu Scan";
 }
 
+@Html.AntiForgeryToken()
+
 <div class="container-fluid py-3">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h5 class="mb-0 fw-bold"><i class="fas fa-upload me-2 text-primary"></i>Danh sách tài liệu Scan / Upload</h5>
         <div>
+            <a asp-controller="SyncUpload" asp-action="Index" class="btn btn-primary btn-sm me-2">
+                <i class="fas fa-cloud-upload-alt me-1"></i>Upload đồng bộ
+            </a>
             <a href="/upload" class="btn btn-success btn-sm me-2">
                 <i class="fas fa-plus me-1"></i>Upload tài liệu
             </a>
@@ -31,7 +36,7 @@
                 </div>
                 <div class="col-auto">
                     <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search me-1"></i>Tìm</button>
-                    <a href="/scan" class="btn btn-outline-secondary btn-sm ms-1">Reset</a>
+                    <a asp-controller="Scan" asp-action="Index" class="btn btn-outline-secondary btn-sm ms-1">Reset</a>
                 </div>
             </form>
         </div>
@@ -66,10 +71,13 @@
                         }
                         @foreach (var (doc, i) in Model.Items.Select((d, idx) => (d, idx + 1 + (Model.PageIndex - 1) * Model.PageSize)))
                         {
+                            var viewUrl = IsPdfDoc(doc)
+                                ? Url.Action("Preview", "Scan", new { id = doc.Id })!
+                                : Url.Action("Detail", "Scan", new { id = doc.Id })!;
                             <tr>
                                 <td class="text-muted small">@i</td>
                                 <td>
-                                    <a href="/scan/detail/@doc.Id" class="text-decoration-none fw-semibold">@doc.Name</a>
+                                    <a href="@viewUrl" class="text-decoration-none fw-semibold">@doc.Name</a>
                                     @if (!string.IsNullOrEmpty(doc.Extension))
                                     {
                                         <span class="badge bg-secondary ms-1">@doc.Extension.ToUpper()</span>
@@ -83,7 +91,7 @@
                                 <td class="small">@doc.Created.ToString("dd/MM/yyyy HH:mm")</td>
                                 <td class="small text-muted">@doc.CreatedByName</td>
                                 <td>
-                                    <a href="/scan/detail/@doc.Id" class="btn btn-xs btn-outline-info" title="Xem chi tiết">
+                                    <a href="@viewUrl" class="btn btn-xs btn-outline-info" title="@(IsPdfDoc(doc) ? "Xem PDF" : "Xem chi tiết")">
                                         <i class="fas fa-eye"></i>
                                     </a>
                                     @if (doc.CurrentStep == Core.Domain.Enums.WorkflowStep.Scan)
@@ -136,9 +144,15 @@
 <script>
     function confirmDelete(id) {
         if (!confirm('Bạn có chắc muốn xóa tài liệu này?')) return;
-        fetch('/scan/delete/' + id, {
+        const token = getAntiForgeryToken();
+        const body = new URLSearchParams();
+        body.append('id', String(id));
+        body.append('__RequestVerificationToken', token);
+        fetch('@Url.Action("Delete", "Scan")', {
             method: 'POST',
-            headers: { 'RequestVerificationToken': getAntiForgeryToken() }
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
+            body: body,
+            credentials: 'same-origin'
         })
         .then(r => r.json())
         .then(res => {
@@ -148,7 +162,8 @@
             } else {
                 showToast('error', res.message);
             }
-        });
+        })
+        .catch(() => showToast('error', 'Lỗi mạng hoặc máy chủ.'));
     }
     function getAntiForgeryToken() {
         return document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
@@ -162,6 +177,16 @@
 }
 
 @functions {
+    static bool IsPdfDoc(Shared.Contracts.Dtos.DocumentDto doc)
+    {
+        var ext = (doc.Extension ?? "").Trim().TrimStart('.').ToLowerInvariant();
+        if (ext == "pdf") return true;
+        if (doc.Name.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase)) return true;
+        if (!string.IsNullOrEmpty(doc.FileName) && doc.FileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase)) return true;
+        if (!string.IsNullOrEmpty(doc.FilePath) && doc.FilePath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase)) return true;
+        return false;
+    }
+
     string GetStepBadge(Core.Domain.Enums.WorkflowStep step) => step switch {
         Core.Domain.Enums.WorkflowStep.Scan => "bg-secondary",
         Core.Domain.Enums.WorkflowStep.CheckScan1 => "bg-warning text-dark",

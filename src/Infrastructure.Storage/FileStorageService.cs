@@ -46,8 +46,8 @@ public class LocalFileStorageService : IStorageService
 
     public async Task<Stream?> GetFileAsync(string path)
     {
-        var fullPath = Path.Combine(_options.RootPath, path.TrimStart('/'));
-        if (!File.Exists(fullPath)) return null;
+        var fullPath = ResolveSafeFullPath(path);
+        if (fullPath is null || !File.Exists(fullPath)) return null;
 
         var ms = new MemoryStream();
         await using var fs = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read);
@@ -56,10 +56,17 @@ public class LocalFileStorageService : IStorageService
         return ms;
     }
 
+    public Stream? OpenRead(string relativePath)
+    {
+        var fullPath = ResolveSafeFullPath(relativePath);
+        if (fullPath is null || !File.Exists(fullPath)) return null;
+        return new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+    }
+
     public Task<bool> DeleteFileAsync(string path)
     {
-        var fullPath = Path.Combine(_options.RootPath, path.TrimStart('/'));
-        if (!File.Exists(fullPath)) return Task.FromResult(false);
+        var fullPath = ResolveSafeFullPath(path);
+        if (fullPath is null || !File.Exists(fullPath)) return Task.FromResult(false);
         File.Delete(fullPath);
         return Task.FromResult(true);
     }
@@ -82,5 +89,18 @@ public class LocalFileStorageService : IStorageService
         var invalid = Path.GetInvalidFileNameChars();
         var safe = string.Concat(fileName.Select(c => invalid.Contains(c) ? '_' : c));
         return safe;
+    }
+
+    /// <summary>Chuẩn hóa path và chặn path traversal.</summary>
+    private string? ResolveSafeFullPath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return null;
+        var root = Path.GetFullPath(_options.RootPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        var combined = Path.GetFullPath(Path.Combine(root, path.TrimStart('/', '\\')));
+        var rootPrefix = root + Path.DirectorySeparatorChar;
+        var ok = combined.Equals(root, StringComparison.OrdinalIgnoreCase)
+                 || combined.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase);
+        if (!ok) return null;
+        return combined;
     }
 }

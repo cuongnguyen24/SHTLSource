@@ -7,7 +7,7 @@ namespace Core.Application.Services;
 public interface ILogService
 {
     Task<PaginatedResult<ActionLogDto>> GetActionLogsAsync(int channelId, int pageIndex, int pageSize, string? date, string? search);
-    Task<PaginatedResult<AccessLogDto>> GetAccessLogsAsync(int channelId, int pageIndex, int pageSize, string? date, string? search, bool loginOnly = false);
+    Task<PaginatedResult<AccessLogDto>> GetAccessLogsAsync(int channelId, int pageIndex, int pageSize, string? dateFrom, string? dateTo, string? search, bool loginOnly = false);
 }
 
 public class LogService : ILogService
@@ -32,10 +32,10 @@ public class LogService : ILogService
         };
     }
 
-    public async Task<PaginatedResult<AccessLogDto>> GetAccessLogsAsync(int channelId, int pageIndex, int pageSize, string? date, string? search, bool loginOnly = false)
+    public async Task<PaginatedResult<AccessLogDto>> GetAccessLogsAsync(int channelId, int pageIndex, int pageSize, string? dateFrom, string? dateTo, string? search, bool loginOnly = false)
     {
-        var items = await _logRepo.GetAccessLogsAsync(channelId, pageIndex, pageSize, date, search, loginOnly);
-        var count = await _logRepo.CountAccessLogsAsync(channelId, date, search, loginOnly);
+        var items = await _logRepo.GetAccessLogsAsync(channelId, pageIndex, pageSize, dateFrom, dateTo, search, loginOnly);
+        var count = await _logRepo.CountAccessLogsAsync(channelId, dateFrom, dateTo, search, loginOnly);
         return new PaginatedResult<AccessLogDto>
         {
             Items = items,

@@ -21,6 +21,7 @@ builder.Services.Configure<ShellOptions>(
 
 builder.Services.AddInfrastructureData(builder.Configuration);
 builder.Services.AddInfrastructureIdentity();
+builder.Services.AddShtlAccessLogging(builder.Configuration);
 builder.Services.AddInfrastructureStorage(builder.Configuration);
 builder.Services.AddCoreApplication();
 
@@ -48,6 +49,7 @@ app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseShtlAccessLogging();
 
 app.MapControllerRoute(
     name: "default",

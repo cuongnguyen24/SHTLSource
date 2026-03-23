@@ -8,9 +8,15 @@
         </a>
     </li>
     <li class="nav-item">
-        <a class="nav-link" href="/scan">
+        <a class="nav-link" asp-controller="Scan" asp-action="Index">
             <i class="fas fa-fw fa-upload"></i>
             <span>Scan / Upload</span>
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" asp-controller="SyncUpload" asp-action="Index">
+            <i class="fas fa-fw fa-cloud-upload-alt"></i>
+            <span>Upload đồng bộ</span>
         </a>
     </li>
     <li class="nav-item">
@@ -21,8 +27,8 @@
         <div id="collapseSoHoaCheck" class="collapse" data-parent="#accordionSidebar">
             <div class="bg-white py-2 collapse-inner rounded">
                 <h6 class="collapse-header">Danh sách:</h6>
-                <a class="collapse-item" href="/scan/check-scan1-list">Kiểm tra scan 1</a>
-                <a class="collapse-item" href="/scan/check-scan2-list">Kiểm tra scan 2</a>
+                <a class="collapse-item" asp-controller="Scan" asp-action="CheckScan1List">Kiểm tra scan 1</a>
+                <a class="collapse-item" asp-controller="Scan" asp-action="CheckScan2List">Kiểm tra scan 2</a>
                 <div class="collapse-divider"></div>
                 <h6 class="collapse-header">Bước kiểm tra:</h6>
                 <a class="collapse-item" href="/check/check1">Kiểm tra lần 1</a>

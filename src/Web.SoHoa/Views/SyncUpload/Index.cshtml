@@ -1,0 +1,110 @@
+@model IReadOnlyList<DocTypeSyncListItemDto>
+<partial name="_ShtlPageHeader" />
+
+<div class="container-fluid px-0 pb-4">
+    <div class="alert alert-info small">
+        <strong>Cách hoạt động (giống AXE):</strong>
+        <ul class="mb-0 pl-3">
+            <li>Chọn <strong>Loại đồng bộ</strong> đã cấu hình <em>Cấu trúc thư mục scan</em> (Format), ví dụ <code>{nam}/{thang}/{so}</code>.</li>
+            <li>Mỗi placeholder trong Format phải khớp <strong>Tiêu đề</strong> (<code>Title</code>) của dòng cấu hình trường trong Loại đồng bộ — ví dụ segment thứ nhất gán cho cột có Title <code>nam</code>.</li>
+            <li>Chọn thư mục (hoặc nhiều file): trình duyệt gửi <em>đường dẫn tương đối</em> để hệ thống tách segment và điền metadata.</li>
+            <li>File được lưu dưới thư mục gốc <code>Storage:RootPath</code> (xem <code>appsettings.json</code> của Web.SoHoa), con đường <code>{channelId}/web-sync/{syncTypeId}/{ngày}/</code>.</li>
+        </ul>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-muted">
+                Chưa có loại đồng bộ. Hãy <a asp-controller="LoaiDongBo" asp-action="Create">tạo loại đồng bộ</a> và cấu hình Format + trường đồng bộ trước.
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <form asp-action="Submit" method="post" enctype="multipart/form-data" id="frmSyncUp">
+                    @Html.AntiForgeryToken()
+                    <div class="form-group">
+                        <label class="font-weight-bold">Loại đồng bộ</label>
+                        <select name="syncTypeId" class="form-control form-control-sm" required>
+                            <option value="">— Chọn —</option>
+                            @foreach (var s in Model)
+                            {
+                                <!option value="@s.Id">@s.Name — @(s.Format ?? "chưa có format")</!option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="onlyPdf" value="1" id="onlyPdf" checked />
+                            <label class="form-check-label font-weight-bold" for="onlyPdf">Chỉ tải lên file PDF</label>
+                        </div>
+                        <small class="text-muted d-block mb-2">Giống tùy chọn trên plugin: khi bật, các file không phải .pdf sẽ bị từ chối. Bỏ tích để dùng thêm đuôi trong cấu hình Storage (tif, jpg, …).</small>
+                    </div>
+                    <div class="form-group">
+                        <label class="font-weight-bold">Tệp / thư mục</label>
+                        <div class="custom-file">
+                            <input type="file" name="files" id="filesInp" class="custom-file-input" multiple required />
+                            <label class="custom-file-label" for="filesInp">Chọn file hoặc thư mục…</label>
+                        </div>
+                        <small class="text-muted d-block mt-1">
+                            Dùng Chrome/Edge: bật “Thư mục” bằng cách chọn cả thư mục (webkitdirectory) từ nút bên dưới nếu cần.
+                        </small>
+                        <button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="btnPickDir">Chọn cả thư mục</button>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm">Tải lên &amp; tạo tài liệu</button>
+                    <a asp-controller="Scan" asp-action="Index" class="btn btn-outline-secondary btn-sm">Về danh sách scan</a>
+                </form>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            var form = document.getElementById('frmSyncUp');
+            var inp = document.getElementById('filesInp');
+            var lbl = form && form.querySelector('.custom-file-label');
+            var btn = document.getElementById('btnPickDir');
+            if (btn && inp) {
+                btn.addEventListener('click', function () {
+                    inp.setAttribute('webkitdirectory', '');
+                    inp.setAttribute('directory', '');
+                    inp.value = '';
+                    inp.click();
+                });
+            }
+            if (inp && form) {
+                inp.addEventListener('change', function () {
+                    if (lbl) lbl.textContent = inp.files.length ? (inp.files.length + ' file') : 'Chọn file…';
+                });
+                form.addEventListener('submit', function (e) {
+                    var onlyPdfEl = document.getElementById('onlyPdf');
+                    if (onlyPdfEl && onlyPdfEl.checked) {
+                        for (var j = 0; j < inp.files.length; j++) {
+                            var n = inp.files[j].name.toLowerCase();
+                            if (n.length < 5 || !n.endsWith('.pdf')) {
+                                e.preventDefault();
+                                alert('Đang bật \"Chỉ tải lên PDF\". File không phải PDF: ' + inp.files[j].name);
+                                return;
+                            }
+                        }
+                    }
+                    form.querySelectorAll('input[name="relativePaths"]').forEach(function (n) { n.remove(); });
+                    for (var i = inp.files.length - 1; i >= 0; i--) {
+                        var f = inp.files[i];
+                        var rel = f.webkitRelativePath || f.name;
+                        var h = document.createElement('input');
+                        h.type = 'hidden';
+                        h.name = 'relativePaths';
+                        h.value = rel;
+                        form.appendChild(h);
+                    }
+                });
+            }
+        })();
+    </script>
+}

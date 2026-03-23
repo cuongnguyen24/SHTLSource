@@ -20,6 +20,7 @@ public static class AppServiceExtensions
         services.AddScoped<IDocCatalogService, DocCatalogService>();
         services.AddScoped<IAxeDocTypeAdminService, AxeDocTypeAdminService>();
         services.AddScoped<IAxeSyncTypeAdminService, AxeSyncTypeAdminService>();
+        services.AddScoped<IDocumentSyncUploadService, DocumentSyncUploadService>();
         return services;
     }
 }

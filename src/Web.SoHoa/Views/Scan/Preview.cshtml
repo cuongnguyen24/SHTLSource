@@ -1,0 +1,113 @@
+@model Shared.Contracts.Dtos.DocumentDto
+@{
+    ViewData["Title"] = $"Xem PDF — {Model.Name}";
+    ViewData["ShellMainFlush"] = true;
+    var ext = (Model.Extension ?? "").Trim().TrimStart('.').ToLowerInvariant();
+    var isPdf = ext == "pdf"
+                || Model.Name.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase)
+                || (!string.IsNullOrEmpty(Model.FileName) && Model.FileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                || (!string.IsNullOrEmpty(Model.FilePath) && Model.FilePath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase));
+    // URL tuyệt đối: PDF.js/worker và iframe con đôi khi resolve path tương đối sai; cookie cùng site vẫn gửi.
+    var pdfStreamUrl = Url.Action("Pdf", "Scan", new { id = Model.Id }, Context.Request.Scheme, Context.Request.Host.Value) ?? "";
+    // AXE: Utils.RenderPdf + PDF.js; iframe tới viewer.html với ?file= (viewer.js)
+    var pdfJsViewerPage = Url.Content("~/pdf/viewer.html");
+    var pdfJsIframeSrc = string.IsNullOrEmpty(pdfStreamUrl)
+        ? ""
+        : $"{pdfJsViewerPage}?file={Uri.EscapeDataString(pdfStreamUrl)}";
+}
+
+@section Styles {
+    <style>
+        .scan-pdf-preview .file_button_action_list { list-style: none; margin: 0; padding: 0; display: inline-flex; flex-wrap: wrap; gap: 0.35rem; justify-content: flex-end; align-items: center; }
+        .scan-pdf-preview .file_button_action_list a { white-space: nowrap; }
+        .scan-pdf-preview .viewer-toolbar { background: linear-gradient(180deg, #5eb8e0 0%, #4aa8d4 100%); border-radius: 0.25rem 0.25rem 0 0; padding: 0.4rem 0.75rem; color: #fff; font-size: 0.875rem; }
+        .scan-pdf-preview .viewer-body { background: #e9ecef; border: 1px solid #dee2e6; border-top: 0; border-radius: 0 0 0.25rem 0.25rem; }
+        .scan-pdf-preview .viewer-frame { width: 100%; height: calc(100vh - 220px); min-height: 420px; border: 0; display: block; background: #525659; }
+    </style>
+}
+
+<div class="scan-pdf-preview px-2 pb-2">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+        <div>
+            <a href="@Url.Action("Index", "Scan")" class="btn btn-sm btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i>Danh sách scan</a>
+            <a href="@Url.Action("Detail", "Scan", new { id = Model.Id })" class="btn btn-sm btn-outline-secondary ms-1">Chi tiết</a>
+        </div>
+        @if (isPdf)
+        {
+            <ul class="file_button_action_list">
+                <li>
+                    <a href="@Url.Action("Download", "Scan", new { id = Model.Id })" class="btn btn-sm btn-light text-primary" title="Tải về"><i class="fas fa-download"></i></a>
+                </li>
+                <li>
+                    <a href="@Url.Action("Preview", "Scan", new { id = Model.Id })" class="btn btn-sm btn-light text-success" title="Làm mới"><i class="fas fa-sync-alt"></i></a>
+                </li>
+                <li>
+                    <a href="@Url.Action("Detail", "Scan", new { id = Model.Id })" class="btn btn-sm btn-light text-warning" title="Thông tin"><i class="fas fa-info-circle"></i></a>
+                </li>
+                <li>
+                    <a href="#" class="btn btn-sm btn-light pdfviewerchange" title="Đổi phương thức hiển thị">
+                        <i class="far fa-file-pdf text-primary me-1"></i><span class="d-none d-md-inline">Đổi phương thức hiển thị</span>
+                    </a>
+                </li>
+            </ul>
+        }
+    </div>
+
+    @if (!isPdf)
+    {
+        <div class="alert alert-info mb-0">
+            Chỉ xem trực tiếp được tệp PDF. Tài liệu hiện tại: <strong>@Model.Name</strong>
+            @if (!string.IsNullOrEmpty(Model.Extension))
+            {
+                <span class="badge bg-secondary">@Model.Extension</span>
+            }
+            <div class="mt-2">
+                <a href="@Url.Action("Detail", "Scan", new { id = Model.Id })" class="btn btn-sm btn-primary">Xem chi tiết</a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="viewer-toolbar shadow-sm">
+            <span><i class="fas fa-file-pdf me-1"></i>@Model.Name</span>
+            @if (!string.IsNullOrEmpty(Model.FileName) && !string.Equals(Model.Name, Model.FileName, StringComparison.Ordinal))
+            {
+                <span class="opacity-75 small ms-2">(@Model.FileName)</span>
+            }
+        </div>
+        <div class="viewer-body shadow-sm">
+            @* Mặc định: iframe trỏ thẳng /scan/pdf (trình duyệt) — cookie/auth ổn định hơn PDF.js lồng iframe. *@
+            @* pdfViewer_PV: Mozilla PDF.js — bật qua "Đổi phương thức hiển thị". *@
+            <div id="pdfViewer_PV" class="doc-viewer d-none">
+                @if (string.IsNullOrEmpty(pdfJsIframeSrc))
+                {
+                    <div class="p-4 text-center text-muted">Không tạo được liên kết xem PDF.</div>
+                }
+                else
+                {
+                    <iframe class="viewer-frame" title="Xem PDF (PDF.js)" src="@pdfJsIframeSrc"></iframe>
+                }
+            </div>
+            @* pdfViewer_I: stream PDF trực tiếp (giống iframe StgRead trong AXE) *@
+            <div id="pdfViewer_I" class="doc-viewer">
+                <iframe class="viewer-frame" name="iframe_PDF" title="Xem PDF (trình duyệt)" src="@pdfStreamUrl"></iframe>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    @if (isPdf)
+    {
+        <script>
+            document.querySelector('.pdfviewerchange')?.addEventListener('click', function (e) {
+                e.preventDefault();
+                var a = document.getElementById('pdfViewer_PV');
+                var b = document.getElementById('pdfViewer_I');
+                if (!a || !b) return;
+                a.classList.toggle('d-none');
+                b.classList.toggle('d-none');
+            });
+        </script>
+    }
+}

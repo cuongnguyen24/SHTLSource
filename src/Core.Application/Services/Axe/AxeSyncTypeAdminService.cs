@@ -109,6 +109,7 @@ public sealed class AxeSyncTypeAdminService : IAxeSyncTypeAdminService
             if (ex == null)
                 return ApiResult.Fail("Kiểu đồng bộ không tồn tại");
             row.Id = ex.Id;
+            row.ChannelId = ex.ChannelId; // bản ghi kênh 0: không ghi đè thành kênh user khi cập nhật
             await _sync.UpdateAsync(row, userId);
             syncId = id;
         }

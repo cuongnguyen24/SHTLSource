@@ -28,8 +28,8 @@ public class AxeSyncTypeRepository : BaseRepository, IAxeSyncTypeRepository
                    ISNULL(t.name, N'') AS DocTypeName, s.name AS Name, s.[describe] AS Describe,
                    s.format AS Format, s.weight AS Weight, s.is_default AS IsDefault
             FROM core_stg.doc_type_sync_types s
-            LEFT JOIN core_stg.doc_types t ON t.id = s.doc_type_id AND t.channel_id = s.channel_id
-            WHERE s.channel_id = @ChannelId";
+            LEFT JOIN core_stg.doc_types t ON t.id = s.doc_type_id
+            WHERE 1 = 1";
         if (!string.IsNullOrWhiteSpace(search))
             sql += " AND (s.name LIKE @Like OR s.[describe] LIKE @Like OR s.format LIKE @Like OR t.name LIKE @Like)";
         sql += " ORDER BY s.weight, s.name";
@@ -43,7 +43,8 @@ public class AxeSyncTypeRepository : BaseRepository, IAxeSyncTypeRepository
         return await QueryFirstOrDefaultAsync<DocTypeSyncFullDto>(conn, @"
             SELECT id AS Id, channel_id AS ChannelId, doc_type_id AS DocTypeId, name AS Name,
                    [describe] AS Describe, format AS Format, weight AS Weight, is_default AS IsDefault
-            FROM core_stg.doc_type_sync_types WHERE channel_id = @C AND id = @Id",
+            FROM core_stg.doc_type_sync_types
+            WHERE id = @Id",
             new { C = channelId, Id = id });
     }
 
@@ -52,7 +53,7 @@ public class AxeSyncTypeRepository : BaseRepository, IAxeSyncTypeRepository
         using var conn = _factory.CreateStgConnection();
         var n = await ExecuteScalarAsync<int>(conn,
             @"SELECT COUNT(1) FROM core_stg.doc_type_sync_types
-              WHERE channel_id = @C AND name = @Name AND id <> @Ex",
+              WHERE name = @Name AND id <> @Ex",
             new { C = channelId, Name = name, Ex = excludeId });
         return n > 0;
     }
@@ -86,7 +87,7 @@ public class AxeSyncTypeRepository : BaseRepository, IAxeSyncTypeRepository
                 doc_type_id = @DocTypeId, name = @Name, [describe] = @Describe,
                 format = @Format, weight = @Weight, is_default = @IsDefault,
                 updated = SYSUTCDATETIME(), updated_by = @UserId
-            WHERE id = @Id AND channel_id = @ChannelId",
+            WHERE id = @Id",
             new
             {
                 row.Id,
@@ -105,7 +106,7 @@ public class AxeSyncTypeRepository : BaseRepository, IAxeSyncTypeRepository
     {
         using var conn = _factory.CreateStgConnection();
         await ExecuteAsync(conn, "DELETE FROM core_stg.doc_type_sync_settings WHERE id_type = @Id", new { Id = id });
-        await ExecuteAsync(conn, "DELETE FROM core_stg.doc_type_sync_types WHERE channel_id = @C AND id = @Id", new { C = channelId, Id = id });
+        await ExecuteAsync(conn, "DELETE FROM core_stg.doc_type_sync_types WHERE id = @Id", new { C = channelId, Id = id });
     }
 
     public async Task<IReadOnlyList<DocTypeSyncSettingDto>> GetSettingsAsync(int syncTypeId)

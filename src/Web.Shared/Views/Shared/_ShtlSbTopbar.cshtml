@@ -8,6 +8,7 @@
     // Nhóm menu "Ứng dụng" dùng chung: chỉ còn 2 chức năng loại tài liệu (module Số hóa).
     var loaiTaiLieuHref = ShellOptions.Join(shell.SoHoaUrl, "/loai-tai-lieu");
     var loaiDongBoHref = ShellOptions.Join(shell.SoHoaUrl, "/loai-dong-bo");
+    var uploadDongBoHref = ShellOptions.Join(shell.SoHoaUrl, "/dong-bo-upload");
 }
 <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
     <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3" type="button">
@@ -24,6 +25,10 @@
                 </a>
                 <a class="dropdown-item" href="@loaiDongBoHref">
                     <i class="fas fa-sync-alt fa-sm fa-fw mr-2 text-gray-400"></i>Loại đồng bộ
+                </a>
+                <div class="dropdown-divider"></div>
+                <a class="dropdown-item" href="@uploadDongBoHref">
+                    <i class="fas fa-cloud-upload-alt fa-sm fa-fw mr-2 text-gray-400"></i>Upload đồng bộ (web)
                 </a>
             </div>
         </li>

@@ -25,6 +25,7 @@ builder.Services.Configure<ErrorHandlingOptions>(
 
 builder.Services.AddInfrastructureData(builder.Configuration);
 builder.Services.AddInfrastructureIdentity();
+builder.Services.AddShtlAccessLogging(builder.Configuration);
 builder.Services.AddInfrastructureStorage(builder.Configuration);
 builder.Services.AddCoreApplication();
 
@@ -68,6 +69,7 @@ if (errorOpts.UseCustomErrorPages)
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseShtlAccessLogging();
 
 app.MapGet("/home.html", (HttpContext ctx) =>
 {
