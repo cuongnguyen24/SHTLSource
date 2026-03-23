@@ -1,0 +1,44 @@
+@inject Microsoft.Extensions.Options.IOptions<ShellOptions> ShellOpts
+@{
+    var shell = ShellOpts.Value;
+}
+<ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
+    <partial name="_ShtlSidebarBrand" />
+    <hr class="sidebar-divider my-0">
+    <li class="nav-item">
+        <a class="nav-link" href="@shell.HomeUrl">
+            <i class="fas fa-fw fa-home"></i>
+            <span>Trang chủ</span>
+        </a>
+    </li>
+    <hr class="sidebar-divider">
+    <div class="sidebar-heading">Ứng dụng</div>
+    <li class="nav-item">
+        <a class="nav-link" href="@shell.AdminUrl">
+            <i class="fas fa-fw fa-cogs"></i>
+            <span>Quản trị</span>
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="@shell.SoHoaUrl">
+            <i class="fas fa-fw fa-file-alt"></i>
+            <span>Số hóa</span>
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="@shell.UploaderUrl">
+            <i class="fas fa-fw fa-cloud-upload-alt"></i>
+            <span>Uploader</span>
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="@shell.AccountUrl">
+            <i class="fas fa-fw fa-user"></i>
+            <span>Tài khoản</span>
+        </a>
+    </li>
+    <hr class="sidebar-divider d-none d-md-block">
+    <div class="text-center d-none d-md-inline">
+        <button class="rounded-circle border-0" id="sidebarToggle" aria-label="Thu gọn menu"></button>
+    </div>
+</ul>

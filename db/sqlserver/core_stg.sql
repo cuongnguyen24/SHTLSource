@@ -189,3 +189,56 @@ BEGIN
     );
 END
 GO
+
+-- Loại tài liệu (cấu hình số hóa; extractor_type_id dự phòng gán loại trích xuất sau này)
+IF OBJECT_ID(N'core_stg.doc_types', N'U') IS NULL
+BEGIN
+    CREATE TABLE core_stg.doc_types (
+        id                  INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        channel_id          INT NOT NULL,
+        name                NVARCHAR(255) NOT NULL,
+        code                NVARCHAR(100) NULL,
+        [describe]          NVARCHAR(MAX) NULL,
+        separate_type_id    INT NOT NULL CONSTRAINT DF_dtp_septype DEFAULT (0),
+        extractor_type_id   INT NULL,
+        review_status       TINYINT NOT NULL CONSTRAINT DF_dtp_rev DEFAULT (1),
+        weight              INT NOT NULL CONSTRAINT DF_dtp_w DEFAULT (0),
+        search_meta         NVARCHAR(MAX) NULL,
+        created             DATETIME2(7) NOT NULL CONSTRAINT DF_dtp_created DEFAULT (SYSUTCDATETIME()),
+        created_by          INT NOT NULL CONSTRAINT DF_dtp_cby DEFAULT (0),
+        updated             DATETIME2(7) NULL,
+        updated_by          INT NOT NULL CONSTRAINT DF_dtp_uby DEFAULT (0)
+    );
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'ix_doc_types_channel' AND object_id = OBJECT_ID(N'core_stg.doc_types'))
+    CREATE INDEX ix_doc_types_channel ON core_stg.doc_types(channel_id);
+GO
+
+-- Loại đồng bộ theo loại tài liệu (cấu trúc thư mục / đồng bộ — tương tự AXE StgDocSoHoaSyncType)
+IF OBJECT_ID(N'core_stg.doc_type_sync_types', N'U') IS NULL
+BEGIN
+    CREATE TABLE core_stg.doc_type_sync_types (
+        id              INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        channel_id      INT NOT NULL,
+        doc_type_id     INT NOT NULL,
+        name            NVARCHAR(255) NOT NULL,
+        [describe]      NVARCHAR(MAX) NULL,
+        format          NVARCHAR(MAX) NULL,
+        weight          INT NOT NULL CONSTRAINT DF_dst_w DEFAULT (0),
+        is_default      BIT NOT NULL CONSTRAINT DF_dst_def DEFAULT (0),
+        search_meta     NVARCHAR(MAX) NULL,
+        created         DATETIME2(7) NOT NULL CONSTRAINT DF_dst_created DEFAULT (SYSUTCDATETIME()),
+        created_by      INT NOT NULL CONSTRAINT DF_dst_cby DEFAULT (0),
+        updated         DATETIME2(7) NULL,
+        updated_by      INT NOT NULL CONSTRAINT DF_dst_uby DEFAULT (0)
+    );
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'ix_doc_type_sync_types_channel' AND object_id = OBJECT_ID(N'core_stg.doc_type_sync_types'))
+    CREATE INDEX ix_doc_type_sync_types_channel ON core_stg.doc_type_sync_types(channel_id);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'ix_doc_type_sync_types_doctype' AND object_id = OBJECT_ID(N'core_stg.doc_type_sync_types'))
+    CREATE INDEX ix_doc_type_sync_types_doctype ON core_stg.doc_type_sync_types(channel_id, doc_type_id);
+GO

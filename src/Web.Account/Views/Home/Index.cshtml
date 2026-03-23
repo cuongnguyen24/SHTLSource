@@ -1,10 +1,22 @@
+@using Web.Shared
 @{
     ViewData["Title"] = "Trang chủ";
+    ViewData["PageTitle"] = "Trang chủ tài khoản";
+    ViewData["PageIcon"] = "home";
+    ViewData["Breadcrumbs"] = new List<BreadcrumbItem> { new() { Text = "Trang chủ" } };
 }
 
-<div class="text-center py-5">
-    <h1 class="display-6 mb-3">Xin chào@(string.IsNullOrEmpty(User.Identity?.Name) ? "" : $", {User.Identity!.Name}")</h1>
-    <p class="lead text-muted mb-4">Bạn đã đăng nhập. Từ đây có thể mở hồ sơ hoặc các module khác (theo cấu hình site).</p>
-    <a class="btn btn-primary me-2" asp-controller="Profile" asp-action="Index">Hồ sơ tài khoản</a>
-    <a class="btn btn-outline-secondary" asp-controller="Account" asp-action="Logout">Đăng xuất</a>
+<partial name="_ShtlPageHeader" />
+
+<div class="text-center py-4">
+    <p class="lead text-gray-800 mb-4">
+        Xin chào<strong>@(string.IsNullOrEmpty(User.Identity?.Name) ? "" : $", {User.Identity!.Name}")</strong>.
+        Bạn có thể mở hồ sơ hoặc các module khác từ menu hoặc thanh trên.
+    </p>
+    <a class="btn btn-primary mr-2" asp-controller="Profile" asp-action="Index">
+        <i class="fas fa-id-card mr-1"></i>Hồ sơ tài khoản
+    </a>
+    <a class="btn btn-outline-secondary" asp-controller="Account" asp-action="Logout">
+        <i class="fas fa-sign-out-alt mr-1"></i>Đăng xuất
+    </a>
 </div>

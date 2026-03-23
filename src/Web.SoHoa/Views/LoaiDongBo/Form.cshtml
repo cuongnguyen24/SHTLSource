@@ -1,0 +1,19 @@
+@model SyncTypeEditPageDto
+<partial name="_ShtlPageHeader" />
+
+<div class="container-fluid px-0 pb-4">
+    @if (Model.Sync.Id == 0)
+    {
+        <form asp-action="CreateSubmit" method="post" class="card border-0 shadow-sm">
+            @Html.AntiForgeryToken()
+            <partial name="_LoaiDongBoFormBody" model="Model" />
+        </form>
+    }
+    else
+    {
+        <form asp-action="EditSubmit" asp-route-id="@Model.Sync.Id" method="post" class="card border-0 shadow-sm">
+            @Html.AntiForgeryToken()
+            <partial name="_LoaiDongBoFormBody" model="Model" />
+        </form>
+    }
+</div>

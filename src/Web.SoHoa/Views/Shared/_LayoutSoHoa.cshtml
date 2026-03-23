@@ -1,73 +1,38 @@
 @{
     Layout = "_LayoutShell";
+    ViewData["ShellTopbarPartial"] = "_SoHoaSbTopbar";
 }
 @section Styles {
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     @await RenderSectionAsync("Styles", required: false)
 }
-@section Toolbar {
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary border-bottom">
-        <div class="container-fluid">
-            <a class="navbar-brand fw-bold" asp-controller="Home" asp-action="Index">
-                <i class="fas fa-file-alt me-2"></i>SHTL - Số Hóa
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenuSoHoa">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navMenuSoHoa">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/scan"><i class="fas fa-upload me-1"></i>Scan / Upload</a>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
-                            <i class="fas fa-check-circle me-1"></i>Kiểm tra
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="/scan/check-scan1-list">Kiểm tra scan 1</a></li>
-                            <li><a class="dropdown-item" href="/scan/check-scan2-list">Kiểm tra scan 2</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="/check/check1">Kiểm tra lần 1</a></li>
-                            <li><a class="dropdown-item" href="/check/check2">Kiểm tra lần 2</a></li>
-                            <li><a class="dropdown-item" href="/check/check-final">Kiểm tra cuối</a></li>
-                            <li><a class="dropdown-item" href="/check/check-logic">Kiểm tra logic</a></li>
-                        </ul>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/extract"><i class="fas fa-keyboard me-1"></i>Nhập liệu</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/export"><i class="fas fa-file-export me-1"></i>Export</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/home/speechdemo"><i class="fas fa-microphone me-1"></i>Demo giọng nói</a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
-}
 
-<div class="container-fluid mt-2">
+<div class="container-fluid">
     @if (TempData["Success"] is string sMsg)
     {
         <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="fas fa-check-circle me-2"></i>@sMsg
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <i class="fas fa-check-circle mr-2"></i>@sMsg
+            <button type="button" class="close" data-dismiss="alert" aria-label="Đóng">
+                <span aria-hidden="true">&times;</span>
+            </button>
         </div>
     }
     @if (TempData["Error"] is string eMsg)
     {
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="fas fa-exclamation-circle me-2"></i>@eMsg
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <i class="fas fa-exclamation-circle mr-2"></i>@eMsg
+            <button type="button" class="close" data-dismiss="alert" aria-label="Đóng">
+                <span aria-hidden="true">&times;</span>
+            </button>
         </div>
     }
     @if (TempData["Warning"] is string wMsg)
     {
         <div class="alert alert-warning alert-dismissible fade show" role="alert">
-            <i class="fas fa-exclamation-triangle me-2"></i>@wMsg
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <i class="fas fa-exclamation-triangle mr-2"></i>@wMsg
+            <button type="button" class="close" data-dismiss="alert" aria-label="Đóng">
+                <span aria-hidden="true">&times;</span>
+            </button>
         </div>
     }
 </div>

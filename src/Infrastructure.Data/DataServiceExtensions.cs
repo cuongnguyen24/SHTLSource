@@ -28,6 +28,9 @@ public static class DataServiceExtensions
 
         // Stg
         services.AddScoped<IDocumentRepository, DocumentRepository>();
+        services.AddScoped<IDocCatalogRepository, DocCatalogRepository>();
+        services.AddScoped<IAxeDocTypeRepository, AxeDocTypeRepository>();
+        services.AddScoped<IAxeSyncTypeRepository, AxeSyncTypeRepository>();
         services.AddScoped<IFormCellRepository, FormCellRepository>();
         services.AddScoped<IOcrJobRepository, OcrJobRepository>();
         services.AddScoped<IExportJobRepository, ExportJobRepository>();

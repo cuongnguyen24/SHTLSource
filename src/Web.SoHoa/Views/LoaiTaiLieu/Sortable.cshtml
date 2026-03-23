@@ -1,0 +1,59 @@
+@model DocTypeSortablePageDto
+<partial name="_ShtlPageHeader" />
+
+<div class="container-fluid px-0 pb-4">
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <p class="small text-muted mb-3">Kéo thả để đổi thứ tự. Tích <strong>Tìm kiếm</strong> để bật <code>IsSearch</code> cho trường.</p>
+            <form asp-action="SortableSubmit" asp-route-id="@Model.DocType.Id" method="post" id="frmSort">
+                @Html.AntiForgeryToken()
+                <ul class="list-group" id="sortList">
+                    @foreach (var s in Model.Settings.OrderBy(x => x.Weight))
+                    {
+                        var f = Model.FieldById.GetValueOrDefault(s.IdField);
+                        var label = f != null ? $"{f.Title} ({f.Name})" : (s.Title ?? $"#{s.IdField}");
+                        <li class="list-group-item d-flex align-items-center" data-setting-id="@s.Id">
+                            <span class="drag-handle mr-3 text-muted" style="cursor:grab" title="Kéo">☰</span>
+                            <div class="form-check mr-3">
+                                <input class="form-check-input chk-tick" type="checkbox" name="Ticks" value="@s.Id" id="t_@s.Id" @(s.IsSearch ? "checked" : null) />
+                                <label class="form-check-label" for="t_@s.Id">Tìm kiếm</label>
+                            </div>
+                            <div class="flex-grow-1">@label</div>
+                            <input type="hidden" name="IDFieldSettings" value="@s.Id" class="order-input" />
+                        </li>
+                    }
+                </ul>
+                <div class="mt-3">
+                    <button type="submit" class="btn btn-primary btn-sm">Lưu thứ tự</button>
+                    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">Quay lại</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            var list = document.getElementById('sortList');
+            if (!list) return;
+            var dragEl = null;
+            list.querySelectorAll('li').forEach(function (li) {
+                li.setAttribute('draggable', 'true');
+                li.addEventListener('dragstart', function (e) {
+                    dragEl = li;
+                    e.dataTransfer.effectAllowed = 'move';
+                });
+                li.addEventListener('dragover', function (e) {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    if (dragEl === li) return;
+                    var rect = li.getBoundingClientRect();
+                    var before = (e.clientY - rect.top) < rect.height / 2;
+                    list.insertBefore(dragEl, before ? li : li.nextSibling);
+                });
+                li.addEventListener('drop', function (e) { e.preventDefault(); });
+            });
+        })();
+    </script>
+}

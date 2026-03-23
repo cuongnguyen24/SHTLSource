@@ -1,0 +1,76 @@
+@{
+    var ctrl = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+    var act = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+    var isCfgSection = string.Equals(ctrl, "Config", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(ctrl, "ConfigVersion", StringComparison.OrdinalIgnoreCase);
+    var isAccSection = string.Equals(ctrl, "Role", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(ctrl, "Dept", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(ctrl, "User", StringComparison.OrdinalIgnoreCase);
+    string Active(string c, string? a = null)
+    {
+        if (!string.Equals(ctrl, c, StringComparison.OrdinalIgnoreCase)) return "";
+        if (a == null) return "active";
+        return string.Equals(act, a, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+    }
+    string NavLi(string c, string? a = null) => Active(c, a) == "active" ? "nav-item active" : "nav-item";
+}
+<ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
+    <partial name="_ShtlSidebarBrand" />
+    <hr class="sidebar-divider my-0">
+    <li class="@NavLi("Home", "Index")">
+        <a class="nav-link" asp-controller="Home" asp-action="Index">
+            <i class="fas fa-fw fa-tachometer-alt"></i>
+            <span>Tổng quan</span>
+        </a>
+    </li>
+    <hr class="sidebar-divider">
+    <div class="sidebar-heading">Cấu hình</div>
+    <li class="nav-item">
+        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseCfg" aria-expanded="@(isCfgSection ? "true" : "false")" aria-controls="collapseCfg">
+            <i class="fas fa-fw fa-sliders-h"></i>
+            <span>Cấu hình hệ thống</span>
+        </a>
+        <div id="collapseCfg" class="collapse @(isCfgSection ? "show" : "")" data-parent="#accordionSidebar">
+            <div class="bg-white py-2 collapse-inner rounded">
+                <h6 class="collapse-header">Thông số:</h6>
+                <a class="collapse-item @Active("Config", "Index")" asp-controller="Config" asp-action="Index">Cấu hình thông số</a>
+                <a class="collapse-item @Active("ConfigVersion")" asp-controller="ConfigVersion" asp-action="Index">Phiên bản cấu hình</a>
+            </div>
+        </div>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseLog" aria-expanded="@(ctrl == "Log" ? "true" : "false")" aria-controls="collapseLog">
+            <i class="fas fa-fw fa-list-alt"></i>
+            <span>Nhật ký hệ thống</span>
+        </a>
+        <div id="collapseLog" class="collapse @(ctrl == "Log" ? "show" : "")" data-parent="#accordionSidebar">
+            <div class="bg-white py-2 collapse-inner rounded">
+                <h6 class="collapse-header">Nhật ký:</h6>
+                <a class="collapse-item @Active("Log", "Login")" asp-controller="Log" asp-action="Login">Log đăng nhập</a>
+                <a class="collapse-item @Active("Log", "Access")" asp-controller="Log" asp-action="Access">Log truy cập</a>
+                <a class="collapse-item @Active("Log", "Detail")" asp-controller="Log" asp-action="Detail">Log thay đổi nội dung</a>
+                <a class="collapse-item @Active("Log", "Action")" asp-controller="Log" asp-action="Action">Log thao tác</a>
+            </div>
+        </div>
+    </li>
+    <hr class="sidebar-divider">
+    <div class="sidebar-heading">Tài khoản</div>
+    <li class="nav-item">
+        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseAcc" aria-expanded="@(isAccSection ? "true" : "false")" aria-controls="collapseAcc">
+            <i class="fas fa-fw fa-users-cog"></i>
+            <span>Tài khoản hệ thống</span>
+        </a>
+        <div id="collapseAcc" class="collapse @(isAccSection ? "show" : "")" data-parent="#accordionSidebar">
+            <div class="bg-white py-2 collapse-inner rounded">
+                <h6 class="collapse-header">Danh mục:</h6>
+                <a class="collapse-item @Active("Role")" asp-controller="Role" asp-action="Index">Vai trò &amp; nhóm quyền</a>
+                <a class="collapse-item @Active("Dept")" asp-controller="Dept" asp-action="Index">Cơ cấu tổ chức</a>
+                <a class="collapse-item @Active("User")" asp-controller="User" asp-action="Index">Người dùng</a>
+            </div>
+        </div>
+    </li>
+    <hr class="sidebar-divider d-none d-md-block">
+    <div class="text-center d-none d-md-inline">
+        <button class="rounded-circle border-0" id="sidebarToggle" aria-label="Thu gọn menu"></button>
+    </div>
+</ul>

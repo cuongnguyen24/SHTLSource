@@ -4,13 +4,18 @@ using Infrastructure.Identity;
 using Infrastructure.Storage;
 using System.IO;
 using Web.Account.Models;
+using Web.Shared;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Configuration
     .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "config", "connectionstrings.json"), optional: false, reloadOnChange: true);
 
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews()
+    .AddApplicationPart(typeof(WebSharedMarker).Assembly);
+
+builder.Services.Configure<ShellOptions>(
+    builder.Configuration.GetSection(ShellOptions.SectionName));
 
 builder.Services.Configure<AccountAuthOptions>(
     builder.Configuration.GetSection(AccountAuthOptions.SectionName));

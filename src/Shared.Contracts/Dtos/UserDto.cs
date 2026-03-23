@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace Shared.Contracts.Dtos;
 
 public class UserDto
@@ -45,13 +47,65 @@ public class ChangePasswordRequest
 public class CreateUserRequest
 {
     public int ChannelId { get; set; }
+
+    [Required, Display(Name = "Tên đăng nhập")]
     public string UserName { get; set; } = string.Empty;
+
+    [Required, EmailAddress, Display(Name = "Email")]
     public string Email { get; set; } = string.Empty;
+
+    [Required, Display(Name = "Họ và tên")]
     public string FullName { get; set; } = string.Empty;
+
+    [Required, MinLength(6), Display(Name = "Mật khẩu")]
     public string Password { get; set; } = string.Empty;
+
+    [Display(Name = "Phòng ban")]
     public int DeptId { get; set; }
+
+    [Display(Name = "Chức vụ (mã)")]
     public int PositionId { get; set; }
+
+    [Display(Name = "Quản trị viên")]
     public bool IsAdmin { get; set; }
+
+    [Display(Name = "Điện thoại")]
     public string? Phone { get; set; }
+
     public List<int> RoleIds { get; set; } = new();
+}
+
+public class UpdateUserRequest
+{
+    public int Id { get; set; }
+
+    [Required, EmailAddress, Display(Name = "Email")]
+    public string Email { get; set; } = string.Empty;
+
+    [Required, Display(Name = "Họ và tên")]
+    public string FullName { get; set; } = string.Empty;
+
+    [Display(Name = "Điện thoại")]
+    public string? Phone { get; set; }
+
+    [Display(Name = "Phòng ban")]
+    public int DeptId { get; set; }
+
+    [Display(Name = "Chức vụ (mã)")]
+    public int PositionId { get; set; }
+
+    [Display(Name = "Tài khoản hoạt động")]
+    public bool IsActive { get; set; } = true;
+
+    [Display(Name = "Quản trị viên")]
+    public bool IsAdmin { get; set; }
+}
+
+public class AdminResetPasswordRequest
+{
+    [Required, MinLength(6), Display(Name = "Mật khẩu mới")]
+    public string NewPassword { get; set; } = string.Empty;
+
+    [Required, Compare(nameof(NewPassword)), Display(Name = "Xác nhận mật khẩu")]
+    public string ConfirmPassword { get; set; } = string.Empty;
 }

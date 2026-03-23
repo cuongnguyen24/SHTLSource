@@ -13,6 +13,7 @@ public interface IUserRepository
     Task<int> InsertAsync(User user);
     Task<int> UpdateAsync(User user);
     Task<int> SetActiveAsync(int id, bool isActive, int updatedBy);
+    Task<int> SetPasswordHashAsync(int id, string passwordHash, int updatedBy);
     Task<IEnumerable<User>> GetByChannelAsync(int channelId);
 }
 
@@ -126,6 +127,14 @@ public class UserRepository : BaseRepository, IUserRepository
         return await ExecuteAsync(conn,
             "UPDATE core_acc.users SET is_active = @IsActive, updated = SYSUTCDATETIME(), updated_by = @UpdatedBy WHERE id = @Id",
             new { Id = id, IsActive = isActive, UpdatedBy = updatedBy });
+    }
+
+    public async Task<int> SetPasswordHashAsync(int id, string passwordHash, int updatedBy)
+    {
+        using var conn = _factory.CreateAccConnection();
+        return await ExecuteAsync(conn,
+            @"UPDATE core_acc.users SET password_hash = @PasswordHash, updated = SYSUTCDATETIME(), updated_by = @UpdatedBy WHERE id = @Id",
+            new { Id = id, PasswordHash = passwordHash, UpdatedBy = updatedBy });
     }
 
     public async Task<IEnumerable<User>> GetByChannelAsync(int channelId)

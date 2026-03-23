@@ -1,0 +1,71 @@
+<ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
+    <partial name="_ShtlSidebarBrand" />
+    <hr class="sidebar-divider my-0">
+    <li class="nav-item">
+        <a class="nav-link" asp-controller="Home" asp-action="Index">
+            <i class="fas fa-fw fa-tachometer-alt"></i>
+            <span>Số hóa — Tổng quan</span>
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="/scan">
+            <i class="fas fa-fw fa-upload"></i>
+            <span>Scan / Upload</span>
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseSoHoaCheck" aria-expanded="false" aria-controls="collapseSoHoaCheck">
+            <i class="fas fa-fw fa-check-circle"></i>
+            <span>Kiểm tra</span>
+        </a>
+        <div id="collapseSoHoaCheck" class="collapse" data-parent="#accordionSidebar">
+            <div class="bg-white py-2 collapse-inner rounded">
+                <h6 class="collapse-header">Danh sách:</h6>
+                <a class="collapse-item" href="/scan/check-scan1-list">Kiểm tra scan 1</a>
+                <a class="collapse-item" href="/scan/check-scan2-list">Kiểm tra scan 2</a>
+                <div class="collapse-divider"></div>
+                <h6 class="collapse-header">Bước kiểm tra:</h6>
+                <a class="collapse-item" href="/check/check1">Kiểm tra lần 1</a>
+                <a class="collapse-item" href="/check/check2">Kiểm tra lần 2</a>
+                <a class="collapse-item" href="/check/check-final">Kiểm tra cuối</a>
+                <a class="collapse-item" href="/check/check-logic">Kiểm tra logic</a>
+            </div>
+        </div>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="/extract">
+            <i class="fas fa-fw fa-keyboard"></i>
+            <span>Nhập liệu</span>
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="/export">
+            <i class="fas fa-fw fa-file-export"></i>
+            <span>Export</span>
+        </a>
+    </li>
+    <hr class="sidebar-divider">
+    <div class="sidebar-heading">Danh mục</div>
+    <li class="nav-item">
+        <a class="nav-link" asp-controller="LoaiTaiLieu" asp-action="Index">
+            <i class="fas fa-fw fa-tags"></i>
+            <span>Loại tài liệu</span>
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" asp-controller="LoaiDongBo" asp-action="Index">
+            <i class="fas fa-fw fa-sync-alt"></i>
+            <span>Loại đồng bộ</span>
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="/home/speechdemo">
+            <i class="fas fa-fw fa-microphone"></i>
+            <span>Demo giọng nói</span>
+        </a>
+    </li>
+    <hr class="sidebar-divider d-none d-md-block">
+    <div class="text-center d-none d-md-inline">
+        <button class="rounded-circle border-0" id="sidebarToggle" aria-label="Thu gọn menu"></button>
+    </div>
+</ul>

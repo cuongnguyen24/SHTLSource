@@ -1,6 +1,15 @@
-﻿@{
-    ViewData["Title"] = "Privacy Policy";
+@using Web.Shared
+@{
+    ViewData["Title"] = "Privacy";
+    ViewData["PageTitle"] = "Privacy";
+    ViewData["PageIcon"] = "shield-alt";
+    ViewData["Breadcrumbs"] = new List<BreadcrumbItem> { new() { Text = "Privacy" } };
 }
-<h1>@ViewData["Title"]</h1>
 
-<p>Use this page to detail your site's privacy policy.</p>
+<partial name="_ShtlPageHeader" />
+
+<div class="card shadow-sm border-0">
+    <div class="card-body">
+        <p class="text-muted mb-0">Nội dung chính sách bảo mật của hệ thống (cập nhật theo yêu cầu tổ chức).</p>
+    </div>
+</div>

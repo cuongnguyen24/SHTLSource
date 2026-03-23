@@ -1,11 +1,18 @@
 @model Shared.Contracts.Dtos.ProfileVm
+@using Web.Shared
 @{
     ViewData["Title"] = "Hồ sơ cá nhân";
+    ViewData["PageTitle"] = "Hồ sơ cá nhân";
+    ViewData["PageIcon"] = "id-card";
+    ViewData["Breadcrumbs"] = new List<BreadcrumbItem> { new() { Text = "Hồ sơ" } };
 }
 
-<h2>Hồ sơ cá nhân</h2>
+<partial name="_ShtlPageHeader" />
 
-<div class="card mt-3">
+<div class="card shadow-sm border-0">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Thông tin tài khoản</h6>
+    </div>
     <div class="card-body">
         <div><strong>UserId:</strong> @Model.UserId</div>
         <div><strong>ChannelId:</strong> @Model.ChannelId</div>

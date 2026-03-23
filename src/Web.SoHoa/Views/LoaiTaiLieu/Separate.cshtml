@@ -1,0 +1,71 @@
+@model DocTypeSeparatePageDto
+<partial name="_ShtlPageHeader" />
+
+<div class="container-fluid px-0 pb-4">
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <p class="small text-muted mb-3">Cấu hình vùng tách trang: tọa độ X, Y, chiều rộng W, chiều cao H (pixel). Để trống hàng và lưu để xóa toàn bộ.</p>
+            <form asp-action="SeparateSubmit" asp-route-id="@Model.DocType.Id" method="post">
+                @Html.AntiForgeryToken()
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered" id="sepTable">
+                        <thead><tr><th>X</th><th>Y</th><th>W</th><th>H</th><th></th></tr></thead>
+                        <tbody>
+                            @if (Model.Separates.Count == 0)
+                            {
+                                <tr class="sep-row">
+                                    <td><input class="form-control form-control-sm" name="X" type="number" /></td>
+                                    <td><input class="form-control form-control-sm" name="Y" type="number" /></td>
+                                    <td><input class="form-control form-control-sm" name="W" type="number" /></td>
+                                    <td><input class="form-control form-control-sm" name="H" type="number" /></td>
+                                    <td><button type="button" class="btn btn-sm btn-outline-danger sep-del">Xóa dòng</button></td>
+                                </tr>
+                            }
+                            else
+                            {
+                                @foreach (var r in Model.Separates)
+                                {
+                                    <tr class="sep-row">
+                                        <td><input class="form-control form-control-sm" name="X" type="number" value="@r.X" /></td>
+                                        <td><input class="form-control form-control-sm" name="Y" type="number" value="@r.Y" /></td>
+                                        <td><input class="form-control form-control-sm" name="W" type="number" value="@r.Width" /></td>
+                                        <td><input class="form-control form-control-sm" name="H" type="number" value="@r.Height" /></td>
+                                        <td><button type="button" class="btn btn-sm btn-outline-danger sep-del">Xóa dòng</button></td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-primary mb-2" id="sepAdd">Thêm dòng</button>
+                <div>
+                    <button type="submit" class="btn btn-primary btn-sm">Lưu</button>
+                    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">Quay lại</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            document.getElementById('sepAdd')?.addEventListener('click', function () {
+                var tb = document.querySelector('#sepTable tbody');
+                if (!tb) return;
+                var tr = document.createElement('tr');
+                tr.className = 'sep-row';
+                tr.innerHTML = '<td><input class="form-control form-control-sm" name="X" type="number" /></td>' +
+                    '<td><input class="form-control form-control-sm" name="Y" type="number" /></td>' +
+                    '<td><input class="form-control form-control-sm" name="W" type="number" /></td>' +
+                    '<td><input class="form-control form-control-sm" name="H" type="number" /></td>' +
+                    '<td><button type="button" class="btn btn-sm btn-outline-danger sep-del">Xóa dòng</button></td>';
+                tb.appendChild(tr);
+                tr.querySelector('.sep-del').addEventListener('click', function () { tr.remove(); });
+            });
+            document.querySelectorAll('.sep-del').forEach(function (b) {
+                b.addEventListener('click', function () { b.closest('tr')?.remove(); });
+            });
+        })();
+    </script>
+}

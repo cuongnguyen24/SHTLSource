@@ -1,34 +1,64 @@
 @model Shared.Contracts.Dtos.LoginRequest
 @{
     ViewData["Title"] = "Đăng nhập";
+    Layout = "_LayoutLoginSb";
 }
 
-<div class="row justify-content-center mt-5">
-    <div class="col-md-4">
-        <h3 class="text-center mb-4">Đăng nhập</h3>
+<div class="row justify-content-center">
+    <div class="col-xl-10 col-lg-12 col-md-9">
+        <div class="card o-hidden border-0 shadow-lg my-5">
+            <div class="card-body p-0">
+                <div class="row">
+                    <div class="col-lg-6 d-none d-lg-block bg-login-image"></div>
+                    <div class="col-lg-6">
+                        <div class="p-5">
+                            <div class="text-center mb-4">
+                                <div class="text-primary mb-2" style="font-size: 2.5rem;">
+                                    <i class="fas fa-user-circle"></i>
+                                </div>
+                                <h1 class="h4 text-gray-900">SHTL — Tài khoản</h1>
+                                <p class="text-muted small">Đăng nhập để tiếp tục</p>
+                            </div>
 
-        <form asp-action="Login" method="post">
-            <input type="hidden" name="returnUrl" value="@(ViewBag.ReturnUrl ?? string.Empty)" />
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                            <form asp-action="Login" method="post" class="user">
+                                <input type="hidden" name="returnUrl" value="@(ViewBag.ReturnUrl ?? string.Empty)" />
+                                <div asp-validation-summary="ModelOnly" class="alert alert-danger small"></div>
 
-            <div class="mb-3">
-                <label asp-for="UserName" class="form-label"></label>
-                <input asp-for="UserName" class="form-control" />
+                                <div class="form-group">
+                                    <label asp-for="UserName" class="small text-muted"></label>
+                                    <input asp-for="UserName" class="form-control form-control-user" autocomplete="username" autofocus />
+                                    <span asp-validation-for="UserName" class="text-danger small d-block"></span>
+                                </div>
+
+                                <div class="form-group">
+                                    <label asp-for="Password" class="small text-muted"></label>
+                                    <input asp-for="Password" class="form-control form-control-user" type="password" autocomplete="current-password" />
+                                    <span asp-validation-for="Password" class="text-danger small d-block"></span>
+                                </div>
+
+                                <div class="form-group">
+                                    <div class="custom-control custom-checkbox small">
+                                        <input asp-for="RememberMe" class="custom-control-input" />
+                                        <label asp-for="RememberMe" class="custom-control-label"></label>
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary btn-user btn-block">
+                                    <i class="fas fa-sign-in-alt mr-2"></i>Đăng nhập
+                                </button>
+                            </form>
+                            <hr />
+                            <div class="text-center text-muted small">
+                                &copy; @DateTime.Now.Year SHTL
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="mb-3">
-                <label asp-for="Password" class="form-label"></label>
-                <input asp-for="Password" class="form-control" type="password" />
-            </div>
-            <div class="mb-3 form-check">
-                <input asp-for="RememberMe" class="form-check-input" />
-                <label asp-for="RememberMe" class="form-check-label"></label>
-            </div>
-            <button type="submit" class="btn btn-primary w-100">Đăng nhập</button>
-        </form>
+        </div>
     </div>
 </div>
 
 @section Scripts {
-    <partial name="~/Views/Shared/_ValidationScriptsPartial.cshtml" />
+    <partial name="_ValidationScriptsPartial" />
 }
-

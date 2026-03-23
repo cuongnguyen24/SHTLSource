@@ -29,6 +29,12 @@ public interface ICnfRepository
     Task<IEnumerable<ExportTypeDto>> GetExportTypesAsync(int channelId);
     Task InsertExportTypeAsync(ExportTypeRequest req, int channelId, int createdBy);
     Task UpdateExportTypeAsync(ExportTypeRequest req, int channelId, int updatedBy);
+
+    /// <summary>Loại nội dung dùng làm &quot;Loại trích xuất&quot; (AXE ContentType.IsDocType).</summary>
+    Task<IEnumerable<ContentTypeDocRowDto>> GetDocTypeContentTypesAsync(int channelId);
+
+    /// <summary>Loại phân tách (AXE SeparateType).</summary>
+    Task<IEnumerable<SeparateTypeRowDto>> GetSeparateTypesAsync(int channelId);
 }
 
 public class CnfRepository : BaseRepository, ICnfRepository
@@ -157,5 +163,23 @@ public class CnfRepository : BaseRepository, ICnfRepository
         await ExecuteAsync(conn,
             "UPDATE core_cnf.export_types SET name = @Name, code = @Code, exporter_class = @ExporterClass, updated = SYSUTCDATETIME(), updated_by = @UpdatedBy WHERE id = @Id AND channel_id = @ChannelId",
             new { req.Id, req.Name, req.Code, req.ExporterClass, ChannelId = channelId, UpdatedBy = updatedBy });
+    }
+
+    public async Task<IEnumerable<ContentTypeDocRowDto>> GetDocTypeContentTypesAsync(int channelId)
+    {
+        using var conn = _factory.CreateCnfConnection();
+        return await QueryAsync<ContentTypeDocRowDto>(conn,
+            @"SELECT id AS Id, name AS Name, code AS Code FROM core_cnf.content_types
+              WHERE channel_id = @ChannelId AND is_doc_type = 1 AND is_active = 1
+              ORDER BY weight, name",
+            new { ChannelId = channelId });
+    }
+
+    public async Task<IEnumerable<SeparateTypeRowDto>> GetSeparateTypesAsync(int channelId)
+    {
+        using var conn = _factory.CreateCnfConnection();
+        return await QueryAsync<SeparateTypeRowDto>(conn,
+            "SELECT id AS Id, name AS Name FROM core_cnf.separate_types WHERE channel_id = @ChannelId ORDER BY name",
+            new { ChannelId = channelId });
     }
 }

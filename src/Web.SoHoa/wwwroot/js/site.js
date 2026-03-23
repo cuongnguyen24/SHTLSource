@@ -1,4 +1,4 @@
-﻿// SHTL - Site JS
+// SHTL - Site JS
 
 // Anti-forgery token helper
 function getToken() {
@@ -17,7 +17,7 @@ function showToast(type, message) {
     const container = document.getElementById('toast-container') || createToastContainer();
     const div = document.createElement('div');
     div.className = `alert ${alertClass} alert-dismissible fade show`;
-    div.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+    div.innerHTML = `${message}<button type="button" class="close" data-dismiss="alert" aria-label="Đóng"><span aria-hidden="true">&times;</span></button>`;
     container.appendChild(div);
 
     setTimeout(() => div.remove(), 5000);

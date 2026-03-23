@@ -1,0 +1,87 @@
+@model DocTypeOcrFixPageDto
+<partial name="_ShtlPageHeader" />
+
+<div class="container-fluid px-0 pb-4">
+    <p class="small text-muted">Cấu hình chuỗi chỉnh sửa hậu OCR theo từng trường nhập liệu.</p>
+
+    @foreach (var s in Model.FieldSettings)
+    {
+        var f = Model.FieldById.GetValueOrDefault(s.IdField);
+        var title = f != null ? f.Title : (s.Title ?? $"Trường #{s.IdField}");
+        var selected = Model.OcrFixRuleIdsByFieldId.GetValueOrDefault(s.IdField) ?? Array.Empty<int>();
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                <strong>@title</strong>
+                <div class="form-check m-0">
+                    <input class="form-check-input ocr-use-cb" type="checkbox" value="1" id="use_@s.IdField" data-field="@s.IdField" @(s.IsOcrFix ? "checked" : null) />
+                    <label class="form-check-label" for="use_@s.IdField">Bật OCR fix</label>
+                </div>
+            </div>
+            <div class="card-body">
+                <form class="ocr-field-form" asp-action="OcrFixSaveField" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="idDoctype" value="@Model.DocType.Id" />
+                    <input type="hidden" name="IDField" value="@s.IdField" />
+                    <input type="hidden" name="IsUse" value="0" class="isuse-hidden" />
+                    <div class="form-group">
+                        <label class="small text-muted">Chọn các rule (theo thứ tự)</label>
+                        <select class="form-control form-control-sm" name="FieldOCRFix_@(s.IdField)" multiple size="@Math.Min(12, Math.Max(4, Model.OcrFixes.Count))">
+                            @foreach (var fx in Model.OcrFixes)
+                            {
+                                <!option value="@fx.Id" @(selected.Contains(fx.Id) ? "selected" : null)>@fx.Name (@fx.Type)</!option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <div class="col-md-8">
+                            <input class="form-control form-control-sm ocr-preview-input" type="text" placeholder="Chuỗi thử nghiệm…" />
+                        </div>
+                        <div class="col-md-4">
+                            <button type="button" class="btn btn-sm btn-outline-info btn-preview-ocr w-100" data-field="@s.IdField">Xem trước</button>
+                        </div>
+                    </div>
+                    <pre class="small bg-light p-2 mt-2 ocr-preview-out" style="min-height:2rem;"></pre>
+                    <button type="submit" class="btn btn-primary btn-sm mt-2">Lưu trường này</button>
+                </form>
+            </div>
+        </div>
+    }
+
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">Quay lại danh sách</a>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            function syncIsUse(form) {
+                var idInput = form.querySelector('input[name="IDField"]');
+                if (!idInput) return;
+                var cb = document.getElementById('use_' + idInput.value);
+                var h = form.querySelector('.isuse-hidden');
+                if (h) h.value = cb && cb.checked ? '1' : '0';
+            }
+
+            document.querySelectorAll('.ocr-field-form').forEach(function (form) {
+                form.addEventListener('submit', function () { syncIsUse(form); });
+            });
+
+            document.querySelectorAll('.btn-preview-ocr').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var card = btn.closest('.card-body');
+                    var form = card.querySelector('form');
+                    var input = card.querySelector('.ocr-preview-input');
+                    var out = card.querySelector('.ocr-preview-out');
+                    syncIsUse(form);
+                    var fd = new FormData(form);
+                    fd.set('Input', input ? input.value : '');
+                    fetch('@Url.Action("OcrFixPreview")', { method: 'POST', body: fd })
+                        .then(function (r) { return r.json(); })
+                        .then(function (j) {
+                            if (out) out.textContent = j.success ? (j.result || '') : (j.message || 'Lỗi');
+                        })
+                        .catch(function () { if (out) out.textContent = 'Lỗi mạng'; });
+                });
+            });
+        })();
+    </script>
+}

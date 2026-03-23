@@ -1,0 +1,57 @@
+@using System.Security.Claims
+@inject Microsoft.Extensions.Options.IOptions<ShellOptions> ShellOpts
+@{
+    var shell = ShellOpts.Value;
+    var returnAfterLogout = Uri.EscapeDataString(Context.Request.PathBase + Context.Request.Path + Context.Request.QueryString);
+    var logoutHref = $"{shell.ExternalLogoutUrl.TrimEnd('/')}?returnUrl={returnAfterLogout}";
+    var loaiTaiLieuHref = Url.Action("Index", "LoaiTaiLieu") ?? "/loai-tai-lieu";
+    var loaiDongBoHref = Url.Action("Index", "LoaiDongBo") ?? "/loai-dong-bo";
+}
+<nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
+    <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3" type="button">
+        <i class="fa fa-bars"></i>
+    </button>
+    <ul class="navbar-nav ml-auto">
+        <li class="nav-item dropdown no-arrow mx-1">
+            <a class="nav-link dropdown-toggle" href="#" id="appsDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" title="Danh mục số hóa">
+                <i class="fas fa-th fa-fw text-gray-600"></i>
+            </a>
+            <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in px-0 py-0" aria-labelledby="appsDropdown" style="min-width: 19rem;">
+                <a class="dropdown-item py-3 px-3 border-bottom" href="@loaiTaiLieuHref">
+                    <div class="d-flex align-items-start">
+                        <i class="fas fa-file-alt fa-lg text-warning mr-3 mt-1"></i>
+                        <div>
+                            <div class="font-weight-bold text-dark">Loại tài liệu</div>
+                            <small class="text-muted d-block">Định nghĩa các loại tài liệu lưu trữ…</small>
+                        </div>
+                    </div>
+                </a>
+                <a class="dropdown-item py-3 px-3" href="@loaiDongBoHref">
+                    <div class="d-flex align-items-start">
+                        <i class="fas fa-sync-alt fa-lg text-warning mr-3 mt-1"></i>
+                        <div>
+                            <div class="font-weight-bold text-dark">Loại đồng bộ</div>
+                            <small class="text-muted d-block">Định nghĩa các loại đồng bộ theo loại tài liệu…</small>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </li>
+        <div class="topbar-divider d-none d-sm-block"></div>
+        @if (User.Identity?.IsAuthenticated == true)
+        {
+            <li class="nav-item dropdown no-arrow">
+                <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <span class="mr-2 d-none d-lg-inline text-gray-600 small">@(User.FindFirstValue("full_name") ?? User.Identity?.Name)</span>
+                    <img class="img-profile rounded-circle" src="@Url.Content("~/_content/Web.Shared/sb-admin-2/img/undraw_profile.svg")" alt="">
+                </a>
+                <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in" aria-labelledby="userDropdown">
+                    <a class="dropdown-item" href="@shell.ProfileUrl"><i class="fas fa-id-card fa-sm fa-fw mr-2 text-gray-400"></i>Hồ sơ</a>
+                    <a class="dropdown-item" asp-controller="Home" asp-action="Privacy"><i class="fas fa-shield-alt fa-sm fa-fw mr-2 text-gray-400"></i>Privacy</a>
+                    <div class="dropdown-divider"></div>
+                    <a class="dropdown-item text-danger" href="@logoutHref"><i class="fas fa-sign-out-alt fa-sm fa-fw mr-2 text-gray-400"></i>Đăng xuất</a>
+                </div>
+            </li>
+        }
+    </ul>
+</nav>

@@ -5,30 +5,23 @@
     <link rel="stylesheet" href="~/css/admin-layout.css" asp-append-version="true" />
     @await RenderSectionAsync("Styles", required: false)
 }
-<div class="container-fluid admin-shell-wrap px-0">
-    <div class="row g-0 flex-nowrap admin-shell-row">
-        <aside class="admin-sidebar d-none d-md-flex flex-column">
-            <partial name="_AdminMenu" />
-        </aside>
-        <div class="offcanvas offcanvas-start admin-offcanvas d-md-none" tabindex="-1" id="adminMenuOffcanvas">
-            <div class="offcanvas-header border-bottom">
-                <h5 class="offcanvas-title">Quản trị hệ thống</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
-            </div>
-            <div class="offcanvas-body p-0">
-                <partial name="_AdminMenu" />
-            </div>
+<div class="container-fluid px-0">
+    @if (TempData["Success"] is string ok)
+    {
+        <div class="alert alert-success alert-dismissible fade show mx-3 mt-3" role="alert">
+            <i class="fas fa-check-circle mr-2"></i>@ok
+            <button type="button" class="close" data-dismiss="alert" aria-label="Đóng"><span aria-hidden="true">&times;</span></button>
         </div>
-        <main class="admin-main flex-grow-1 min-w-0">
-            <div class="d-md-none border-bottom px-3 py-2 bg-light">
-                <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="offcanvas" data-bs-target="#adminMenuOffcanvas">
-                    <i class="fas fa-bars me-1"></i>Menu
-                </button>
-            </div>
-            @RenderBody()
-        </main>
-    </div>
+    }
+    @if (TempData["Error"] is string err)
+    {
+        <div class="alert alert-danger alert-dismissible fade show mx-3 mt-3" role="alert">
+            <i class="fas fa-exclamation-circle mr-2"></i>@err
+            <button type="button" class="close" data-dismiss="alert" aria-label="Đóng"><span aria-hidden="true">&times;</span></button>
+        </div>
+    }
 </div>
+@RenderBody()
 @section Scripts {
     @await RenderSectionAsync("Scripts", required: false)
 }

@@ -26,8 +26,8 @@
   letter-spacing: 0.02em;
 }
 
-.admin-config-page .table-striped > tbody > tr:nth-of-type(odd) > * {
-  --bs-table-bg-type: rgba(0, 0, 0, 0.02);
+.admin-config-page .table-striped > tbody > tr:nth-of-type(odd) > td {
+  background-color: rgba(0, 0, 0, 0.02);
 }
 
 .admin-config-page .cfg-group-row td {
@@ -36,8 +36,7 @@
   color: #333;
 }
 
-.admin-config-page .form-switch .form-check-input {
-  width: 2.5rem;
+.admin-config-page .custom-switch .custom-control-input {
   cursor: pointer;
 }
 

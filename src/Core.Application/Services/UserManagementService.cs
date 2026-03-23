@@ -12,7 +12,9 @@ public interface IUserManagementService
     Task<PaginatedResult<UserDto>> GetListAsync(int channelId, int pageIndex, int pageSize, string? search);
     Task<UserDto?> GetByIdAsync(int id);
     Task<ApiResult<int>> CreateAsync(CreateUserRequest req, ICurrentUser currentUser);
+    Task<ApiResult> UpdateAsync(UpdateUserRequest req, ICurrentUser currentUser);
     Task<ApiResult> SetActiveAsync(int id, bool isActive, ICurrentUser currentUser);
+    Task<ApiResult> AdminResetPasswordAsync(int userId, AdminResetPasswordRequest req, ICurrentUser currentUser);
     Task<ApiResult> ChangePasswordAsync(int userId, ChangePasswordRequest req);
 }
 
@@ -75,10 +77,64 @@ public class UserManagementService : IUserManagementService
         return ApiResult<int>.Ok(id, "Tạo người dùng thành công");
     }
 
+    public async Task<ApiResult> UpdateAsync(UpdateUserRequest req, ICurrentUser currentUser)
+    {
+        var user = await _userRepo.GetByIdAsync(req.Id);
+        if (user is null)
+            return ApiResult.Fail("Không tìm thấy người dùng");
+        if (user.ChannelId != currentUser.ChannelId)
+            return ApiResult.Fail("Không được phép thao tác người dùng này");
+
+        if (req.Id == currentUser.Id)
+        {
+            if (currentUser.IsAdmin && !req.IsAdmin)
+                return ApiResult.Fail("Không thể bỏ quyền quản trị của chính bạn");
+            if (!req.IsActive)
+                return ApiResult.Fail("Không thể vô hiệu hóa chính bạn");
+        }
+
+        var email = req.Email.Trim().ToLower();
+        var existingEmail = await _userRepo.GetByEmailAsync(email);
+        if (existingEmail is not null && existingEmail.Id != req.Id)
+            return ApiResult.Fail("Email đã được sử dụng bởi tài khoản khác");
+
+        user.Email = email;
+        user.FullName = req.FullName.Trim();
+        user.Phone = string.IsNullOrWhiteSpace(req.Phone) ? null : req.Phone.Trim();
+        user.DeptId = req.DeptId;
+        user.PositionId = req.PositionId;
+        user.IsActive = req.IsActive;
+        user.IsAdmin = req.IsAdmin && currentUser.IsAdmin;
+        user.SearchMeta = $"{user.FullName} {user.UserName} {user.Email}";
+        user.Updated = DateTime.UtcNow;
+        user.UpdatedBy = currentUser.Id;
+
+        await _userRepo.UpdateAsync(user);
+        return ApiResult.Ok("Cập nhật người dùng thành công");
+    }
+
     public async Task<ApiResult> SetActiveAsync(int id, bool isActive, ICurrentUser currentUser)
     {
+        if (id == currentUser.Id && !isActive)
+            return ApiResult.Fail("Không thể vô hiệu hóa chính bạn");
+
         await _userRepo.SetActiveAsync(id, isActive, currentUser.Id);
         return ApiResult.Ok(isActive ? "Đã kích hoạt tài khoản" : "Đã vô hiệu hóa tài khoản");
+    }
+
+    public async Task<ApiResult> AdminResetPasswordAsync(int userId, AdminResetPasswordRequest req, ICurrentUser currentUser)
+    {
+        if (req.NewPassword != req.ConfirmPassword)
+            return ApiResult.Fail("Mật khẩu xác nhận không khớp");
+
+        var user = await _userRepo.GetByIdAsync(userId);
+        if (user is null)
+            return ApiResult.Fail("Người dùng không tồn tại");
+        if (user.ChannelId != currentUser.ChannelId)
+            return ApiResult.Fail("Không được phép thao tác người dùng này");
+
+        await _userRepo.SetPasswordHashAsync(userId, _hasher.Hash(req.NewPassword), currentUser.Id);
+        return ApiResult.Ok("Đặt lại mật khẩu thành công");
     }
 
     public async Task<ApiResult> ChangePasswordAsync(int userId, ChangePasswordRequest req)

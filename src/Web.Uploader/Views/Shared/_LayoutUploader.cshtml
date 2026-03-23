@@ -5,20 +5,6 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     @await RenderSectionAsync("Styles", required: false)
 }
-@section Toolbar {
-    <nav class="navbar navbar-expand-lg navbar-light bg-light border-bottom py-2">
-        <div class="container-fluid">
-            <span class="navbar-text small text-muted mb-0">
-                <i class="fas fa-cloud-upload-alt me-1"></i>Uploader
-            </span>
-            <ul class="navbar-nav ms-auto">
-                <li class="nav-item">
-                    <a class="nav-link py-1" asp-controller="Home" asp-action="Index">Trang chủ</a>
-                </li>
-            </ul>
-        </div>
-    </nav>
-}
 
 @RenderBody()
 

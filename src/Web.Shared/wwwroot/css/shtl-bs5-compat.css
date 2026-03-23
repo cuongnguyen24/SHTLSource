@@ -1,0 +1,106 @@
+/* Một số lớp giống Bootstrap 5 để view cũ vẫn hiển thị ổn khi shell dùng SB Admin (Bootstrap 4). */
+.form-label {
+  display: inline-block;
+  margin-bottom: 0.5rem;
+}
+
+.fw-semibold {
+  font-weight: 600;
+}
+
+.gap-2 {
+  gap: 0.5rem !important;
+}
+
+.me-1 { margin-right: 0.25rem !important; }
+.me-2 { margin-right: 0.5rem !important; }
+.me-3 { margin-right: 1rem !important; }
+.ms-1 { margin-left: 0.25rem !important; }
+.ms-2 { margin-left: 0.5rem !important; }
+.ms-auto { margin-left: auto !important; }
+
+.row.g-2 {
+  margin-left: -0.25rem;
+  margin-right: -0.25rem;
+}
+.row.g-2 > [class*="col-"] {
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
+}
+
+.badge.bg-secondary {
+  color: #fff;
+  background-color: #858796;
+}
+
+.badge.bg-primary {
+  color: #fff;
+  background-color: #4e73df;
+}
+
+.fw-bold {
+  font-weight: 700 !important;
+}
+
+.fs-1 {
+  font-size: 2.5rem !important;
+}
+
+.fs-5 {
+  font-size: 1.25rem !important;
+}
+
+.display-6 {
+  font-size: 2.5rem;
+  font-weight: 300;
+  line-height: 1.2;
+}
+
+.row.g-3 {
+  margin-left: -0.5rem;
+  margin-right: -0.5rem;
+}
+.row.g-3 > [class*="col-"] {
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+@media (min-width: 768px) {
+  .row.g-md-4 {
+    margin-left: -0.75rem;
+    margin-right: -0.75rem;
+  }
+  .row.g-md-4 > [class*="col-"] {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+}
+
+.card.text-bg-primary {
+  color: #fff !important;
+  background-color: #4e73df !important;
+}
+
+.card.text-bg-success {
+  color: #fff !important;
+  background-color: #1cc88a !important;
+}
+
+.bg-primary.bg-opacity-10 {
+  background-color: rgba(78, 115, 223, 0.1) !important;
+}
+.bg-secondary.bg-opacity-10 {
+  background-color: rgba(133, 135, 150, 0.15) !important;
+}
+.bg-warning.bg-opacity-10 {
+  background-color: rgba(246, 194, 62, 0.2) !important;
+}
+.bg-info.bg-opacity-10 {
+  background-color: rgba(54, 185, 204, 0.15) !important;
+}
+.bg-success.bg-opacity-10 {
+  background-color: rgba(28, 200, 138, 0.15) !important;
+}
+.bg-dark.bg-opacity-10 {
+  background-color: rgba(90, 92, 105, 0.12) !important;
+}

@@ -3,11 +3,11 @@
     ViewData["Title"] = "Lỗi máy chủ";
 }
 <div class="text-center py-5">
-    <h1 class="display-4 text-danger">500</h1>
-    <p class="lead">Đã xảy ra lỗi khi xử lý yêu cầu. Vui lòng thử lại sau.</p>
+    <div class="text-danger mb-3" style="font-size: 5rem; font-weight: 800;">500</div>
+    <p class="lead text-gray-700">Đã xảy ra lỗi khi xử lý yêu cầu. Vui lòng thử lại sau.</p>
     @if (Model.ShowRequestId)
     {
         <p class="small text-muted">Mã tham chiếu: <code>@Model.RequestId</code></p>
     }
-    <a class="btn btn-outline-primary" asp-controller="Home" asp-action="Index">Trang chủ tài khoản</a>
+    <a class="btn btn-primary" asp-controller="Home" asp-action="Index"><i class="fas fa-home mr-2"></i>Trang chủ tài khoản</a>
 </div>

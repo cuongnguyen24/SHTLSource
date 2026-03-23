@@ -1,0 +1,47 @@
+@using System.Security.Claims
+@inject Microsoft.Extensions.Options.IOptions<ShellOptions> ShellOpts
+@{
+    var shell = ShellOpts.Value;
+    var returnAfterLogout = Uri.EscapeDataString(Context.Request.PathBase + Context.Request.Path + Context.Request.QueryString);
+    var logoutHref = $"{shell.ExternalLogoutUrl.TrimEnd('/')}?returnUrl={returnAfterLogout}";
+
+    // Nhóm menu "Ứng dụng" dùng chung: chỉ còn 2 chức năng loại tài liệu (module Số hóa).
+    var loaiTaiLieuHref = ShellOptions.Join(shell.SoHoaUrl, "/loai-tai-lieu");
+    var loaiDongBoHref = ShellOptions.Join(shell.SoHoaUrl, "/loai-dong-bo");
+}
+<nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
+    <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3" type="button">
+        <i class="fa fa-bars"></i>
+    </button>
+    <ul class="navbar-nav ml-auto">
+        <li class="nav-item dropdown no-arrow mx-1">
+            <a class="nav-link dropdown-toggle" href="#" id="appsDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" title="Ứng dụng">
+                <i class="fas fa-th fa-fw text-gray-600"></i>
+            </a>
+            <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in" aria-labelledby="appsDropdown">
+                <a class="dropdown-item" href="@loaiTaiLieuHref">
+                    <i class="fas fa-file-alt fa-sm fa-fw mr-2 text-gray-400"></i>Loại tài liệu
+                </a>
+                <a class="dropdown-item" href="@loaiDongBoHref">
+                    <i class="fas fa-sync-alt fa-sm fa-fw mr-2 text-gray-400"></i>Loại đồng bộ
+                </a>
+            </div>
+        </li>
+        <div class="topbar-divider d-none d-sm-block"></div>
+        @if (User.Identity?.IsAuthenticated == true)
+        {
+            <li class="nav-item dropdown no-arrow">
+                <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <span class="mr-2 d-none d-lg-inline text-gray-600 small">@(User.FindFirstValue("full_name") ?? User.Identity?.Name)</span>
+                    <img class="img-profile rounded-circle" src="@Url.Content("~/_content/Web.Shared/sb-admin-2/img/undraw_profile.svg")" alt="">
+                </a>
+                <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in" aria-labelledby="userDropdown">
+                    <a class="dropdown-item" href="@shell.ProfileUrl"><i class="fas fa-id-card fa-sm fa-fw mr-2 text-gray-400"></i>Hồ sơ</a>
+                    <a class="dropdown-item" asp-controller="Home" asp-action="Privacy"><i class="fas fa-shield-alt fa-sm fa-fw mr-2 text-gray-400"></i>Privacy</a>
+                    <div class="dropdown-divider"></div>
+                    <a class="dropdown-item text-danger" href="@logoutHref"><i class="fas fa-sign-out-alt fa-sm fa-fw mr-2 text-gray-400"></i>Đăng xuất</a>
+                </div>
+            </li>
+        }
+    </ul>
+</nav>

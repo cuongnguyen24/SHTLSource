@@ -15,7 +15,7 @@ public class DocumentFolder : TenantEntity
     public string? Describe { get; set; }
 }
 
-/// <summary>Bảng: Core_Stg.doc_types (loại tài liệu)</summary>
+/// <summary>Bảng: core_stg.doc_types (loại tài liệu). Cột extractor_type_id trong DB dự phòng gán loại trích xuất (UI/API sẽ bổ sung sau).</summary>
 public class DocType : TenantEntity
 {
     public int Id { get; set; }
@@ -30,6 +30,8 @@ public class DocType : TenantEntity
     public bool IsOcrManualZoned { get; set; }
     public int FieldQuantity { get; set; }
     public int SeparateTypeId { get; set; }
+    /// <summary>Dự phòng — đồng bộ với cột extractor_type_id khi triển khai loại trích xuất.</summary>
+    public int? ExtractorTypeId { get; set; }
     public string? SearchMeta { get; set; }
 }
 

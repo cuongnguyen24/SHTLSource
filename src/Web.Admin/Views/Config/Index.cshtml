@@ -9,7 +9,6 @@
 }
 
 @section Styles {
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="stylesheet" href="~/css/admin-config.css" asp-append-version="true" />
 }
 
@@ -20,13 +19,13 @@
         <div class="cfg-card-header d-flex flex-wrap align-items-center justify-content-end gap-2 p-3">
             <div class="d-flex flex-wrap gap-2">
                 <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="Tính năng sẽ bổ sung">
-                    <i class="fas fa-undo me-1"></i>Khôi phục mặc định
+                    <i class="fas fa-undo mr-1"></i>Khôi phục mặc định
                 </button>
                 <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="Tính năng sẽ bổ sung">
-                    <i class="fas fa-broom me-1"></i>Giải phóng dữ liệu caches
+                    <i class="fas fa-broom mr-1"></i>Giải phóng dữ liệu caches
                 </button>
-                <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addConfigModal">
-                    <i class="fas fa-plus me-1"></i>Thêm mới cấu hình
+                <button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#addConfigModal">
+                    <i class="fas fa-plus mr-1"></i>Thêm mới cấu hình
                 </button>
             </div>
         </div>
@@ -41,7 +40,7 @@
             {
                 <div class="table-responsive">
                     <table class="table table-striped table-hover table-bordered mb-0 align-middle">
-                        <thead class="table-light">
+                        <thead class="thead-light">
                             <tr>
                                 <th style="min-width: 280px;">Thông tin cấu hình</th>
                                 <th style="width: 200px;">Mã</th>
@@ -53,8 +52,8 @@
                             @foreach (var grp in grouped)
                             {
                                 <tr class="cfg-group-row">
-                                    <td colspan="4" class="py-2 ps-3">
-                                        <i class="fas fa-caret-down me-1 text-secondary"></i><strong>@grp.Key</strong>
+                                    <td colspan="4" class="py-2 pl-3">
+                                        <i class="fas fa-caret-down mr-1 text-secondary"></i><strong>@grp.Key</strong>
                                     </td>
                                 </tr>
                                 foreach (var item in grp.OrderBy(x => x.Key, StringComparer.OrdinalIgnoreCase))
@@ -68,9 +67,10 @@
                                         <td>
                                             @if (isBool)
                                             {
-                                                <div class="form-check form-switch mb-0">
-                                                    <input class="form-check-input cfg-toggle" type="checkbox" role="switch"
+                                                <div class="custom-control custom-switch mb-0">
+                                                    <input class="custom-control-input cfg-toggle" type="checkbox" id="cfg_@(item.Key.GetHashCode())"
                                                            data-key="@item.Key" @(on ? "checked" : "") />
+                                                    <label class="custom-control-label" for="cfg_@(item.Key.GetHashCode())"></label>
                                                 </div>
                                             }
                                             else
@@ -104,12 +104,14 @@
 </div>
 
 <!-- Sửa giá trị -->
-<div class="modal fade" id="editConfigModal" tabindex="-1" aria-labelledby="editConfigModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+<div class="modal fade" id="editConfigModal" tabindex="-1" role="dialog" aria-labelledby="editConfigModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="editConfigModalLabel">Sửa giá trị</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Đóng">
+                    <span aria-hidden="true">&times;</span>
+                </button>
             </div>
             <div class="modal-body">
                 <div class="mb-2"><strong>Mã:</strong> <code id="editCfgKeyDisplay"></code></div>
@@ -118,7 +120,7 @@
                 <input type="hidden" id="editCfgKey" />
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
                 <button type="button" class="btn btn-primary" id="editCfgSave">Lưu</button>
             </div>
         </div>
@@ -126,12 +128,14 @@
 </div>
 
 <!-- Thêm mới -->
-<div class="modal fade" id="addConfigModal" tabindex="-1" aria-labelledby="addConfigModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+<div class="modal fade" id="addConfigModal" tabindex="-1" role="dialog" aria-labelledby="addConfigModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="addConfigModalLabel">Thêm cấu hình</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Đóng">
+                    <span aria-hidden="true">&times;</span>
+                </button>
             </div>
             <div class="modal-body">
                 <div class="mb-3">
@@ -152,7 +156,7 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
                 <button type="button" class="btn btn-primary" id="addCfgSave">Lưu</button>
             </div>
         </div>
@@ -194,13 +198,12 @@
         });
     });
 
-    const editModal = new bootstrap.Modal(document.getElementById('editConfigModal'));
     document.querySelectorAll('.cfg-edit').forEach(function (btn) {
         btn.addEventListener('click', function () {
             document.getElementById('editCfgKey').value = this.getAttribute('data-key');
             document.getElementById('editCfgKeyDisplay').textContent = this.getAttribute('data-key');
             document.getElementById('editCfgValue').value = this.getAttribute('data-value') || '';
-            editModal.show();
+            $('#editConfigModal').modal('show');
         });
     });
     document.getElementById('editCfgSave').addEventListener('click', async function () {

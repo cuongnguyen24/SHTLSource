@@ -2,7 +2,7 @@
     ViewData["Title"] = "Không tìm thấy trang";
 }
 <div class="text-center py-5">
-    <h1 class="display-4 text-muted">404</h1>
-    <p class="lead">Trang bạn yêu cầu không tồn tại hoặc đã được di chuyển.</p>
-    <a class="btn btn-primary" asp-controller="Home" asp-action="Index">Trang chủ tài khoản</a>
+    <div class="error mx-auto text-gray-800 mb-3" data-text="404" style="font-size: 5rem; font-weight: 800;">404</div>
+    <p class="lead text-gray-700">Trang bạn yêu cầu không tồn tại hoặc đã được di chuyển.</p>
+    <a class="btn btn-primary" asp-controller="Home" asp-action="Index"><i class="fas fa-home mr-2"></i>Trang chủ tài khoản</a>
 </div>

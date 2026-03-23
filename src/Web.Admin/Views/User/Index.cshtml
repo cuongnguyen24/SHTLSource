@@ -1,24 +1,22 @@
 @model Shared.Contracts.PaginatedResult<Shared.Contracts.Dtos.UserDto>
 @{
     ViewData["Title"] = ViewData["PageTitle"];
-}
-@section Styles {
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    var meId = (int)(ViewData["MeUserId"] ?? 0);
 }
 <partial name="_ShtlPageHeader" />
 <partial name="_ShtlCrudSearch" />
 
-<div class="table-responsive shtl-crud-card">
-    <table class="table table-sm table-hover mb-0 align-middle">
-        <thead class="table-light">
+<div class="table-responsive shtl-crud-card shadow-sm">
+    <table class="table table-bordered table-hover mb-0 align-middle">
+        <thead class="thead-light">
             <tr>
-                <th>STT</th>
+                <th class="text-center" style="width:3rem;">STT</th>
                 <th>Tài khoản</th>
                 <th>Họ tên</th>
                 <th>Email</th>
                 <th>Phòng ban</th>
-                <th>Trạng thái</th>
-                <th></th>
+                <th class="text-center">Trạng thái</th>
+                <th class="text-right" style="min-width:12rem;">Thao tác</th>
             </tr>
         </thead>
         <tbody>
@@ -27,27 +25,57 @@
             {
                 i++;
                 <tr>
-                    <td>@i</td>
-                    <td>@u.UserName</td>
+                    <td class="text-center text-muted small">@i</td>
+                    <td><strong>@u.UserName</strong></td>
                     <td>@u.FullName</td>
                     <td class="small">@u.Email</td>
                     <td>@(u.DeptName ?? "—")</td>
-                    <td>
+                    <td class="text-center">
                         @if (u.IsActive)
                         {
-                            <span class="badge bg-success">Có hiệu lực</span>
+                            <span class="badge badge-success">Hoạt động</span>
                         }
                         else
                         {
-                            <span class="badge bg-secondary">Khóa</span>
+                            <span class="badge badge-secondary">Đã khóa</span>
                         }
                     </td>
-                    <td><a class="btn btn-outline-primary btn-sm py-0" asp-action="Edit" asp-route-id="@u.Id">Sửa</a></td>
+                    <td class="text-right text-nowrap">
+                        <a class="btn btn-primary btn-sm" asp-action="Edit" asp-route-id="@u.Id" title="Sửa">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        @if (u.Id != meId)
+                        {
+                            @if (u.IsActive)
+                            {
+                                <form asp-action="SetActive" method="post" class="d-inline" onsubmit="return confirm('Vô hiệu hóa tài khoản @u.UserName?');">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@u.Id" />
+                                    <input type="hidden" name="isActive" value="false" />
+                                    <button type="submit" class="btn btn-warning btn-sm" title="Khóa tài khoản"><i class="fas fa-lock"></i></button>
+                                </form>
+                            }
+                            else
+                            {
+                                <form asp-action="SetActive" method="post" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@u.Id" />
+                                    <input type="hidden" name="isActive" value="true" />
+                                    <button type="submit" class="btn btn-success btn-sm" title="Mở khóa"><i class="fas fa-unlock"></i></button>
+                                </form>
+                            }
+                        }
+                    </td>
                 </tr>
             }
         </tbody>
     </table>
 </div>
+
+@if (!Model.Items.Any())
+{
+    <p class="text-center text-muted py-4 mb-0">Không có dữ liệu.</p>
+}
 
 @if (Model.TotalPages > 1)
 {

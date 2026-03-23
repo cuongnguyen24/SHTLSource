@@ -1,45 +1,81 @@
 @model Shared.Contracts.Dtos.CreateUserRequest
+@using Shared.Contracts.Dtos
 @{
     ViewData["Title"] = ViewData["PageTitle"];
-}
-@section Styles {
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    var depts = ViewBag.Depts as IEnumerable<DeptDto> ?? Array.Empty<DeptDto>();
 }
 <partial name="_ShtlPageHeader" />
 
-<form asp-action="Create" method="post" class="card shtl-crud-card p-3 shadow-sm" style="max-width:520px;">
-    @Html.AntiForgeryToken()
-    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-    <input type="hidden" asp-for="ChannelId" />
-    <div class="mb-2">
-        <label asp-for="UserName" class="form-label"></label>
-        <input asp-for="UserName" class="form-control form-control-sm" />
-        <span asp-validation-for="UserName" class="text-danger small"></span>
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Thông tin đăng nhập</h6>
+            </div>
+            <div class="card-body">
+                <form asp-action="Create" method="post">
+                    @Html.AntiForgeryToken()
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small"></div>
+                    <input type="hidden" asp-for="ChannelId" />
+
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label asp-for="UserName"></label>
+                            <input asp-for="UserName" class="form-control" autocomplete="username" />
+                            <span asp-validation-for="UserName" class="text-danger small"></span>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label asp-for="Password"></label>
+                            <input asp-for="Password" type="password" class="form-control" autocomplete="new-password" />
+                            <span asp-validation-for="Password" class="text-danger small"></span>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label asp-for="FullName"></label>
+                            <input asp-for="FullName" class="form-control" />
+                            <span asp-validation-for="FullName" class="text-danger small"></span>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label asp-for="Email"></label>
+                            <input asp-for="Email" class="form-control" type="email" />
+                            <span asp-validation-for="Email" class="text-danger small"></span>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label asp-for="Phone">Điện thoại</label>
+                            <input asp-for="Phone" class="form-control" />
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label asp-for="DeptId">Phòng ban</label>
+                            <select asp-for="DeptId" class="form-control">
+                                <option value="0">— Chưa gán —</option>
+                                @foreach (var d in depts)
+                                {
+                                    <option value="@d.Id">@d.Name</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label asp-for="PositionId">Chức vụ (mã)</label>
+                        <input asp-for="PositionId" type="number" class="form-control" value="0" />
+                        <small class="form-text text-muted">Nhập mã chức vụ trong hệ thống (0 nếu chưa có).</small>
+                    </div>
+                    <div class="custom-control custom-checkbox mb-3">
+                        <input asp-for="IsAdmin" class="custom-control-input" />
+                        <label asp-for="IsAdmin" class="custom-control-label">Quản trị viên</label>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save mr-1"></i>Lưu</button>
+                    <a asp-action="Index" class="btn btn-outline-secondary">Hủy</a>
+                </form>
+            </div>
+        </div>
     </div>
-    <div class="mb-2">
-        <label asp-for="Email" class="form-label"></label>
-        <input asp-for="Email" class="form-control form-control-sm" />
-    </div>
-    <div class="mb-2">
-        <label asp-for="FullName" class="form-label"></label>
-        <input asp-for="FullName" class="form-control form-control-sm" />
-    </div>
-    <div class="mb-2">
-        <label asp-for="Password" class="form-label"></label>
-        <input asp-for="Password" type="password" class="form-control form-control-sm" />
-    </div>
-    <div class="mb-2">
-        <label asp-for="DeptId" class="form-label">Phòng ban (Id)</label>
-        <input asp-for="DeptId" type="number" class="form-control form-control-sm" value="0" />
-    </div>
-    <div class="mb-2">
-        <label asp-for="PositionId" class="form-label">Chức vụ (Id)</label>
-        <input asp-for="PositionId" type="number" class="form-control form-control-sm" value="0" />
-    </div>
-    <div class="form-check mb-3">
-        <input asp-for="IsAdmin" class="form-check-input" />
-        <label asp-for="IsAdmin" class="form-check-label">Quản trị</label>
-    </div>
-    <button type="submit" class="btn btn-primary btn-sm">Lưu</button>
-    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">Hủy</a>
-</form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

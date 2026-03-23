@@ -1,0 +1,19 @@
+@model DocTypeEditPageDto
+<partial name="_ShtlPageHeader" />
+
+<div class="container-fluid px-0 pb-4">
+    @if (Model.DocType.Id == 0)
+    {
+        <form asp-action="CreateSubmit" method="post" class="card border-0 shadow-sm">
+            @Html.AntiForgeryToken()
+            <partial name="_LoaiTaiLieuFormBody" model="Model" />
+        </form>
+    }
+    else
+    {
+        <form asp-action="EditSubmit" asp-route-id="@Model.DocType.Id" method="post" class="card border-0 shadow-sm">
+            @Html.AntiForgeryToken()
+            <partial name="_LoaiTaiLieuFormBody" model="Model" />
+        </form>
+    }
+</div>
