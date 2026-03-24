@@ -94,7 +94,7 @@
                                     <a href="@viewUrl" class="btn btn-xs btn-outline-info" title="@(IsPdfDoc(doc) ? "Xem PDF" : "Xem chi tiết")">
                                         <i class="fas fa-eye"></i>
                                     </a>
-                                    @if (doc.CurrentStep == Core.Domain.Enums.WorkflowStep.Scan)
+                                    @if ((int)doc.CurrentStep <= (int)Core.Domain.Enums.WorkflowStep.Extract && !doc.IsExtracted)
                                     {
                                         <button class="btn btn-xs btn-outline-danger ms-1" onclick="confirmDelete(@doc.Id)" title="Xóa">
                                             <i class="fas fa-trash"></i>

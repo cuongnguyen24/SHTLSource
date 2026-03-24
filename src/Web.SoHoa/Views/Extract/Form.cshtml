@@ -1,131 +1,205 @@
 @model Shared.Contracts.Dtos.DocumentDto
+@using Web.Shared
 @{
     ViewData["Title"] = "Nhập liệu - " + Model.Name;
-    var cells = ViewBag.Cells as IEnumerable<Core.Domain.Entities.Stg.FormCell>;
+    ViewData["PageTitle"] = "Nhập liệu";
+    ViewData["PageIcon"] = "keyboard";
+    ViewData["Breadcrumbs"] = new List<BreadcrumbItem>
+    {
+        new() { Text = "Tổng quan", Url = Url.Action("Index", "Home") },
+        new() { Text = "Nhập liệu", Url = Url.Action("Index", "Extract") },
+        new() { Text = $"Hồ sơ #{Model.Id}" }
+    };
+    var cells = ViewBag.Cells as IEnumerable<Core.Domain.Entities.Stg.FormCell> ?? Enumerable.Empty<Core.Domain.Entities.Stg.FormCell>();
+    var rawFileUrl = "/files/" + Model.FilePath;
+    var previewUrl = Url.Action("Preview", "Scan", new { id = Model.Id }) ?? $"/scan/preview/{Model.Id}";
+    var pdfStreamUrl = Url.Action("Pdf", "Scan", new { id = Model.Id }) ?? $"/scan/pdf/{Model.Id}";
+    var downloadUrl = Url.Action("Download", "Scan", new { id = Model.Id }) ?? $"/scan/download/{Model.Id}";
+    var submitUrl = Url.Action("Submit", "Extract") ?? "/extract/submit";
+    var isPdf = Model.Extension?.ToLowerInvariant() == ".pdf"
+        || (Model.FileName?.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) ?? false)
+        || (Model.FilePath?.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) ?? false);
 }
 
-<div class="container-fluid py-3">
-    <div class="row">
-        <!-- Cột trái: xem file -->
-        <div class="col-md-6 col-lg-7">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                    <span class="fw-semibold"><i class="fas fa-file-pdf me-2 text-danger"></i>@Model.FileName</span>
-                    <div>
-                        <a href="/files/@Model.FilePath" target="_blank" class="btn btn-sm btn-outline-secondary">
-                            <i class="fas fa-external-link-alt me-1"></i>Mở file
-                        </a>
-                    </div>
-                </div>
-                <div class="card-body p-0" style="height: 75vh; overflow: auto;">
-                    @if (Model.Extension?.ToLower() is ".pdf")
-                    {
-                        <iframe src="/files/@Model.FilePath" width="100%" height="100%" frameborder="0"></iframe>
-                    }
-                    else
-                    {
-                        <img src="/files/@Model.FilePath" class="img-fluid" alt="@Model.FileName" />
-                    }
-                </div>
-            </div>
+<partial name="_ShtlPageHeader" />
+
+<div class="extract-toolbar card shadow-sm border-0 mb-3">
+    <div class="card-body py-2 d-flex flex-wrap align-items-center justify-content-between">
+        <div class="small text-muted">
+            <span class="font-weight-bold text-gray-700 mr-2">Tài liệu:</span>@Model.FileName
         </div>
-
-        <!-- Cột phải: form nhập liệu -->
-        <div class="col-md-6 col-lg-5">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h6 class="mb-0"><i class="fas fa-keyboard me-2"></i>Form nhập liệu</h6>
-                    <small>Tài liệu ID: @Model.Id</small>
-                </div>
-                <div class="card-body" style="max-height: 75vh; overflow-y: auto;">
-                    <form id="extractForm">
-                        <input type="hidden" id="docId" value="@Model.Id" />
-
-                        <!-- Thông tin chính -->
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold small">Tên tài liệu</label>
-                            <input type="text" name="Name" value="@Model.Name" class="form-control form-control-sm" />
-                        </div>
-                        <div class="row mb-2">
-                            <div class="col-6">
-                                <label class="form-label fw-semibold small">Số hiệu</label>
-                                <input type="text" name="Field1" value="@Model.SymbolNo" class="form-control form-control-sm" />
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label fw-semibold small">Số hồ sơ</label>
-                                <input type="text" name="Field2" value="@Model.RecordNo" class="form-control form-control-sm" />
-                            </div>
-                        </div>
-                        <div class="mb-2">
-                            <label class="form-label fw-semibold small">Cơ quan ban hành</label>
-                            <input type="text" name="Field3" value="@Model.IssuedBy" class="form-control form-control-sm" />
-                        </div>
-                        <div class="row mb-2">
-                            <div class="col-6">
-                                <label class="form-label fw-semibold small">Ngày ban hành</label>
-                                <input type="date" name="Field4" class="form-control form-control-sm"
-                                       value="@(Model.Issued?.ToString("yyyy-MM-dd"))" />
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label fw-semibold small">Năm</label>
-                                <input type="number" name="Field5" value="@Model.IssuedYear" class="form-control form-control-sm" />
-                            </div>
-                        </div>
-                        <div class="mb-2">
-                            <label class="form-label fw-semibold small">Tác giả / Người ký</label>
-                            <input type="text" name="Field6" value="@Model.Author" class="form-control form-control-sm" />
-                        </div>
-                        <div class="mb-2">
-                            <label class="form-label fw-semibold small">Trường mở rộng 7</label>
-                            <input type="text" name="Field7" class="form-control form-control-sm" />
-                        </div>
-                        <div class="mb-2">
-                            <label class="form-label fw-semibold small">Trường mở rộng 8</label>
-                            <input type="text" name="Field8" class="form-control form-control-sm" />
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold small">Ghi chú</label>
-                            <textarea name="Noted" class="form-control form-control-sm" rows="2">@Model.Noted</textarea>
-                        </div>
-
-                        <!-- Form cells nếu có -->
-                        @if (cells?.Any() == true)
-                        {
-                            <hr />
-                            <h6 class="small fw-bold text-primary">Các ô OCR Form</h6>
-                            @foreach (var cell in cells)
-                            {
-                                <div class="mb-2">
-                                    <label class="form-label small">@(cell.Title ?? cell.Field ?? $"Ô {cell.Cell}")</label>
-                                    <input type="text" class="form-control form-control-sm cell-input"
-                                           data-cell-id="@cell.Id"
-                                           value="@cell.ExtractedValue" />
-                                </div>
-                            }
-                        }
-
-                        <div class="d-grid gap-2 mt-3">
-                            <button type="button" class="btn btn-primary" onclick="submitExtract()">
-                                <i class="fas fa-save me-2"></i>Lưu nhập liệu
-                            </button>
-                            <a href="/extract" class="btn btn-outline-secondary">
-                                <i class="fas fa-arrow-left me-2"></i>Quay lại
-                            </a>
-                        </div>
-                    </form>
-                </div>
+        <div class="d-flex flex-wrap align-items-center">
+            <button type="button" id="btnStartSpeech" class="btn btn-primary btn-sm mr-2">
+                <i class="fas fa-microphone mr-1"></i>Bắt đầu nghe
+            </button>
+            <div class="btn-group btn-group-sm">
+            <a asp-action="Take" class="btn btn-outline-primary"><i class="fas fa-file-import mr-1"></i>Nhận hồ sơ mới</a>
+            @if (isPdf)
+            {
+                <a href="@downloadUrl" class="btn btn-outline-secondary" target="_blank"><i class="fas fa-download mr-1"></i>Tải về</a>
+            }
+            else
+            {
+                <a href="@rawFileUrl" class="btn btn-outline-secondary" target="_blank"><i class="fas fa-download mr-1"></i>Tải về</a>
+            }
+            <button type="button" id="btnSaveTop" class="btn btn-primary"><i class="fas fa-save mr-1"></i>Lưu</button>
             </div>
         </div>
     </div>
 </div>
 
+<div class="row">
+    <div class="col-lg-7 mb-3">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header py-2">
+                <i class="fas fa-file-alt text-primary mr-2"></i><span class="font-weight-bold">Ảnh/PDF nguồn</span>
+            </div>
+            <div class="card-body p-0 extract-preview">
+                @if (isPdf)
+                {
+                    <iframe src="@pdfStreamUrl" title="@Model.FileName" width="100%" height="100%" frameborder="0"></iframe>
+                }
+                else
+                {
+                    <a href="@previewUrl" target="_blank" class="d-inline-block w-100">
+                        <img src="@rawFileUrl" class="img-fluid w-100" alt="@Model.FileName" />
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5 mb-3">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                <span class="font-weight-bold"><i class="fas fa-pen-square text-primary mr-2"></i>Nhập phiếu</span>
+                <span class="badge badge-light text-muted">ID: @Model.Id</span>
+            </div>
+            <div class="card-body extract-form-panel">
+                <form id="extractForm">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" id="docId" value="@Model.Id" />
+
+                    <ul class="nav nav-tabs nav-fill mb-3" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" data-toggle="tab" href="#tabInfo" role="tab">Thông tin tài liệu</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-toggle="tab" href="#tabCells" role="tab">Tài liệu cùng bộ</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-toggle="tab" href="#tabSpeech" role="tab">Cá nhân xử lý</a>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content">
+                        <div class="tab-pane fade show active" id="tabInfo" role="tabpanel">
+                            <div class="form-group mb-2">
+                                <label class="small mb-1 font-weight-bold">Tên tài liệu</label>
+                                <input type="text" name="Name" value="@Model.Name" class="form-control form-control-sm voice-input" />
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group col-6 mb-2">
+                                    <label class="small mb-1 font-weight-bold">Số hiệu</label>
+                                    <input type="text" name="Field1" value="@Model.SymbolNo" class="form-control form-control-sm voice-input" />
+                                </div>
+                                <div class="form-group col-6 mb-2">
+                                    <label class="small mb-1 font-weight-bold">Số hồ sơ</label>
+                                    <input type="text" name="Field2" value="@Model.RecordNo" class="form-control form-control-sm voice-input" />
+                                </div>
+                            </div>
+                            <div class="form-group mb-2">
+                                <label class="small mb-1 font-weight-bold">Cơ quan ban hành</label>
+                                <input type="text" name="Field3" value="@Model.IssuedBy" class="form-control form-control-sm voice-input" />
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group col-6 mb-2">
+                                    <label class="small mb-1 font-weight-bold">Ngày ban hành</label>
+                                    <input type="date" name="Field4" class="form-control form-control-sm voice-input"
+                                           value="@(Model.Issued?.ToString("yyyy-MM-dd"))" />
+                                </div>
+                                <div class="form-group col-6 mb-2">
+                                    <label class="small mb-1 font-weight-bold">Năm</label>
+                                    <input type="number" name="Field5" value="@Model.IssuedYear" class="form-control form-control-sm voice-input" />
+                                </div>
+                            </div>
+                            <div class="form-group mb-2">
+                                <label class="small mb-1 font-weight-bold">Tác giả / Người ký</label>
+                                <input type="text" name="Field6" value="@Model.Author" class="form-control form-control-sm voice-input" />
+                            </div>
+                            <div class="form-group mb-2">
+                                <label class="small mb-1 font-weight-bold">Trường mở rộng 7</label>
+                                <input type="text" name="Field7" class="form-control form-control-sm voice-input" />
+                            </div>
+                            <div class="form-group mb-2">
+                                <label class="small mb-1 font-weight-bold">Trường mở rộng 8</label>
+                                <input type="text" name="Field8" class="form-control form-control-sm voice-input" />
+                            </div>
+                            <div class="form-group mb-2">
+                                <label class="small mb-1 font-weight-bold">Ghi chú</label>
+                                <textarea name="Noted" class="form-control form-control-sm voice-input" rows="2">@Model.Noted</textarea>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="tabCells" role="tabpanel">
+                            @if (cells.Any())
+                            {
+                                foreach (var cell in cells)
+                                {
+                                    <div class="form-group mb-2">
+                                        <label class="small mb-1">@(cell.Title ?? cell.Field ?? $"Ô {cell.Cell}")</label>
+                                        <input type="text" class="form-control form-control-sm cell-input voice-input"
+                                               data-cell-id="@cell.Id"
+                                               value="@cell.ExtractedValue" />
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <p class="text-muted small mb-0">Không có ô OCR form cho tài liệu này.</p>
+                            }
+                        </div>
+                        <div class="tab-pane fade" id="tabSpeech" role="tabpanel">
+                            <div class="alert alert-light small mb-2">
+                                Chọn một ô bất kỳ bên tab “Thông tin tài liệu” hoặc “Tài liệu cùng bộ”, bấm <strong>Bắt đầu nghe</strong>, đọc nội dung,
+                                sau đó bấm <strong>Tab</strong> để sang ô kế tiếp và đọc tiếp.
+                            </div>
+                            <div id="speechStatus" class="small text-muted">Sẵn sàng.</div>
+                            <div class="small text-muted mt-2">Ô đang nhập bằng giọng nói: <span id="speechActiveField">(chưa chọn)</span></div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3 d-flex">
+                        <button type="button" id="btnSaveBottom" class="btn btn-primary mr-2">
+                            <i class="fas fa-save mr-1"></i>Lưu nhập liệu
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left mr-1"></i>Quay lại
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+<style>
+    .extract-preview { height: calc(100vh - 260px); min-height: 480px; overflow: auto; background: #f8f9fc; }
+    .extract-form-panel { max-height: calc(100vh - 260px); min-height: 480px; overflow-y: auto; }
+    .voice-active { border-color: #4e73df !important; box-shadow: 0 0 0 .12rem rgba(78,115,223,.25) !important; }
+</style>
+}
+
 @section Scripts {
 <script>
-    function submitExtract() {
-        const docId = parseInt(document.getElementById('docId').value);
-        const form = document.getElementById('extractForm');
-        const data = new FormData(form);
+(() => {
+    const formEl = document.getElementById('extractForm');
+    const tokenEl = formEl.querySelector('input[name="__RequestVerificationToken"]');
+    const btnSaveTop = document.getElementById('btnSaveTop');
+    const btnSaveBottom = document.getElementById('btnSaveBottom');
 
+    async function submitExtract() {
+        const docId = parseInt(document.getElementById('docId').value);
+        const data = new FormData(formEl);
         const payload = {
             documentId: docId,
             field1: data.get('Field1') || null,
@@ -139,32 +213,150 @@
             cells: []
         };
 
-        // Collect cell values
         document.querySelectorAll('.cell-input').forEach(input => {
-            payload.cells.push({
-                id: parseInt(input.dataset.cellId),
-                value: input.value
-            });
+            payload.cells.push({ id: parseInt(input.dataset.cellId), value: input.value });
         });
 
-        fetch('/extract/submit', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
-            },
-            body: JSON.stringify(payload)
-        })
-        .then(r => r.json())
-        .then(res => {
-            if (res.success) {
-                alert('Nhập liệu thành công!');
+        try {
+            const res = await fetch('@submitUrl', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': tokenEl ? tokenEl.value : ''
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify(payload)
+            });
+
+            const contentType = (res.headers.get('content-type') || '').toLowerCase();
+            if (!contentType.includes('application/json')) {
+                const text = await res.text();
+                const brief = (text || '').replace(/\s+/g, ' ').slice(0, 220);
+                throw new Error(`Phản hồi không phải JSON (HTTP ${res.status}). ${brief}`);
+            }
+
+            const json = await res.json();
+            const ok = json.success ?? json.Success ?? false;
+            const msg = json.message ?? json.Message ?? '';
+            if (ok) {
+                alert('Nhập liệu thành công.');
                 window.location.href = '/extract';
             } else {
-                alert('Lỗi: ' + res.message);
+                alert('Lỗi: ' + (msg || 'Không lưu được dữ liệu.'));
             }
-        })
-        .catch(err => alert('Lỗi kết nối: ' + err));
+        } catch (e) {
+            alert('Lỗi kết nối: ' + e);
+        }
     }
+
+    btnSaveTop.addEventListener('click', submitExtract);
+    btnSaveBottom.addEventListener('click', submitExtract);
+
+    const inputs = Array.from(document.querySelectorAll('.voice-input'));
+    const activeLabel = document.getElementById('speechActiveField');
+    let activeInput = null;
+
+    function markActive(el) {
+        inputs.forEach(i => i.classList.remove('voice-active'));
+        if (el && inputs.includes(el)) {
+            activeInput = el;
+            activeInput.classList.add('voice-active');
+            const label = activeInput.closest('.form-group')?.querySelector('label')?.textContent?.trim();
+            activeLabel.textContent = label || activeInput.name || '(không tên)';
+        }
+    }
+
+    inputs.forEach(el => {
+        el.addEventListener('focus', () => markActive(el));
+        el.addEventListener('click', () => markActive(el));
+    });
+    if (inputs.length > 0) markActive(inputs[0]);
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const btnStart = document.getElementById('btnStartSpeech');
+    const speechStatus = document.getElementById('speechStatus');
+
+    if (!SpeechRecognition) {
+        speechStatus.textContent = 'Trình duyệt không hỗ trợ Web Speech API. Hãy dùng Chrome.';
+        speechStatus.classList.add('text-danger');
+        btnStart.disabled = true;
+        return;
+    }
+
+    const rec = new SpeechRecognition();
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.maxAlternatives = 1;
+    rec.lang = 'vi-VN';
+    let listening = false;
+
+    function setListening(on) {
+        listening = on;
+        btnStart.classList.toggle('btn-danger', on);
+        btnStart.classList.toggle('btn-primary', !on);
+        btnStart.innerHTML = on
+            ? '<i class="fas fa-stop mr-1"></i>Đang nghe (bấm để dừng)'
+            : '<i class="fas fa-microphone mr-1"></i>Bắt đầu nghe';
+        speechStatus.classList.toggle('text-success', on);
+        if (!on && !speechStatus.classList.contains('text-danger')) {
+            speechStatus.textContent = 'Đã dừng.';
+        }
+    }
+
+    rec.onresult = (event) => {
+        let finalText = '';
+        let interim = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            const r = event.results[i];
+            if (r.isFinal) finalText += r[0].transcript;
+            else interim += r[0].transcript;
+        }
+
+        if (finalText && activeInput) {
+            const cur = activeInput.value || '';
+            const sep = cur && !cur.endsWith(' ') && !cur.endsWith('\n') ? ' ' : '';
+            activeInput.value = (cur + sep + finalText.trim()).trim();
+            activeInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        speechStatus.classList.remove('text-danger');
+        speechStatus.textContent = interim
+            ? ('Đang nghe… ' + interim)
+            : (listening ? 'Đang nghe…' : 'Sẵn sàng.');
+    };
+
+    rec.onerror = (e) => {
+        if (e.error === 'no-speech' || e.error === 'aborted') return;
+        speechStatus.classList.add('text-danger');
+        speechStatus.textContent = 'Lỗi micro: ' + e.error;
+        setListening(false);
+    };
+
+    rec.onend = () => {
+        if (listening) {
+            try { rec.start(); } catch (_) { setListening(false); }
+        }
+    };
+
+    btnStart.addEventListener('click', () => {
+        if (listening) {
+            listening = false;
+            rec.stop();
+            setListening(false);
+            return;
+        }
+        if (!activeInput && inputs.length) markActive(inputs[0]);
+        if (activeInput) activeInput.focus();
+        try {
+            speechStatus.classList.remove('text-danger');
+            rec.lang = 'vi-VN';
+            rec.start();
+            setListening(true);
+            speechStatus.textContent = 'Đang nghe…';
+        } catch (err) {
+            speechStatus.classList.add('text-danger');
+            speechStatus.textContent = 'Không thể bắt đầu: ' + (err && err.message ? err.message : err);
+        }
+    });
+})();
 </script>
 }

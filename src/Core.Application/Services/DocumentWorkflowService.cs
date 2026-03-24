@@ -129,8 +129,6 @@ public class DocumentWorkflowService : IDocumentWorkflowService
     {
         var doc = await _docRepo.GetByIdAsync(req.DocumentId);
         if (doc is null) return ApiResult.Fail("Tài liệu không tồn tại");
-        if (doc.CurrentStep != WorkflowStep.Extract && doc.CurrentStep != WorkflowStep.Ocr)
-            return ApiResult.Fail("Tài liệu chưa đến bước nhập liệu");
 
         // Cập nhật fields
         MapExtractFields(doc, req);
@@ -230,9 +228,9 @@ public class DocumentWorkflowService : IDocumentWorkflowService
         var doc = await _docRepo.GetByIdAsync(documentId);
         if (doc is null) return ApiResult.Fail("Tài liệu không tồn tại");
 
-        // Chặn xóa nếu đã qua bước nhập liệu
-        if ((int)doc.CurrentStep >= (int)WorkflowStep.Extract)
-            return ApiResult.Fail("Không thể xóa tài liệu đã được nhập liệu hoặc kiểm tra. Hãy liên hệ quản trị viên.");
+        // Chặn xóa nếu đã qua bước nhập liệu (đã sang Check1 trở đi).
+        if ((int)doc.CurrentStep > (int)WorkflowStep.Extract || doc.IsExtracted)
+            return ApiResult.Fail("Không thể xóa tài liệu đã nhập liệu hoặc đang ở bước kiểm tra. Hãy liên hệ quản trị viên.");
 
         var filePath = doc.FilePath;
         var thumbPath = doc.ThumbPath;

@@ -18,7 +18,7 @@ namespace Web.SoHoa.Controllers;
 /// Quản lý danh sách tài liệu scan/upload và các thao tác trên bước scan.
 /// </summary>
 [Authorize]
-[AuthorizeModule(ModuleCode.ScanUpload, ModuleCode.CheckScanFirst, ModuleCode.CheckScanSecond)]
+[AuthorizeModule(ModuleCode.ScanUpload)]
 public class ScanController : BaseController
 {
     private readonly IDocumentService _docService;
@@ -53,7 +53,6 @@ public class ScanController : BaseController
             PageIndex = GetPageRequest().PageIndex,
             PageSize = GetPageRequest().PageSize,
             Search = Request.Query["q"],
-            Step = WorkflowStep.Scan,
             StartDate = ParseDate(Request.Query["from"]),
             EndDate = ParseDate(Request.Query["to"])
         };

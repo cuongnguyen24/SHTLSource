@@ -73,7 +73,7 @@ public class DocumentService : IDocumentService
             FileSize = req.FileSize,
             WorkstationName = req.WorkstationName,
             Status = DocumentStatus.Active,
-            CurrentStep = WorkflowStep.Scan,
+            CurrentStep = WorkflowStep.Extract,
             Created = DateTime.UtcNow,
             CreatedBy = user.Id,
             Version = 1

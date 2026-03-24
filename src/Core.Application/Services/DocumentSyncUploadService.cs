@@ -183,7 +183,7 @@ public sealed class DocumentSyncUploadService : IDocumentSyncUploadService
                     Extension = ext,
                     FileSize = item.File.Length,
                     Status = DocumentStatus.Active,
-                    CurrentStep = WorkflowStep.Scan,
+                    CurrentStep = WorkflowStep.Extract,
                     OcrStatus = OcrStatus.NotRequested,
                     Version = 1,
                     Created = DateTime.UtcNow,

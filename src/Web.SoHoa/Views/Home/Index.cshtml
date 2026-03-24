@@ -30,34 +30,12 @@
             </a>
         </div>
         <div class="col-6 col-md-3 col-xl-2">
-            <a href="/scan/check-scan1-list" class="text-decoration-none">
-                <div class="card border-0 shadow-sm h-100 text-center">
-                    <div class="card-body">
-                        <div class="fs-1 text-warning mb-2"><i class="fas fa-search"></i></div>
-                        <h6 class="fw-bold">Kiểm tra scan</h6>
-                        <p class="text-muted small mb-0">Bước 2 & 3</p>
-                    </div>
-                </div>
-            </a>
-        </div>
-        <div class="col-6 col-md-3 col-xl-2">
-            <a href="/zone" class="text-decoration-none">
-                <div class="card border-0 shadow-sm h-100 text-center">
-                    <div class="card-body">
-                        <div class="fs-1 text-info mb-2"><i class="fas fa-vector-square"></i></div>
-                        <h6 class="fw-bold">Khoanh vùng</h6>
-                        <p class="text-muted small mb-0">Bước 4</p>
-                    </div>
-                </div>
-            </a>
-        </div>
-        <div class="col-6 col-md-3 col-xl-2">
             <a href="/extract" class="text-decoration-none">
                 <div class="card border-0 shadow-sm h-100 text-center">
                     <div class="card-body">
                         <div class="fs-1 text-primary mb-2"><i class="fas fa-keyboard"></i></div>
                         <h6 class="fw-bold">Nhập liệu</h6>
-                        <p class="text-muted small mb-0">Bước 5</p>
+                        <p class="text-muted small mb-0">Bước 2</p>
                     </div>
                 </div>
             </a>
@@ -66,9 +44,20 @@
             <a href="/check/check1" class="text-decoration-none">
                 <div class="card border-0 shadow-sm h-100 text-center">
                     <div class="card-body">
+                        <div class="fs-1 text-success mb-2"><i class="fas fa-check"></i></div>
+                        <h6 class="fw-bold">Kiểm tra lần 1</h6>
+                        <p class="text-muted small mb-0">Bước 3</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-6 col-md-3 col-xl-2">
+            <a href="/check/check2" class="text-decoration-none">
+                <div class="card border-0 shadow-sm h-100 text-center">
+                    <div class="card-body">
                         <div class="fs-1 text-success mb-2"><i class="fas fa-check-double"></i></div>
-                        <h6 class="fw-bold">Kiểm tra</h6>
-                        <p class="text-muted small mb-0">Bước 6-9</p>
+                        <h6 class="fw-bold">Kiểm tra lần 2</h6>
+                        <p class="text-muted small mb-0">Bước 4</p>
                     </div>
                 </div>
             </a>
@@ -79,7 +68,7 @@
                     <div class="card-body">
                         <div class="fs-1 text-dark mb-2"><i class="fas fa-file-export"></i></div>
                         <h6 class="fw-bold">Export</h6>
-                        <p class="text-muted small mb-0">Bước 10</p>
+                        <p class="text-muted small mb-0">Sau check 2</p>
                     </div>
                 </div>
             </a>
@@ -114,16 +103,10 @@ fetch('/api/report/workflow-progress')
         const d = data.data;
         const html = `
             <div class="row g-2 text-center">
-                ${badge('Mới upload', d.atScan, 'secondary')}
-                ${badge('KT Scan 1', d.atCheckScan1, 'warning')}
-                ${badge('KT Scan 2', d.atCheckScan2, 'warning')}
-                ${badge('Khoanh vùng', d.atZone, 'info')}
-                ${badge('OCR', d.atOcr, 'info')}
+                ${badge('Upload', d.atScan, 'secondary')}
                 ${badge('Nhập liệu', d.atExtract, 'primary')}
                 ${badge('KT lần 1', d.atCheck1, 'primary')}
                 ${badge('KT lần 2', d.atCheck2, 'primary')}
-                ${badge('KT cuối', d.atCheckFinal, 'success')}
-                ${badge('KT logic', d.atCheckLogic, 'success')}
                 ${badge('Chờ export', d.atExport, 'dark')}
                 ${badge('Hoàn thành', d.completed, 'success')}
             </div>

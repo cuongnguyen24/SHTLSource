@@ -33,15 +33,40 @@ public class ExtractController : BaseController
     [HttpGet]
     public async Task<IActionResult> Index()
     {
+        WorkflowStep? step = WorkflowStep.Extract;
+        if (Enum.TryParse<WorkflowStep>(Request.Query["step"], true, out var parsedStep))
+            step = parsedStep;
+
         var req = new DocumentFilterRequest
         {
             PageIndex = GetPageRequest().PageIndex,
             PageSize = GetPageRequest().PageSize,
             Search = Request.Query["q"],
-            Step = WorkflowStep.Extract
+            Step = step
         };
         var result = await _docService.GetListAsync(req, CurrentUser);
         return View(result);
+    }
+
+    // GET /extract/take - Nhận nhanh 1 tài liệu để nhập
+    [HttpGet]
+    public async Task<IActionResult> Take()
+    {
+        var req = new DocumentFilterRequest
+        {
+            PageIndex = 1,
+            PageSize = 1,
+            Step = WorkflowStep.Extract
+        };
+        var result = await _docService.GetListAsync(req, CurrentUser);
+        var doc = result.Items.FirstOrDefault();
+        if (doc is null)
+        {
+            SetWarning("Hiện không có tài liệu nào chờ nhập liệu.");
+            return RedirectToAction(nameof(Index));
+        }
+
+        return RedirectToAction(nameof(Form), new { id = doc.Id });
     }
 
     // GET /extract/form/{id} - Form nhập liệu
@@ -50,11 +75,6 @@ public class ExtractController : BaseController
     {
         var doc = await _docService.GetByIdAsync(id, CurrentUser);
         if (doc is null) return NotFound();
-        if (doc.CurrentStep != WorkflowStep.Extract && doc.CurrentStep != WorkflowStep.Ocr)
-        {
-            SetError($"Tài liệu đang ở bước {doc.CurrentStep}, không phải bước nhập liệu");
-            return RedirectToAction("Index");
-        }
 
         var cells = await _cellRepo.GetByDocumentAsync(id);
         ViewBag.Cells = cells;
