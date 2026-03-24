@@ -49,7 +49,6 @@ public abstract class BaseAdminController : Controller
 
         CurrentUser = currentUser;
         ViewBag.CurrentUser = CurrentUser;
-        ViewData["ShellMainFlush"] = true;
         await next();
     }
 

@@ -1,27 +1,44 @@
 @{
     Layout = "_LayoutShell";
+    ViewData["ShellTopbarPartial"] = "_ShtlSbTopbar";
 }
 @section Styles {
-    <link rel="stylesheet" href="~/css/admin-layout.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     @await RenderSectionAsync("Styles", required: false)
 }
-<div class="container-fluid px-0">
-    @if (TempData["Success"] is string ok)
+
+<div class="container-fluid">
+    @if (TempData["Success"] is string sMsg)
     {
-        <div class="alert alert-success alert-dismissible fade show mx-3 mt-3" role="alert">
-            <i class="fas fa-check-circle mr-2"></i>@ok
-            <button type="button" class="close" data-dismiss="alert" aria-label="Đóng"><span aria-hidden="true">&times;</span></button>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle mr-2"></i>@sMsg
+            <button type="button" class="close" data-dismiss="alert" aria-label="Đóng">
+                <span aria-hidden="true">&times;</span>
+            </button>
         </div>
     }
-    @if (TempData["Error"] is string err)
+    @if (TempData["Error"] is string eMsg)
     {
-        <div class="alert alert-danger alert-dismissible fade show mx-3 mt-3" role="alert">
-            <i class="fas fa-exclamation-circle mr-2"></i>@err
-            <button type="button" class="close" data-dismiss="alert" aria-label="Đóng"><span aria-hidden="true">&times;</span></button>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-circle mr-2"></i>@eMsg
+            <button type="button" class="close" data-dismiss="alert" aria-label="Đóng">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    }
+    @if (TempData["Warning"] is string wMsg)
+    {
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle mr-2"></i>@wMsg
+            <button type="button" class="close" data-dismiss="alert" aria-label="Đóng">
+                <span aria-hidden="true">&times;</span>
+            </button>
         </div>
     }
 </div>
+
 @RenderBody()
+
 @section Scripts {
     @await RenderSectionAsync("Scripts", required: false)
 }
