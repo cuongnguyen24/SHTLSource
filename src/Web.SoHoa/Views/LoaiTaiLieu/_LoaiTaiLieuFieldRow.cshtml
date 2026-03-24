@@ -7,112 +7,133 @@
     var checkedAttr = field.IsRequired || st != null ? "checked" : null;
     var disabledAttr = field.IsRequired ? "disabled" : null;
     var itype = string.IsNullOrEmpty(st?.IType) ? "text" : st!.IType!;
+    var modalId = $"cfg_{fid}";
 }
-<div class="border rounded p-2 mb-2">
-    <div class="form-row align-items-center">
-        <div class="col-auto">
-            <div class="form-check m-0">
-                <input class="form-check-input" type="checkbox" name="F@(fid)" value="@fid" id="f_@fid" @disabledAttr @checkedAttr />
+<div class="col-md-6 mb-2">
+    <div class="border rounded p-2 bg-white">
+        <div class="form-row align-items-center">
+            <div class="col-auto pr-1">
+                <input type="checkbox" name="F@(fid)" value="@fid" id="f_@fid" @disabledAttr @checkedAttr />
+            </div>
+            <div class="col">
+                <input class="form-control form-control-sm" name="FN@(fid)" id="fn_@fid" placeholder="@field.Title" value="@(st?.Title ?? field.Title)" />
+                <small class="text-muted">@field.Name · @field.Datatype</small>
+            </div>
+            <div class="col-auto">
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-toggle="modal" data-target="#@modalId" title="Cấu hình trường">
+                    <i class="fas fa-cog"></i>
+                </button>
             </div>
         </div>
-        <div class="col">
-            <input class="form-control form-control-sm" name="FN@(fid)" id="fn_@fid" placeholder="@field.Title" value="@(st?.Title ?? field.Title)" />
-            <small class="text-muted">@field.Name · @field.Datatype</small>
-        </div>
-        <div class="col-auto">
-            <button class="btn btn-sm btn-outline-secondary" type="button" data-toggle="collapse" data-target="#cfg_@fid" aria-expanded="false">Cấu hình</button>
-        </div>
-    </div>
-    <div id="cfg_@fid" class="collapse mt-2">
-        <div class="row">
-            <div class="col-md-4">
-                <label class="small text-muted">Kiểu nhập (FT)</label>
-                <select class="form-control form-control-sm" name="FT@(fid)">
-                    <!option value="text" @(itype == "text" ? "selected" : null)>Text</!option>
-                    <!option value="textarea" @(itype == "textarea" ? "selected" : null)>Textarea</!option>
-                    <!option value="dropdownlist" @(itype == "dropdownlist" ? "selected" : null)>Dropdown list</!option>
-                    <!option value="radio" @(itype == "radio" ? "selected" : null)>Radio</!option>
-                    <!option value="checkbox" @(itype == "checkbox" ? "selected" : null)>Checkbox</!option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="small text-muted">Hàng (FR)</label>
-                <input class="form-control form-control-sm" type="number" name="FR@(fid)" value="@(st?.IRow > 0 ? st.IRow : 3)" />
-            </div>
-            <div class="col-md-2">
-                <label class="small text-muted">Cột (FC)</label>
-                <input class="form-control form-control-sm" type="number" name="FC@(fid)" value="@st?.ICol" />
-            </div>
-            <div class="col-md-4">
-                <label class="small text-muted">Định dạng (FFormat)</label>
-                <input class="form-control form-control-sm" name="FFormat@(fid)" value="@st?.Format" />
-            </div>
-        </div>
-        <div class="row mt-1">
-            <div class="col-md-3">
-                <label class="small text-muted">Giá trị cố định (FFixV)</label>
-                <input class="form-control form-control-sm" name="FFixV@(fid)" value="@st?.FixValue" />
-            </div>
-            <div class="col-md-3">
-                <label class="small text-muted">Min (FMinV)</label>
-                <input class="form-control form-control-sm" name="FMinV@(fid)" value="@st?.MinValue" />
-            </div>
-            <div class="col-md-3">
-                <label class="small text-muted">Max (FMaxV)</label>
-                <input class="form-control form-control-sm" name="FMaxV@(fid)" value="@st?.MaxValue" />
-            </div>
-            <div class="col-md-3">
-                <label class="small text-muted">Pattern type Id (FPT)</label>
-                <select class="form-control form-control-sm" name="FPT@(fid)">
-                    <option value="0">—</option>
-                    @foreach (var p in page.PatternTypes)
-                    {
-                        <!option value="@p.Id" @(st?.IdPatternType == p.Id ? "selected" : null)>@p.Name</!option>
-                    }
-                </select>
-            </div>
-        </div>
-        <div class="row mt-1">
-            <div class="col-md-3">
-                <label class="small text-muted">Min độ dài (FMinL)</label>
-                <input class="form-control form-control-sm" type="number" name="FMinL@(fid)" value="@st?.MinLen" />
-            </div>
-            <div class="col-md-3">
-                <label class="small text-muted">Max độ dài (FMaxL)</label>
-                <input class="form-control form-control-sm" type="number" name="FMaxL@(fid)" value="@st?.MaxLen" />
-            </div>
-            <div class="col-md-3">
-                <label class="small text-muted">Pattern tùy (FPC)</label>
-                <input class="form-control form-control-sm" name="FPC@(fid)" value="@st?.PatternCustom" />
-            </div>
-            <div class="col-md-3">
-                <label class="small text-muted">Danh mục liên kết (FCT)</label>
-                <input class="form-control form-control-sm" type="number" name="FCT@(fid)" value="@(st?.IdCategoryType > 0 ? st.IdCategoryType.ToString() : "")" />
-            </div>
-        </div>
-        <div class="row mt-1">
-            <div class="col-md-4">
-                <label class="small text-muted">Nhóm trường (FG)</label>
-                <select class="form-control form-control-sm" name="FG@(fid)">
-                    <option value="0">—</option>
-                    @foreach (var g in page.FieldGroups)
-                    {
-                        <!option value="@g.Id" @(st?.IdFieldGroup == g.Id ? "selected" : null)>@g.Name</!option>
-                    }
-                </select>
-            </div>
-            <div class="col-md-8 d-flex align-items-end flex-wrap">
-                <div class="form-check form-check-inline">
-                    <input class="form-check-input" type="checkbox" name="FIsRO@(fid)" value="1" id="fro_@fid" @(st?.IsReadOnly == true ? "checked" : null) />
-                    <label class="form-check-label small" for="fro_@fid">Chỉ đọc</label>
-                </div>
-                <div class="form-check form-check-inline">
-                    <input class="form-check-input" type="checkbox" name="FIsU@(fid)" value="1" id="fu_@fid" @(st?.IsUpperCase == true ? "checked" : null) />
-                    <label class="form-check-label small" for="fu_@fid">In hoa</label>
-                </div>
-                <div class="form-check form-check-inline">
-                    <input class="form-check-input" type="checkbox" name="FIsC@(fid)" value="1" id="fcap_@fid" @(st?.IsCapitalize == true ? "checked" : null) />
-                    <label class="form-check-label small" for="fcap_@fid">Viết hoa đầu</label>
+
+        <div class="modal fade" id="@modalId" tabindex="-1" role="dialog" aria-hidden="true">
+            <div class="modal-dialog modal-lg" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h6 class="modal-title">Cấu hình trường thông tin</h6>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <label class="small text-muted">Kiểu nhập</label>
+                                <select class="form-control form-control-sm" name="FT@(fid)">
+                                    <!option value="text" @(itype == "text" ? "selected" : null)>Text</!option>
+                                    <!option value="textarea" @(itype == "textarea" ? "selected" : null)>Textarea</!option>
+                                    <!option value="dropdownlist" @(itype == "dropdownlist" ? "selected" : null)>Dropdown list</!option>
+                                    <!option value="radio" @(itype == "radio" ? "selected" : null)>Radio</!option>
+                                    <!option value="checkbox" @(itype == "checkbox" ? "selected" : null)>Checkbox</!option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="small text-muted">Nhóm trường</label>
+                                <select class="form-control form-control-sm" name="FG@(fid)">
+                                    <option value="0">Không xác định</option>
+                                    @foreach (var g in page.FieldGroups)
+                                    {
+                                        <!option value="@g.Id" @(st?.IdFieldGroup == g.Id ? "selected" : null)>@g.Name</!option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="small text-muted">Định dạng dữ liệu</label>
+                                <select class="form-control form-control-sm" name="FPT@(fid)">
+                                    <option value="0">Không xác định</option>
+                                    @foreach (var p in page.PatternTypes)
+                                    {
+                                        <!option value="@p.Id" @(st?.IdPatternType == p.Id ? "selected" : null)>@p.Name</!option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-md-4">
+                                <label class="small text-muted">Hàng</label>
+                                <input class="form-control form-control-sm" type="number" name="FR@(fid)" value="@(st?.IRow > 0 ? st.IRow : 3)" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="small text-muted">Cột</label>
+                                <input class="form-control form-control-sm" type="number" name="FC@(fid)" value="@(st?.ICol > 0 ? st.ICol : 0)" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="small text-muted">Danh mục liên kết</label>
+                                <input class="form-control form-control-sm" type="number" name="FCT@(fid)" value="@(st?.IdCategoryType > 0 ? st.IdCategoryType : 0)" />
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-md-12">
+                                <label class="small text-muted">Cấu trúc dữ liệu</label>
+                                <input class="form-control form-control-sm" name="FFormat@(fid)" value="@st?.Format" placeholder="{Tên}/{Trường 1} - [{Trường 99}]" />
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-md-6">
+                                <label class="small text-muted">Giá trị tối thiểu</label>
+                                <input class="form-control form-control-sm" name="FMinV@(fid)" value="@st?.MinValue" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="small text-muted">Giá trị tối đa</label>
+                                <input class="form-control form-control-sm" name="FMaxV@(fid)" value="@st?.MaxValue" />
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-md-6">
+                                <label class="small text-muted">Số ký tự tối thiểu</label>
+                                <input class="form-control form-control-sm" type="number" name="FMinL@(fid)" value="@st?.MinLen" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="small text-muted">Số ký tự tối đa</label>
+                                <input class="form-control form-control-sm" type="number" name="FMaxL@(fid)" value="@st?.MaxLen" />
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-md-12">
+                                <label class="small text-muted">Danh sách chọn cố định (mỗi dòng một giá trị)</label>
+                                <textarea class="form-control form-control-sm" name="FFixV@(fid)" rows="4">@st?.FixValue</textarea>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-md-12 d-flex flex-wrap">
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" name="FIsRO@(fid)" value="1" id="fro_@fid" @(st?.IsReadOnly == true ? "checked" : null) />
+                                    <label class="form-check-label small" for="fro_@fid">Trường chỉ đọc</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" name="FIsU@(fid)" value="1" id="fu_@fid" @(st?.IsUpperCase == true ? "checked" : null) />
+                                    <label class="form-check-label small" for="fu_@fid">Trường viết hoa</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" name="FIsC@(fid)" value="1" id="fcap_@fid" @(st?.IsCapitalize == true ? "checked" : null) />
+                                    <label class="form-check-label small" for="fcap_@fid">Viết hoa chữ cái đầu</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer py-2">
+                        <button type="button" class="btn btn-sm btn-primary" data-dismiss="modal">Lưu cấu hình</button>
+                    </div>
                 </div>
             </div>
         </div>

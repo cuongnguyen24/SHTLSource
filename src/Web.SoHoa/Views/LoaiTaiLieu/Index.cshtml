@@ -4,6 +4,7 @@
     var ctypes = ViewBag.DocTypeContentTypes as IReadOnlyList<Shared.Contracts.Dtos.ContentTypeDocRowDto> ?? Array.Empty<Shared.Contracts.Dtos.ContentTypeDocRowDto>();
 }
 <partial name="_ShtlPageHeader" />
+@Html.AntiForgeryToken()
 
 <div class="container-fluid px-0 pb-4">
     <div class="card border-0 shadow-sm mb-3">
@@ -18,6 +19,9 @@
                 </div>
                 <div class="col-auto ms-md-auto">
                     <div class="btn-group">
+                        <button type="button" class="btn btn-danger btn-sm" id="btnBulkDelete" title="Xóa các dòng đã chọn">
+                            <i class="fas fa-trash mr-1"></i>Xóa
+                        </button>
                         <a class="btn btn-primary btn-sm" asp-action="Create"><i class="fas fa-plus mr-1"></i>Tạo mới</a>
                         <button type="button" class="btn btn-primary btn-sm dropdown-toggle dropdown-toggle-split" data-toggle="dropdown"></button>
                         <div class="dropdown-menu dropdown-menu-right">
@@ -43,6 +47,9 @@
                 <table class="table table-hover table-sm mb-0">
                     <thead class="table-primary">
                         <tr>
+                            <th style="width:34px" class="text-center">
+                                <input type="checkbox" id="chkAllRows" />
+                            </th>
                             <th style="width:48px">STT</th>
                             <th>Tên</th>
                             <th>Mô tả</th>
@@ -55,12 +62,15 @@
                     <tbody>
                         @if (!Model.Any())
                         {
-                            <tr><td colspan="7" class="text-center text-muted py-4">Chưa có dữ liệu. <a asp-action="Create">Tạo mới</a></td></tr>
+                            <tr><td colspan="8" class="text-center text-muted py-4">Chưa có dữ liệu. <a asp-action="Create">Tạo mới</a></td></tr>
                         }
                         @{ var i = 1; }
                         @foreach (var row in Model)
                         {
                             <tr>
+                                <td class="text-center">
+                                    <input type="checkbox" class="row-check" value="@row.Id" />
+                                </td>
                                 <td class="text-muted small">@i++</td>
                                 <td class="fw-semibold"><a asp-action="Edit" asp-route-id="@row.Id">@row.Name</a></td>
                                 <td class="small">@(row.Describe ?? "")</td>
@@ -74,6 +84,7 @@
                                     <a class="btn btn-xs btn-outline-secondary" asp-action="OcrFix" asp-route-id="@row.Id" target="_blank" title="Hậu OCR"><i class="fas fa-external-link-alt"></i></a>
                                     <a class="btn btn-xs btn-outline-success" asp-action="Separate" asp-route-id="@row.Id" title="Tách trang"><i class="fas fa-cut"></i></a>
                                     <form asp-action="Delete" asp-route-id="@row.Id" method="post" class="d-inline" onsubmit="return confirm('Xóa loại tài liệu?');">
+                                        @Html.AntiForgeryToken()
                                         <button type="submit" class="btn btn-xs btn-outline-danger" title="Xóa"><i class="fas fa-trash"></i></button>
                                     </form>
                                 </td>
@@ -85,3 +96,44 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+<script>
+(() => {
+    const chkAll = document.getElementById('chkAllRows');
+    const rowChecks = () => Array.from(document.querySelectorAll('.row-check'));
+    chkAll?.addEventListener('change', () => rowChecks().forEach(c => c.checked = chkAll.checked));
+
+    document.getElementById('btnBulkDelete')?.addEventListener('click', () => {
+        const ids = rowChecks().filter(x => x.checked).map(x => x.value);
+        if (ids.length === 0) {
+            alert('Bạn chưa chọn loại tài liệu cần xóa.');
+            return;
+        }
+        if (!confirm(`Xóa ${ids.length} loại tài liệu đã chọn?`)) return;
+
+        const form = document.createElement('form');
+        form.method = 'post';
+        form.action = '@Url.Action("Deletes", "LoaiTaiLieu")';
+
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+        const tokenInput = document.createElement('input');
+        tokenInput.type = 'hidden';
+        tokenInput.name = '__RequestVerificationToken';
+        tokenInput.value = token;
+        form.appendChild(tokenInput);
+
+        ids.forEach(id => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'ids';
+            input.value = id;
+            form.appendChild(input);
+        });
+
+        document.body.appendChild(form);
+        form.submit();
+    });
+})();
+</script>
+}

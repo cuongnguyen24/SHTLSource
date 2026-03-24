@@ -34,6 +34,8 @@ public class LoaiTaiLieuController : BaseController
     }
 
     [HttpGet("")]
+    [HttpGet("/doctype")]
+    [HttpGet("/doctype.html")]
     public async Task<IActionResult> Index([FromQuery] string? q)
     {
         SetPageHeader("Loại tài liệu");
@@ -44,6 +46,8 @@ public class LoaiTaiLieuController : BaseController
     }
 
     [HttpGet("create")]
+    [HttpGet("/doctype/create")]
+    [HttpGet("/doctype/create/{contentTypeId:int}")]
     public async Task<IActionResult> Create([FromQuery] int? contentTypeId)
     {
         SetPageHeader("Tạo loại tài liệu");
@@ -52,6 +56,8 @@ public class LoaiTaiLieuController : BaseController
     }
 
     [HttpPost("create")]
+    [HttpPost("save")]
+    [HttpPost("/doctype/save")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateSubmit()
     {
@@ -67,6 +73,7 @@ public class LoaiTaiLieuController : BaseController
     }
 
     [HttpGet("edit/{id:int}")]
+    [HttpGet("/doctype/update/{id:int}")]
     public async Task<IActionResult> Edit(int id)
     {
         var vm = await _axe.GetEditPageAsync(ChannelId, id);
@@ -77,6 +84,8 @@ public class LoaiTaiLieuController : BaseController
     }
 
     [HttpPost("edit/{id:int}")]
+    [HttpPost("change/{id:int}")]
+    [HttpPost("/doctype/change/{id:int}")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> EditSubmit(int id)
     {
@@ -92,6 +101,7 @@ public class LoaiTaiLieuController : BaseController
     }
 
     [HttpGet("clone/{id:int}")]
+    [HttpGet("/doctype/clone/{id:int}")]
     public async Task<IActionResult> Clone(int id)
     {
         var result = await _axe.CloneAsync(ChannelId, CurrentUser.Id, id);
@@ -103,6 +113,7 @@ public class LoaiTaiLieuController : BaseController
     }
 
     [HttpPost("delete/{id:int}")]
+    [HttpPost("/doctype/delete/{id:int}")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(int id)
     {
@@ -114,7 +125,36 @@ public class LoaiTaiLieuController : BaseController
         return RedirectToAction(nameof(Index));
     }
 
+    [HttpPost("deletes")]
+    [HttpPost("/doctype/deletes")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Deletes([FromForm] List<int> ids)
+    {
+        if (ids == null || ids.Count == 0)
+        {
+            SetWarning("Bạn chưa chọn loại tài liệu cần xóa.");
+            return RedirectToAction(nameof(Index));
+        }
+
+        var deleted = 0;
+        var errors = new List<string>();
+        foreach (var id in ids.Distinct())
+        {
+            var result = await _axe.DeleteAsync(ChannelId, id);
+            if (result.Success) deleted++;
+            else if (!string.IsNullOrWhiteSpace(result.Message)) errors.Add($"#{id}: {result.Message}");
+        }
+
+        if (deleted > 0)
+            SetSuccess($"Đã xóa {deleted} loại tài liệu.");
+        if (errors.Count > 0)
+            SetError("Một số bản ghi chưa xóa được: " + string.Join(" | ", errors.Take(5)));
+
+        return RedirectToAction(nameof(Index));
+    }
+
     [HttpGet("sortable/{id:int}")]
+    [HttpGet("/doctype/sortable/{id:int}")]
     public async Task<IActionResult> Sortable(int id)
     {
         var vm = await _axe.GetSortablePageAsync(ChannelId, id);
@@ -125,6 +165,7 @@ public class LoaiTaiLieuController : BaseController
     }
 
     [HttpPost("sortable/{id:int}")]
+    [HttpPost("/doctype/sortable-change/{id:int}")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SortableSubmit(int id)
     {
@@ -137,6 +178,7 @@ public class LoaiTaiLieuController : BaseController
     }
 
     [HttpGet("separate/{id:int}")]
+    [HttpGet("/doctype/separate/{id:int}")]
     public async Task<IActionResult> Separate(int id)
     {
         var vm = await _axe.GetSeparatePageAsync(ChannelId, id);
@@ -147,6 +189,7 @@ public class LoaiTaiLieuController : BaseController
     }
 
     [HttpPost("separate/{id:int}")]
+    [HttpPost("/doctype/separate-change/{id:int}")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SeparateSubmit(int id)
     {
@@ -159,6 +202,7 @@ public class LoaiTaiLieuController : BaseController
     }
 
     [HttpGet("ocr-fix/{id:int}")]
+    [HttpGet("/doctype/ocr-fix/{id:int}")]
     public async Task<IActionResult> OcrFix(int id)
     {
         var vm = await _axe.GetOcrFixPageAsync(ChannelId, id);
@@ -169,6 +213,7 @@ public class LoaiTaiLieuController : BaseController
     }
 
     [HttpPost("ocr-fix/save-field")]
+    [HttpPost("/doctype/ocr-fix/save")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> OcrFixSaveField([FromForm] int idDoctype)
     {
@@ -177,6 +222,7 @@ public class LoaiTaiLieuController : BaseController
     }
 
     [HttpPost("ocr-fix/preview")]
+    [HttpPost("/doctype/ocr-fix/example")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> OcrFixPreview([FromForm] int idDoctype)
     {

@@ -3,29 +3,25 @@
     var d = Model.DocType;
     StgDocFieldSettingDto? Fs(int fieldId, bool catalog) =>
         Model.Settings.LastOrDefault(x => x.IdField == fieldId && x.IsCatalog == catalog);
-
-    string[] dcOrder = { "dctext", "dcnumber", "dcdatetime" };
-    string[] fcOrder = { "fctext", "fcnumber", "fcdecimal", "fcdatetime" };
-    string[] stdOrder = { "text", "number", "decimal", "datetime" };
 }
 
 <div class="card-body">
     <input type="hidden" name="Parent" value="0" />
 
     <div class="form-group row">
-        <label class="col-md-2 col-form-label">Tên <span class="text-danger">*</span></label>
+        <label class="col-lg-2 col-form-label">Tên <span class="text-danger">*</span></label>
         <div class="col-md-10">
             <input name="Name" class="form-control form-control-sm" value="@d.Name" required />
         </div>
     </div>
     <div class="form-group row">
-        <label class="col-md-2 col-form-label">Mô tả</label>
+        <label class="col-lg-2 col-form-label">Mô tả</label>
         <div class="col-md-10">
             <textarea name="Describe" class="form-control form-control-sm" rows="3" placeholder="Mô tả về loại tài liệu">@d.Describe</textarea>
         </div>
     </div>
     <div class="form-group row">
-        <label class="col-md-2 col-form-label">Trích xuất</label>
+        <label class="col-lg-2 col-form-label">Trích xuất</label>
         <div class="col-md-4">
             <select name="Code" class="form-control form-control-sm">
                 <option value="">Không xác định</option>
@@ -43,7 +39,7 @@
         </div>
     </div>
     <div class="form-group row">
-        <label class="col-md-2 col-form-label">Phân tách</label>
+        <label class="col-lg-2 col-form-label">Phân tách</label>
         <div class="col-md-4">
             <select name="IDSeparateType" class="form-control form-control-sm">
                 <option value="0">Không xác định</option>
@@ -55,18 +51,20 @@
         </div>
     </div>
     <div class="form-group row">
-        <label class="col-md-2 col-form-label">Thứ tự</label>
+        <label class="col-lg-2 col-form-label">Thứ tự sắp xếp</label>
         <div class="col-md-4">
             <input type="number" name="Weight" class="form-control form-control-sm" value="@d.Weight" />
         </div>
-        <label class="col-md-2 col-form-label">Số trường nhập liệu</label>
+        <label class="col-lg-2 col-form-label">Số trường nhập liệu</label>
         <div class="col-md-4">
             <input type="number" name="FieldQuantity" class="form-control form-control-sm" min="0" value="@d.FieldQuantity" />
         </div>
     </div>
 
-    <h6 class="mt-4 text-primary">Hiển thị (Dublin Core tùy chỉnh)</h6>
-    <div class="row">
+    <div class="form-group row mt-3">
+        <label class="col-lg-2 col-form-label">Hiển thị</label>
+        <div class="col-lg-10">
+            <div class="row">
         @foreach (var f in Model.AllFields.Where(x => x.Datatype == "dccustom" || x.Datatype == "dcselect"))
         {
             var s = Fs(f.Id, false);
@@ -79,83 +77,140 @@
                 </div>
             </div>
         }
+            </div>
+        </div>
     </div>
 
-    @foreach (var dt in dcOrder)
-    {
-        var fields = Model.AllFields.Where(x => x.Datatype == dt).ToList();
-        if (fields.Count == 0) { continue; }
-        <h6 class="mt-4 text-secondary">DC — @dt</h6>
-        @foreach (var f in fields)
-        {
-            var s = Fs(f.Id, false);
-            <partial name="_LoaiTaiLieuFieldRow" model="Tuple.Create(f,s,Model)" />
-        }
-    }
-
-    @foreach (var dt in fcOrder)
-    {
-        var fields = Model.AllFields.Where(x => x.Datatype == dt).ToList();
-        if (fields.Count == 0) { continue; }
-        <h6 class="mt-4 text-secondary">Mở rộng — @dt</h6>
-        @foreach (var f in fields)
-        {
-            var s = Fs(f.Id, false);
-            <partial name="_LoaiTaiLieuFieldRow" model="Tuple.Create(f,s,Model)" />
-        }
-    }
-
-    @foreach (var dt in stdOrder)
-    {
-        var fields = Model.AllFields.Where(x => x.Datatype == dt).ToList();
-        if (fields.Count == 0) { continue; }
-        <h6 class="mt-4 text-secondary">Chuẩn — @dt</h6>
-        @foreach (var f in fields)
-        {
-            var s = Fs(f.Id, false);
-            <partial name="_LoaiTaiLieuFieldRow" model="Tuple.Create(f,s,Model)" />
-        }
-    }
-
-    <h6 class="mt-4 text-secondary">Trường danh mục</h6>
-    @foreach (var c in Model.CategoryTypes)
-    {
-        var s = Fs(c.Id, true);
-        <div class="border rounded p-2 mb-2">
-            <div class="form-check form-check-inline">
-                <input class="form-check-input" type="checkbox" name="CT@(c.Id)" value="@c.Id" id="ct_@c.Id" @(s != null ? "checked" : null) />
-                <label class="form-check-label" for="ct_@c.Id">@c.Name</label>
-            </div>
-            <div class="form-check form-check-inline">
-                <input class="form-check-input" type="radio" name="CTIsCatalogMain" value="@c.Id" id="ctm_@c.Id" @(s?.IsCatalogMain == true ? "checked" : null) />
-                <label class="form-check-label" for="ctm_@c.Id">Danh mục chính</label>
-            </div>
-            <div class="row mt-2">
-                <div class="col-md-4">
-                    <input name="CTN@(c.Id)" class="form-control form-control-sm" placeholder="Tiêu đề" value="@(s?.Title ?? c.Name)" />
+    <div class="form-group row form-group-sm">
+        <label class="col-lg-2 col-form-label">Chuẩn Dublin Core</label>
+        <div class="col-lg-10">
+            <ul class="nav nav-tabs">
+                <li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#dc_text">Trường text</a></li>
+                <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#dc_number">Trường số nguyên</a></li>
+                <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#dc_date">Trường date</a></li>
+                <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#dc_catalog">Trường danh mục</a></li>
+            </ul>
+            <div class="tab-content border border-top-0 p-2">
+                <div id="dc_text" class="tab-pane fade show active">
+                    <div class="row">
+                        @foreach (var f in Model.AllFields.Where(x => x.Datatype == "dctext"))
+                        {
+                            var s = Fs(f.Id, false);
+                            <partial name="_LoaiTaiLieuFieldRow" model="Tuple.Create(f,s,Model)" />
+                        }
+                    </div>
                 </div>
-                <div class="col-md-2">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="CTIsMulti@(c.Id)" value="1" @(s?.IsMulti == true ? "checked" : null) />
-                        <label class="form-check-label">Đa giá trị</label>
+                <div id="dc_number" class="tab-pane fade">
+                    <div class="row">
+                        @foreach (var f in Model.AllFields.Where(x => x.Datatype == "dcnumber"))
+                        {
+                            var s = Fs(f.Id, false);
+                            <partial name="_LoaiTaiLieuFieldRow" model="Tuple.Create(f,s,Model)" />
+                        }
+                    </div>
+                </div>
+                <div id="dc_date" class="tab-pane fade">
+                    <div class="row">
+                        @foreach (var f in Model.AllFields.Where(x => x.Datatype == "dcdatetime"))
+                        {
+                            var s = Fs(f.Id, false);
+                            <partial name="_LoaiTaiLieuFieldRow" model="Tuple.Create(f,s,Model)" />
+                        }
+                    </div>
+                </div>
+                <div id="dc_catalog" class="tab-pane fade">
+                    @foreach (var c in Model.CategoryTypes)
+                    {
+                        var s = Fs(c.Id, true);
+                        <div class="border rounded p-2 mb-2">
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" name="CT@(c.Id)" value="@c.Id" id="ct_@c.Id" @(s != null ? "checked" : null) />
+                                <label class="form-check-label" for="ct_@c.Id">@c.Name</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="CTIsCatalogMain" value="@c.Id" id="ctm_@c.Id" @(s?.IsCatalogMain == true ? "checked" : null) />
+                                <label class="form-check-label" for="ctm_@c.Id">Danh mục chính</label>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-md-4">
+                                    <input name="CTN@(c.Id)" class="form-control form-control-sm" placeholder="Tiêu đề" value="@(s?.Title ?? c.Name)" />
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="CTIsMulti@(c.Id)" value="1" @(s?.IsMulti == true ? "checked" : null) />
+                                        <label class="form-check-label">Đa giá trị</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <details class="mt-2">
+                                <summary class="small text-muted">Chi tiết (pattern, độ dài, …)</summary>
+                                <div class="row mt-2">
+                                    <div class="col-md-3"><input class="form-control form-control-sm" name="CTFixV@(c.Id)" placeholder="Fix" value="@s?.FixValue" /></div>
+                                    <div class="col-md-3"><input class="form-control form-control-sm" name="CTMinV@(c.Id)" placeholder="Min" value="@s?.MinValue" /></div>
+                                    <div class="col-md-3"><input class="form-control form-control-sm" name="CTMaxV@(c.Id)" placeholder="Max" value="@s?.MaxValue" /></div>
+                                    <div class="col-md-3"><input class="form-control form-control-sm" name="CTPT@(c.Id)" type="number" placeholder="PatternType Id" value="@(s?.IdPatternType > 0 ? s.IdPatternType.ToString() : "")" /></div>
+                                    <div class="col-md-3 mt-1"><input class="form-control form-control-sm" name="CTMinL@(c.Id)" type="number" placeholder="MinLen" value="@s?.MinLen" /></div>
+                                    <div class="col-md-3 mt-1"><input class="form-control form-control-sm" name="CTMaxL@(c.Id)" type="number" placeholder="MaxLen" value="@s?.MaxLen" /></div>
+                                    <div class="col-md-3 mt-1"><input class="form-control form-control-sm" name="CTPC@(c.Id)" placeholder="Pattern custom" value="@s?.PatternCustom" /></div>
+                                    <div class="col-md-3 mt-1"><input class="form-control form-control-sm" name="CTG@(c.Id)" type="number" placeholder="Nhóm Id" value="@(s?.IdFieldGroup > 0 ? s.IdFieldGroup.ToString() : "")" /></div>
+                                </div>
+                            </details>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-group row form-group-sm mt-2">
+        <label class="col-lg-2 col-form-label">Trường mở rộng</label>
+        <div class="col-lg-10">
+            <ul class="nav nav-tabs">
+                <li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#ex_text">Trường text</a></li>
+                <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#ex_number">Trường số nguyên</a></li>
+                <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#ex_decimal">Trường số thập phân</a></li>
+                <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#ex_date">Trường date</a></li>
+            </ul>
+            <div class="tab-content border border-top-0 p-2">
+                <div id="ex_text" class="tab-pane fade show active">
+                    <div class="row">
+                        @foreach (var f in Model.AllFields.Where(x => x.Datatype == "text" || x.Datatype == "fctext"))
+                        {
+                            var s = Fs(f.Id, false);
+                            <partial name="_LoaiTaiLieuFieldRow" model="Tuple.Create(f,s,Model)" />
+                        }
+                    </div>
+                </div>
+                <div id="ex_number" class="tab-pane fade">
+                    <div class="row">
+                        @foreach (var f in Model.AllFields.Where(x => x.Datatype == "number" || x.Datatype == "fcnumber"))
+                        {
+                            var s = Fs(f.Id, false);
+                            <partial name="_LoaiTaiLieuFieldRow" model="Tuple.Create(f,s,Model)" />
+                        }
+                    </div>
+                </div>
+                <div id="ex_decimal" class="tab-pane fade">
+                    <div class="row">
+                        @foreach (var f in Model.AllFields.Where(x => x.Datatype == "decimal" || x.Datatype == "fcdecimal"))
+                        {
+                            var s = Fs(f.Id, false);
+                            <partial name="_LoaiTaiLieuFieldRow" model="Tuple.Create(f,s,Model)" />
+                        }
+                    </div>
+                </div>
+                <div id="ex_date" class="tab-pane fade">
+                    <div class="row">
+                        @foreach (var f in Model.AllFields.Where(x => x.Datatype == "datetime" || x.Datatype == "fcdatetime"))
+                        {
+                            var s = Fs(f.Id, false);
+                            <partial name="_LoaiTaiLieuFieldRow" model="Tuple.Create(f,s,Model)" />
+                        }
                     </div>
                 </div>
             </div>
-            <details class="mt-2">
-                <summary class="small text-muted">Chi tiết (pattern, độ dài, …)</summary>
-                <div class="row mt-2">
-                    <div class="col-md-3"><input class="form-control form-control-sm" name="CTFixV@(c.Id)" placeholder="Fix" value="@s?.FixValue" /></div>
-                    <div class="col-md-3"><input class="form-control form-control-sm" name="CTMinV@(c.Id)" placeholder="Min" value="@s?.MinValue" /></div>
-                    <div class="col-md-3"><input class="form-control form-control-sm" name="CTMaxV@(c.Id)" placeholder="Max" value="@s?.MaxValue" /></div>
-                    <div class="col-md-3"><input class="form-control form-control-sm" name="CTPT@(c.Id)" type="number" placeholder="PatternType Id" value="@(s?.IdPatternType > 0 ? s.IdPatternType.ToString() : "")" /></div>
-                    <div class="col-md-3 mt-1"><input class="form-control form-control-sm" name="CTMinL@(c.Id)" type="number" placeholder="MinLen" value="@s?.MinLen" /></div>
-                    <div class="col-md-3 mt-1"><input class="form-control form-control-sm" name="CTMaxL@(c.Id)" type="number" placeholder="MaxLen" value="@s?.MaxLen" /></div>
-                    <div class="col-md-3 mt-1"><input class="form-control form-control-sm" name="CTPC@(c.Id)" placeholder="Pattern custom" value="@s?.PatternCustom" /></div>
-                    <div class="col-md-3 mt-1"><input class="form-control form-control-sm" name="CTG@(c.Id)" type="number" placeholder="Nhóm Id" value="@(s?.IdFieldGroup > 0 ? s.IdFieldGroup.ToString() : "")" /></div>
-                </div>
-            </details>
         </div>
-    }
+    </div>
 
     <div class="mt-4">
         <button type="submit" class="btn btn-primary btn-sm">Lưu</button>
