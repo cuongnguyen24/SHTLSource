@@ -1,0 +1,73 @@
+@model Shared.Contracts.PaginatedResult<Shared.Contracts.Dtos.DocumentDto>
+@using Web.Shared
+@{
+    ViewData["Title"] = "Kiểm tra lần 1";
+    ViewData["PageTitle"] = "Kiểm tra lần 1";
+    ViewData["PageIcon"] = "check-circle";
+    ViewData["Breadcrumbs"] = new List<BreadcrumbItem>
+    {
+        new() { Text = "Tổng quan", Url = Url.Action("Index", "Home") },
+        new() { Text = "Nhập liệu", Url = Url.Action("Index", "Extract") },
+        new() { Text = "Kiểm tra lần 1" }
+    };
+    var q = Context.Request.Query["q"].ToString();
+}
+
+<partial name="_ShtlPageHeader" />
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="small text-muted">Danh sách hồ sơ chờ kiểm tra lần 1 sau bước nhập liệu.</div>
+    <a asp-controller="Extract" asp-action="Index" class="btn btn-outline-primary btn-sm">
+        <i class="fas fa-keyboard mr-1"></i>Về nhập liệu
+    </a>
+</div>
+
+<form method="get" class="row g-2 align-items-end mb-3 shtl-crud-search">
+    <div class="col-md-4">
+        <label class="form-label small text-muted mb-0">Tìm kiếm</label>
+        <input type="search" name="q" value="@q" class="form-control form-control-sm" placeholder="Tên tài liệu, số hiệu..." />
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search mr-1"></i>Tìm</button>
+        <a asp-action="Check1" class="btn btn-outline-secondary btn-sm ml-1">Reset</a>
+    </div>
+</form>
+
+<div class="table-responsive shtl-crud-card shadow-sm">
+    <table class="table table-sm table-bordered table-hover mb-0 align-middle">
+        <thead class="thead-light">
+            <tr>
+                <th class="text-center" style="width:3rem;">STT</th>
+                <th>Tên tài liệu</th>
+                <th style="width:10rem;">Số hiệu</th>
+                <th style="width:11rem;">Ngày nhập liệu</th>
+                <th style="width:8rem;" class="text-center">Thao tác</th>
+            </tr>
+        </thead>
+        <tbody>
+            @{ var index = (Model.PageIndex - 1) * Model.PageSize; }
+            @if (!Model.Items.Any())
+            {
+                <tr><td colspan="5" class="text-center text-muted py-4">Không có tài liệu chờ kiểm tra lần 1.</td></tr>
+            }
+            @foreach (var doc in Model.Items)
+            {
+                index++;
+                <tr>
+                    <td class="text-center text-muted">@index</td>
+                    <td>
+                        <div class="font-weight-bold">@doc.Name</div>
+                        <div class="small text-muted">@doc.FileName</div>
+                    </td>
+                    <td class="small">@doc.SymbolNo</td>
+                    <td class="small">@doc.Created.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                    <td class="text-center">
+                        <a asp-action="Check1Form" asp-route-id="@doc.Id" class="btn btn-outline-primary btn-sm" title="Mở màn kiểm tra lần 1">
+                            <i class="fas fa-clipboard-check"></i>
+                        </a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

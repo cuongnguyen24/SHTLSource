@@ -16,12 +16,28 @@
     var pdfStreamUrl = Url.Action("Pdf", "Scan", new { id = Model.Id }) ?? $"/scan/pdf/{Model.Id}";
     var downloadUrl = Url.Action("Download", "Scan", new { id = Model.Id }) ?? $"/scan/download/{Model.Id}";
     var submitUrl = Url.Action("Submit", "Extract") ?? "/extract/submit";
+    var check1Url = Url.Action("Check1", "Check") ?? "/check/check1";
+    var returnReason = Model.Checked1ReturnReason;
+    var userNames = ViewBag.UserNames as IDictionary<int, string> ?? new Dictionary<int, string>();
+    string UserNameOf(int id)
+    {
+        if (id <= 0) return "Chưa có";
+        return userNames.TryGetValue(id, out var n) ? n : $"User #{id}";
+    }
     var isPdf = Model.Extension?.ToLowerInvariant() == ".pdf"
         || (Model.FileName?.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) ?? false)
         || (Model.FilePath?.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) ?? false);
 }
 
 <partial name="_ShtlPageHeader" />
+
+@if (!string.IsNullOrWhiteSpace(returnReason))
+{
+    <div class="alert alert-warning border-left-warning shadow-sm">
+        <div class="font-weight-bold mb-1"><i class="fas fa-exclamation-triangle mr-1"></i>Lý do hồ sơ bị trả về</div>
+        <div class="small">@returnReason</div>
+    </div>
+}
 
 <div class="extract-toolbar card shadow-sm border-0 mb-3">
     <div class="card-body py-2 d-flex flex-wrap align-items-center justify-content-between">
@@ -158,12 +174,37 @@
                             }
                         </div>
                         <div class="tab-pane fade" id="tabSpeech" role="tabpanel">
-                            <div class="alert alert-light small mb-2">
-                                Chọn một ô bất kỳ bên tab “Thông tin tài liệu” hoặc “Tài liệu cùng bộ”, bấm <strong>Bắt đầu nghe</strong>, đọc nội dung,
-                                sau đó bấm <strong>Tab</strong> để sang ô kế tiếp và đọc tiếp.
+                            <div class="card border-0 shadow-sm mb-3">
+                                <div class="card-header py-2 font-weight-bold text-primary">
+                                    <i class="fas fa-user-cog mr-1"></i>Cá nhân xử lý
+                                </div>
+                                <div class="card-body p-2">
+                                    <div class="small border rounded p-2 mb-2">
+                                        <div><strong>Upload/Khởi tạo:</strong> @UserNameOf(Model.CreatedBy)</div>
+                                        <div class="text-muted">Thời gian: @Model.Created.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss")</div>
+                                    </div>
+                                    <div class="small border rounded p-2 mb-2">
+                                        <div><strong>Nhập liệu:</strong> @UserNameOf(Model.ExtractedBy)</div>
+                                        <div class="text-muted">Thời gian: @(Model.ExtractedAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss") ?? "Chưa có")</div>
+                                    </div>
+                                    <div class="small border rounded p-2 mb-2">
+                                        <div><strong>Check lần 1:</strong> @UserNameOf(Model.Checked1By)</div>
+                                        <div class="text-muted">Thời gian: @(Model.Checked1At?.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss") ?? "Chưa có")</div>
+                                        @if (!string.IsNullOrWhiteSpace(Model.Checked1ReturnReason))
+                                        {
+                                            <div class="text-warning mt-1"><strong>Lý do trả về:</strong> @Model.Checked1ReturnReason</div>
+                                        }
+                                    </div>
+                                    <div class="small border rounded p-2">
+                                        <div><strong>Check lần 2:</strong> @UserNameOf(Model.Checked2By)</div>
+                                        <div class="text-muted">Thời gian: @(Model.Checked2At?.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss") ?? "Chưa có")</div>
+                                        @if (!string.IsNullOrWhiteSpace(Model.Checked2ReturnReason))
+                                        {
+                                            <div class="text-warning mt-1"><strong>Lý do trả về:</strong> @Model.Checked2ReturnReason</div>
+                                        }
+                                    </div>
+                                </div>
                             </div>
-                            <div id="speechStatus" class="small text-muted">Sẵn sàng.</div>
-                            <div class="small text-muted mt-2">Ô đang nhập bằng giọng nói: <span id="speechActiveField">(chưa chọn)</span></div>
                         </div>
                     </div>
 
@@ -240,7 +281,7 @@
             const msg = json.message ?? json.Message ?? '';
             if (ok) {
                 alert('Nhập liệu thành công.');
-                window.location.href = '/extract';
+                window.location.href = '@check1Url';
             } else {
                 alert('Lỗi: ' + (msg || 'Không lưu được dữ liệu.'));
             }
@@ -262,7 +303,7 @@
             activeInput = el;
             activeInput.classList.add('voice-active');
             const label = activeInput.closest('.form-group')?.querySelector('label')?.textContent?.trim();
-            activeLabel.textContent = label || activeInput.name || '(không tên)';
+            if (activeLabel) activeLabel.textContent = label || activeInput.name || '(không tên)';
         }
     }
 
@@ -275,10 +316,14 @@
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const btnStart = document.getElementById('btnStartSpeech');
     const speechStatus = document.getElementById('speechStatus');
+    function setSpeechStatus(text, isError = false) {
+        if (!speechStatus) return;
+        speechStatus.textContent = text;
+        speechStatus.classList.toggle('text-danger', isError);
+    }
 
     if (!SpeechRecognition) {
-        speechStatus.textContent = 'Trình duyệt không hỗ trợ Web Speech API. Hãy dùng Chrome.';
-        speechStatus.classList.add('text-danger');
+        setSpeechStatus('Trình duyệt không hỗ trợ Web Speech API. Hãy dùng Chrome.', true);
         btnStart.disabled = true;
         return;
     }
@@ -297,9 +342,9 @@
         btnStart.innerHTML = on
             ? '<i class="fas fa-stop mr-1"></i>Đang nghe (bấm để dừng)'
             : '<i class="fas fa-microphone mr-1"></i>Bắt đầu nghe';
-        speechStatus.classList.toggle('text-success', on);
-        if (!on && !speechStatus.classList.contains('text-danger')) {
-            speechStatus.textContent = 'Đã dừng.';
+        if (speechStatus) speechStatus.classList.toggle('text-success', on);
+        if (!on && (!speechStatus || !speechStatus.classList.contains('text-danger'))) {
+            setSpeechStatus('Đã dừng.');
         }
     }
 
@@ -318,16 +363,14 @@
             activeInput.value = (cur + sep + finalText.trim()).trim();
             activeInput.dispatchEvent(new Event('input', { bubbles: true }));
         }
-        speechStatus.classList.remove('text-danger');
-        speechStatus.textContent = interim
+        setSpeechStatus(interim
             ? ('Đang nghe… ' + interim)
-            : (listening ? 'Đang nghe…' : 'Sẵn sàng.');
+            : (listening ? 'Đang nghe…' : 'Sẵn sàng.'));
     };
 
     rec.onerror = (e) => {
         if (e.error === 'no-speech' || e.error === 'aborted') return;
-        speechStatus.classList.add('text-danger');
-        speechStatus.textContent = 'Lỗi micro: ' + e.error;
+        setSpeechStatus('Lỗi micro: ' + e.error, true);
         setListening(false);
     };
 
@@ -347,14 +390,12 @@
         if (!activeInput && inputs.length) markActive(inputs[0]);
         if (activeInput) activeInput.focus();
         try {
-            speechStatus.classList.remove('text-danger');
             rec.lang = 'vi-VN';
             rec.start();
             setListening(true);
-            speechStatus.textContent = 'Đang nghe…';
+            setSpeechStatus('Đang nghe…');
         } catch (err) {
-            speechStatus.classList.add('text-danger');
-            speechStatus.textContent = 'Không thể bắt đầu: ' + (err && err.message ? err.message : err);
+            setSpeechStatus('Không thể bắt đầu: ' + (err && err.message ? err.message : err), true);
         }
     });
 })();

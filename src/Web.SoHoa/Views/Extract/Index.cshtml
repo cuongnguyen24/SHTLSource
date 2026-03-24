@@ -43,6 +43,7 @@
                 <th style="width:10rem;">Số hiệu</th>
                 <th style="width:10rem;">Số hồ sơ</th>
                 <th style="width:8rem;">Bước</th>
+                <th style="width:14rem;">Lý do trả về</th>
                 <th style="width:11rem;">Ngày tạo</th>
                 <th style="width:8rem;" class="text-center">Thao tác</th>
             </tr>
@@ -54,7 +55,7 @@
             @if (!Model.Items.Any())
             {
                 <tr>
-                    <td colspan="7" class="text-center text-muted py-4">Không có tài liệu chờ nhập liệu.</td>
+                    <td colspan="8" class="text-center text-muted py-4">Không có tài liệu chờ nhập liệu.</td>
                 </tr>
             }
             @foreach (var doc in Model.Items)
@@ -71,6 +72,7 @@
                     <td>
                         <span class="badge badge-secondary">@doc.CurrentStepName</span>
                     </td>
+                    <td class="small text-warning">@doc.Checked1ReturnReason</td>
                     <td class="small">@doc.Created.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
                     <td class="text-center">
                         <a asp-action="Form" asp-route-id="@doc.Id" class="btn btn-outline-primary btn-sm" title="Mở form nhập liệu">

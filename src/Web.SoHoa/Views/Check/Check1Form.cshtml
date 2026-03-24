@@ -1,0 +1,218 @@
+@model Shared.Contracts.Dtos.DocumentDto
+@using Core.Domain.Enums
+@using Web.Shared
+@{
+    ViewData["Title"] = $"Check lần 1 - Hồ sơ #{Model.Id}";
+    ViewData["PageTitle"] = "Kiểm tra lần 1";
+    ViewData["PageIcon"] = "clipboard-check";
+    ViewData["Breadcrumbs"] = new List<BreadcrumbItem>
+    {
+        new() { Text = "Tổng quan", Url = Url.Action("Index", "Home") },
+        new() { Text = "Nhập liệu", Url = Url.Action("Index", "Extract") },
+        new() { Text = "Kiểm tra lần 1", Url = Url.Action("Check1", "Check") },
+        new() { Text = $"Hồ sơ #{Model.Id}" }
+    };
+    var previewUrl = Url.Action("Preview", "Scan", new { id = Model.Id }) ?? $"/scan/preview/{Model.Id}";
+    var pdfUrl = Url.Action("Pdf", "Scan", new { id = Model.Id }) ?? $"/scan/pdf/{Model.Id}";
+    var submitUrl = Url.Action("DoCheck1", "Check") ?? "/check/check1/submit";
+    var cells = ViewBag.Cells as IEnumerable<Core.Domain.Entities.Stg.FormCell> ?? Enumerable.Empty<Core.Domain.Entities.Stg.FormCell>();
+    var userNames = ViewBag.UserNames as IDictionary<int, string> ?? new Dictionary<int, string>();
+    string UserNameOf(int id)
+    {
+        if (id <= 0) return "Chưa có";
+        return userNames.TryGetValue(id, out var n) ? n : $"User #{id}";
+    }
+}
+
+<partial name="_ShtlPageHeader" />
+@Html.AntiForgeryToken()
+
+<div class="row">
+    <div class="col-lg-7 mb-3">
+        <div class="card shadow-sm border-0">
+            <div class="card-header py-2 font-weight-bold"><i class="fas fa-file-alt text-primary mr-2"></i>Tài liệu nguồn</div>
+            <div class="card-body p-0" style="height:calc(100vh - 260px);min-height:480px;">
+                <iframe src="@pdfUrl" width="100%" height="100%" frameborder="0"></iframe>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5 mb-3">
+        <div class="card shadow-sm border-0">
+            <div class="card-header py-2 font-weight-bold"><i class="fas fa-check-circle text-success mr-2"></i>Kiểm tra lần 1</div>
+            <div class="card-body" style="max-height:calc(100vh - 260px);overflow:auto;">
+                <ul class="nav nav-tabs nav-fill mb-3">
+                    <li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#tabInfo">Thông tin tài liệu</a></li>
+                    <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#tabCells">Tài liệu cùng bộ</a></li>
+                    <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#tabProfile">Cá nhân xử lý</a></li>
+                </ul>
+
+                <div class="tab-content">
+                <div class="tab-pane fade show active" id="tabInfo">
+                    <div class="form-group mb-2">
+                    <label class="small font-weight-bold mb-1">Tên tài liệu</label>
+                    <input id="ckName" class="form-control form-control-sm" value="@Model.Name" />
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-6 mb-2">
+                        <label class="small font-weight-bold mb-1">Số hiệu</label>
+                        <input id="ckSymbolNo" class="form-control form-control-sm" value="@Model.SymbolNo" />
+                    </div>
+                    <div class="form-group col-6 mb-2">
+                        <label class="small font-weight-bold mb-1">Số hồ sơ</label>
+                        <input id="ckRecordNo" class="form-control form-control-sm" value="@Model.RecordNo" />
+                    </div>
+                </div>
+                <div class="form-group mb-2">
+                    <label class="small font-weight-bold mb-1">Cơ quan ban hành</label>
+                    <input id="ckIssuedBy" class="form-control form-control-sm" value="@Model.IssuedBy" />
+                </div>
+                <div class="form-group mb-2">
+                    <label class="small font-weight-bold mb-1">Tác giả / Người ký</label>
+                    <input id="ckAuthor" class="form-control form-control-sm" value="@Model.Author" />
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-6 mb-2"><label class="small mb-1">Field1</label><input id="ckField1" class="form-control form-control-sm" value="@Model.Field1" /></div>
+                    <div class="form-group col-6 mb-2"><label class="small mb-1">Field2</label><input id="ckField2" class="form-control form-control-sm" value="@Model.Field2" /></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-6 mb-2"><label class="small mb-1">Field3</label><input id="ckField3" class="form-control form-control-sm" value="@Model.Field3" /></div>
+                    <div class="form-group col-6 mb-2"><label class="small mb-1">Field4</label><input id="ckField4" class="form-control form-control-sm" value="@Model.Field4" /></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-6 mb-2"><label class="small mb-1">Field5</label><input id="ckField5" class="form-control form-control-sm" value="@Model.Field5" /></div>
+                    <div class="form-group col-6 mb-2"><label class="small mb-1">Field6</label><input id="ckField6" class="form-control form-control-sm" value="@Model.Field6" /></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-6 mb-2"><label class="small mb-1">Field7</label><input id="ckField7" class="form-control form-control-sm" value="@Model.Field7" /></div>
+                    <div class="form-group col-6 mb-2"><label class="small mb-1">Field8</label><input id="ckField8" class="form-control form-control-sm" value="@Model.Field8" /></div>
+                </div>
+                <div class="form-group mb-2">
+                    <label class="small font-weight-bold mb-1">Ghi chú tài liệu</label>
+                    <textarea id="ckNoted" class="form-control form-control-sm" rows="2">@Model.Noted</textarea>
+                </div>
+                </div>
+
+                <div class="tab-pane fade" id="tabCells">
+                    @if (cells.Any())
+                    {
+                        <div class="small font-weight-bold mb-2 text-primary">Dữ liệu ô nhận từ bước nhập liệu</div>
+                    foreach (var c in cells)
+                    {
+                        var current = c.Checked1Value ?? c.ExtractedValue ?? c.Value;
+                        <div class="form-group mb-2">
+                            <label class="small mb-1">@(c.Title ?? c.Field ?? $"Ô {c.Cell}")</label>
+                            <input class="form-control form-control-sm ck-cell" data-cell-id="@c.Id" value="@current" />
+                        </div>
+                    }
+                    }
+                    else
+                    {
+                        <div class="small text-muted">Không có dữ liệu ô OCR cho hồ sơ này.</div>
+                    }
+                </div>
+
+                <div class="tab-pane fade" id="tabProfile">
+                    <div class="small border rounded p-2 mb-2">
+                        <div><strong>Upload/Khởi tạo:</strong> @UserNameOf(Model.CreatedBy)</div>
+                        <div class="text-muted">Thời gian: @Model.Created.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss")</div>
+                    </div>
+                    <div class="small border rounded p-2 mb-2">
+                        <div><strong>Nhập liệu:</strong> @UserNameOf(Model.ExtractedBy)</div>
+                        <div class="text-muted">Thời gian: @(Model.ExtractedAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss") ?? "Chưa có")</div>
+                    </div>
+                    <div class="small border rounded p-2 mb-2">
+                        <div><strong>Check lần 1:</strong> @UserNameOf(Model.Checked1By)</div>
+                        <div class="text-muted">Thời gian: @(Model.Checked1At?.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss") ?? "Chưa có")</div>
+                        @if (!string.IsNullOrWhiteSpace(Model.Checked1ReturnReason))
+                        {
+                            <div class="text-warning mt-1"><strong>Lý do trả về:</strong> @Model.Checked1ReturnReason</div>
+                        }
+                    </div>
+                    <div class="small border rounded p-2">
+                        <div><strong>Check lần 2:</strong> @UserNameOf(Model.Checked2By)</div>
+                        <div class="text-muted">Thời gian: @(Model.Checked2At?.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss") ?? "Chưa có")</div>
+                        @if (!string.IsNullOrWhiteSpace(Model.Checked2ReturnReason))
+                        {
+                            <div class="text-warning mt-1"><strong>Lý do trả về:</strong> @Model.Checked2ReturnReason</div>
+                        }
+                    </div>
+                </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="small font-weight-bold mb-1">Ghi chú kiểm tra</label>
+                    <textarea id="txtNote" class="form-control form-control-sm" rows="4" placeholder="Nội dung nhận xét, lý do trả lại..."></textarea>
+                </div>
+                <div class="d-flex flex-wrap">
+                    <button type="button" class="btn btn-success btn-sm mr-2 mb-2" onclick="submitCheck(1)">
+                        <i class="fas fa-check mr-1"></i>Đạt - chuyển Check 2
+                    </button>
+                    <button type="button" class="btn btn-warning btn-sm mr-2 mb-2" onclick="submitCheck(3)">
+                        <i class="fas fa-undo mr-1"></i>Trả về nhập liệu
+                    </button>
+                    <a asp-action="Check1" class="btn btn-outline-secondary btn-sm mb-2"><i class="fas fa-arrow-left mr-1"></i>Quay lại</a>
+                    <a href="@previewUrl" target="_blank" class="btn btn-outline-primary btn-sm mb-2 ml-2"><i class="fas fa-external-link-alt mr-1"></i>Mở tab mới</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+async function submitCheck(result) {
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+    const note = document.getElementById('txtNote')?.value || '';
+    const payload = {
+        documentId: @Model.Id,
+        step: @((int)WorkflowStep.Check1),
+        result: result,
+        name: document.getElementById('ckName')?.value || null,
+        symbolNo: document.getElementById('ckSymbolNo')?.value || null,
+        recordNo: document.getElementById('ckRecordNo')?.value || null,
+        issuedBy: document.getElementById('ckIssuedBy')?.value || null,
+        author: document.getElementById('ckAuthor')?.value || null,
+        noted: document.getElementById('ckNoted')?.value || null,
+        field1: document.getElementById('ckField1')?.value || null,
+        field2: document.getElementById('ckField2')?.value || null,
+        field3: document.getElementById('ckField3')?.value || null,
+        field4: document.getElementById('ckField4')?.value || null,
+        field5: document.getElementById('ckField5')?.value || null,
+        field6: document.getElementById('ckField6')?.value || null,
+        field7: document.getElementById('ckField7')?.value || null,
+        field8: document.getElementById('ckField8')?.value || null,
+        note: note,
+        returnReason: result === 3 ? note : null,
+        cells: []
+    };
+    document.querySelectorAll('.ck-cell').forEach(i => {
+        payload.cells.push({ id: parseInt(i.dataset.cellId), value: i.value });
+    });
+    try {
+        const res = await fetch('@submitUrl', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': token
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify(payload)
+        });
+        const contentType = (res.headers.get('content-type') || '').toLowerCase();
+        if (!contentType.includes('application/json')) {
+            const text = await res.text();
+            throw new Error(`Phản hồi không phải JSON (HTTP ${res.status}): ${(text || '').replace(/\s+/g, ' ').slice(0, 180)}`);
+        }
+        const json = await res.json();
+        if (json.success ?? json.Success) {
+            alert('Đã lưu kiểm tra lần 1.');
+            window.location.href = result === 1 ? '@Url.Action("Check2", "Check")' : '@Url.Action("Check1", "Check")';
+        } else {
+            alert('Lỗi: ' + (json.message ?? json.Message ?? 'Không xử lý được.'));
+        }
+    } catch (e) {
+        alert('Lỗi kết nối: ' + e);
+    }
+}
+</script>
+}

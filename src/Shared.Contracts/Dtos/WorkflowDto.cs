@@ -11,6 +11,25 @@ public class WorkflowActionRequest
     public string? ReturnReason { get; set; }
 }
 
+public class CheckReviewRequest : WorkflowActionRequest
+{
+    public string? Name { get; set; }
+    public string? SymbolNo { get; set; }
+    public string? RecordNo { get; set; }
+    public string? IssuedBy { get; set; }
+    public string? Author { get; set; }
+    public string? Noted { get; set; }
+    public string? Field1 { get; set; }
+    public string? Field2 { get; set; }
+    public string? Field3 { get; set; }
+    public string? Field4 { get; set; }
+    public string? Field5 { get; set; }
+    public string? Field6 { get; set; }
+    public string? Field7 { get; set; }
+    public string? Field8 { get; set; }
+    public List<FormCellValueDto> Cells { get; set; } = new();
+}
+
 public class CheckScanRequest
 {
     public long DocumentId { get; set; }

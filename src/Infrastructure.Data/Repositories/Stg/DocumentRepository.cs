@@ -89,6 +89,8 @@ public class DocumentRepository : BaseRepository, IDocumentRepository
                 field13 = @Field13, field14 = @Field14, field15 = @Field15,
                 field16 = @Field16, field17 = @Field17, field18 = @Field18,
                 field19 = @Field19, field20 = @Field20,
+                checked1_return_reason = @Checked1ReturnReason,
+                checked2_return_reason = @Checked2ReturnReason,
                 updated = @Updated, updated_by = @UpdatedBy
             WHERE id = @Id";
         return await ExecuteAsync(conn, sql, doc);

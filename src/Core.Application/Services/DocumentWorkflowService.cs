@@ -21,8 +21,8 @@ public interface IDocumentWorkflowService
     Task<ApiResult> CheckScan2Async(CheckScanRequest req, ICurrentUser user);
     Task<ApiResult> ZoneAsync(WorkflowActionRequest req, ICurrentUser user);
     Task<ApiResult> SubmitExtractAsync(ExtractRequest req, ICurrentUser user);
-    Task<ApiResult> Check1Async(WorkflowActionRequest req, ICurrentUser user);
-    Task<ApiResult> Check2Async(WorkflowActionRequest req, ICurrentUser user);
+    Task<ApiResult> Check1Async(CheckReviewRequest req, ICurrentUser user);
+    Task<ApiResult> Check2Async(CheckReviewRequest req, ICurrentUser user);
     Task<ApiResult> CheckFinalAsync(WorkflowActionRequest req, ICurrentUser user);
     Task<ApiResult> CheckLogicAsync(WorkflowActionRequest req, ICurrentUser user);
     Task<ApiResult> RequestExportAsync(long documentId, string exportType, ICurrentUser user);
@@ -73,6 +73,7 @@ public class DocumentWorkflowService : IDocumentWorkflowService
         doc.UpdatedBy = user.Id;
 
         await _docRepo.UpdateAsync(doc);
+        await _docRepo.UpdateStepAsync(doc.Id, doc.CurrentStep, user.Id);
         await LogActionAsync(user, "CHECK_SCAN1", "documents", doc.Id.ToString(),
             req.Result.ToString(), req.Note);
 
@@ -95,6 +96,7 @@ public class DocumentWorkflowService : IDocumentWorkflowService
         doc.UpdatedBy = user.Id;
 
         await _docRepo.UpdateAsync(doc);
+        await _docRepo.UpdateStepAsync(doc.Id, doc.CurrentStep, user.Id);
         await LogActionAsync(user, "CHECK_SCAN2", "documents", doc.Id.ToString(),
             req.Result.ToString(), req.Note);
 
@@ -120,6 +122,7 @@ public class DocumentWorkflowService : IDocumentWorkflowService
         doc.UpdatedBy = user.Id;
 
         await _docRepo.UpdateAsync(doc);
+        await _docRepo.UpdateStepAsync(doc.Id, doc.CurrentStep, user.Id);
         await LogActionAsync(user, "ZONE", "documents", doc.Id.ToString(), req.Result.ToString(), req.Note);
 
         return ApiResult.Ok("Khoanh vùng thành công");
@@ -136,11 +139,15 @@ public class DocumentWorkflowService : IDocumentWorkflowService
         doc.ExtractedAt = DateTime.UtcNow;
         doc.ExtractedBy = user.Id;
         doc.ExtractedResult = StepResult.Pass;
+        doc.Checked1ReturnReason = null;
+        doc.Checked2ReturnReason = null;
         doc.CurrentStep = WorkflowStep.Check1;
         doc.Updated = DateTime.UtcNow;
         doc.UpdatedBy = user.Id;
 
         await _docRepo.UpdateAsync(doc);
+        // Guard rail: luôn chốt bước workflow về Check1 sau khi lưu nhập liệu.
+        await _docRepo.UpdateStepAsync(doc.Id, WorkflowStep.Check1, user.Id);
 
         // Cập nhật form cells nếu có
         foreach (var cell in req.Cells)
@@ -152,10 +159,10 @@ public class DocumentWorkflowService : IDocumentWorkflowService
         return ApiResult.Ok("Nhập liệu thành công");
     }
 
-    public async Task<ApiResult> Check1Async(WorkflowActionRequest req, ICurrentUser user)
+    public async Task<ApiResult> Check1Async(CheckReviewRequest req, ICurrentUser user)
         => await DoCheckAsync(req, user, WorkflowStep.Check1, WorkflowStep.Check2, WorkflowStep.Extract, "CHECK1");
 
-    public async Task<ApiResult> Check2Async(WorkflowActionRequest req, ICurrentUser user)
+    public async Task<ApiResult> Check2Async(CheckReviewRequest req, ICurrentUser user)
         => await DoCheckAsync(req, user, WorkflowStep.Check2, WorkflowStep.CheckFinal, WorkflowStep.Check1, "CHECK2");
 
     public async Task<ApiResult> CheckFinalAsync(WorkflowActionRequest req, ICurrentUser user)
@@ -175,6 +182,7 @@ public class DocumentWorkflowService : IDocumentWorkflowService
         doc.UpdatedBy = user.Id;
 
         await _docRepo.UpdateAsync(doc);
+        await _docRepo.UpdateStepAsync(doc.Id, doc.CurrentStep, user.Id);
         await LogActionAsync(user, "CHECK_FINAL", "documents", doc.Id.ToString(), req.Result.ToString(), req.Note);
 
         return ApiResult.Ok("Kiểm tra cuối thành công");
@@ -196,6 +204,7 @@ public class DocumentWorkflowService : IDocumentWorkflowService
         doc.UpdatedBy = user.Id;
 
         await _docRepo.UpdateAsync(doc);
+        await _docRepo.UpdateStepAsync(doc.Id, doc.CurrentStep, user.Id);
         await LogActionAsync(user, "CHECK_LOGIC", "documents", doc.Id.ToString(), req.Result.ToString(), req.Note);
 
         return ApiResult.Ok("Kiểm tra logic thành công");
@@ -273,13 +282,15 @@ public class DocumentWorkflowService : IDocumentWorkflowService
     // ----- Helpers -----
 
     private async Task<ApiResult> DoCheckAsync(
-        WorkflowActionRequest req, ICurrentUser user,
+        CheckReviewRequest req, ICurrentUser user,
         WorkflowStep expectedStep, WorkflowStep nextStep, WorkflowStep returnStep, string actionName)
     {
         var doc = await _docRepo.GetByIdAsync(req.DocumentId);
         if (doc is null) return ApiResult.Fail("Tài liệu không tồn tại");
         if (doc.CurrentStep != expectedStep)
             return ApiResult.Fail($"Tài liệu đang ở bước {doc.CurrentStep}, không phải {expectedStep}");
+
+        ApplyCheckEdits(doc, req);
 
         if (req.Result == StepResult.Pass)
         {
@@ -307,18 +318,32 @@ public class DocumentWorkflowService : IDocumentWorkflowService
                     doc.Checked1ReturnCount++;
                     doc.Checked1ReturnReason = req.ReturnReason;
                 }
+                else
+                {
+                    doc.Checked1ReturnReason = null;
+                }
                 break;
             case WorkflowStep.Check2:
                 doc.IsChecked2 = req.Result == StepResult.Pass;
                 doc.Checked2At = DateTime.UtcNow;
                 doc.Checked2By = user.Id;
                 doc.Checked2Result = req.Result;
+                if (req.Result != StepResult.Pass)
+                    doc.Checked2ReturnReason = req.ReturnReason;
+                else
+                    doc.Checked2ReturnReason = null;
                 break;
         }
 
         doc.Updated = DateTime.UtcNow;
         doc.UpdatedBy = user.Id;
         await _docRepo.UpdateAsync(doc);
+        await _docRepo.UpdateStepAsync(doc.Id, doc.CurrentStep, user.Id);
+        if (req.Cells.Count > 0)
+        {
+            foreach (var cell in req.Cells)
+                await _cellRepo.UpdateValueAsync(cell.Id, cell.Value, user.Id, expectedStep);
+        }
         await LogActionAsync(user, actionName, "documents", doc.Id.ToString(), req.Result.ToString(), req.Note);
 
         return ApiResult.Ok($"Bước {actionName} thành công");
@@ -346,6 +371,24 @@ public class DocumentWorkflowService : IDocumentWorkflowService
         if (req.Field21.HasValue) doc.Field21 = req.Field21;
         if (req.Field22.HasValue) doc.Field22 = req.Field22;
         if (req.Field23.HasValue) doc.Field23 = req.Field23;
+    }
+
+    private static void ApplyCheckEdits(Document doc, CheckReviewRequest req)
+    {
+        doc.Name = req.Name ?? doc.Name;
+        doc.SymbolNo = req.SymbolNo ?? doc.SymbolNo;
+        doc.RecordNo = req.RecordNo ?? doc.RecordNo;
+        doc.IssuedBy = req.IssuedBy ?? doc.IssuedBy;
+        doc.Author = req.Author ?? doc.Author;
+        doc.Noted = req.Noted ?? doc.Noted;
+        doc.Field1 = req.Field1 ?? doc.Field1;
+        doc.Field2 = req.Field2 ?? doc.Field2;
+        doc.Field3 = req.Field3 ?? doc.Field3;
+        doc.Field4 = req.Field4 ?? doc.Field4;
+        doc.Field5 = req.Field5 ?? doc.Field5;
+        doc.Field6 = req.Field6 ?? doc.Field6;
+        doc.Field7 = req.Field7 ?? doc.Field7;
+        doc.Field8 = req.Field8 ?? doc.Field8;
     }
 
     private async Task LogActionAsync(ICurrentUser user, string action, string table, string recordId, string newValue, string? description)

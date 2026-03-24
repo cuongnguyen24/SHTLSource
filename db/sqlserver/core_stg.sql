@@ -83,9 +83,11 @@ BEGIN
         is_checked1      BIT NOT NULL CONSTRAINT DF_doc_c1 DEFAULT (0),
         checked1_at      DATETIME2(7) NULL,
         checked1_by      INT NOT NULL CONSTRAINT DF_doc_c1b DEFAULT (0),
+        checked1_return_reason NVARCHAR(MAX) NULL,
         is_checked2      BIT NOT NULL CONSTRAINT DF_doc_c2 DEFAULT (0),
         checked2_at      DATETIME2(7) NULL,
         checked2_by      INT NOT NULL CONSTRAINT DF_doc_c2b DEFAULT (0),
+        checked2_return_reason NVARCHAR(MAX) NULL,
         is_checked_final BIT NOT NULL CONSTRAINT DF_doc_cf DEFAULT (0),
         checked_final_at DATETIME2(7) NULL,
         checked_final_by INT NOT NULL CONSTRAINT DF_doc_cfb DEFAULT (0),
@@ -102,6 +104,18 @@ BEGIN
         updated         DATETIME2(7) NULL,
         updated_by      INT NOT NULL CONSTRAINT DF_doc_uby DEFAULT (0)
     );
+END
+GO
+
+IF COL_LENGTH('core_stg.documents', 'checked1_return_reason') IS NULL
+BEGIN
+    ALTER TABLE core_stg.documents ADD checked1_return_reason NVARCHAR(MAX) NULL;
+END
+GO
+
+IF COL_LENGTH('core_stg.documents', 'checked2_return_reason') IS NULL
+BEGIN
+    ALTER TABLE core_stg.documents ADD checked2_return_reason NVARCHAR(MAX) NULL;
 END
 GO
 

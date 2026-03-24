@@ -138,6 +138,16 @@ public class DocumentService : IDocumentService
         IssuedYear = doc.IssuedYear,
         Author = doc.Author,
         Noted = doc.Noted,
+        Field1 = doc.Field1,
+        Field2 = doc.Field2,
+        Field3 = doc.Field3,
+        Field4 = doc.Field4,
+        Field5 = doc.Field5,
+        Field6 = doc.Field6,
+        Field7 = doc.Field7,
+        Field8 = doc.Field8,
+        Checked1ReturnReason = doc.Checked1ReturnReason,
+        Checked2ReturnReason = doc.Checked2ReturnReason,
         DocTypeId = doc.DocTypeId,
         FolderId = (int)doc.FolderId,
         CurrentStep = doc.CurrentStep,
@@ -150,6 +160,12 @@ public class DocumentService : IDocumentService
         PageCount = doc.PageCount,
         Created = doc.Created,
         CreatedBy = doc.CreatedBy,
+        ExtractedAt = doc.ExtractedAt,
+        ExtractedBy = doc.ExtractedBy,
+        Checked1At = doc.Checked1At,
+        Checked1By = doc.Checked1By,
+        Checked2At = doc.Checked2At,
+        Checked2By = doc.Checked2By,
         IsCheckedScan1 = doc.IsCheckedScan1,
         IsCheckedScan2 = doc.IsCheckedScan2,
         IsZoned = doc.IsZoned,
@@ -160,5 +176,6 @@ public class DocumentService : IDocumentService
         IsCheckedLogic = doc.IsCheckedLogic,
         ExportStatus = doc.ExportStatus
     };
+
 }
 

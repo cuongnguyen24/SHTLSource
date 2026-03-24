@@ -103,6 +103,7 @@ public class Document : TenantEntity
     public DateTime? Checked2At { get; set; }
     public int Checked2By { get; set; }
     public StepResult Checked2Result { get; set; }
+    public string? Checked2ReturnReason { get; set; }
 
     // ---------- BƯỚC 8: Kiểm tra cuối ----------
     public bool IsCheckedFinal { get; set; }

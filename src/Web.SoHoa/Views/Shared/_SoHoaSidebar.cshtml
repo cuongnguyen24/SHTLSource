@@ -20,28 +20,26 @@
         </a>
     </li>
     <li class="nav-item">
+        <a class="nav-link" asp-controller="Extract" asp-action="Index">
+            <i class="fas fa-fw fa-keyboard"></i>
+            <span>Nhập liệu</span>
+        </a>
+    </li>
+    <li class="nav-item">
         <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseSoHoaCheck" aria-expanded="false" aria-controls="collapseSoHoaCheck">
             <i class="fas fa-fw fa-check-circle"></i>
             <span>Kiểm tra</span>
         </a>
         <div id="collapseSoHoaCheck" class="collapse" data-parent="#accordionSidebar">
             <div class="bg-white py-2 collapse-inner rounded">
-                <h6 class="collapse-header">Bước kiểm tra:</h6>
-                <a class="collapse-item" href="/check/check1">Kiểm tra lần 1</a>
-                <a class="collapse-item" href="/check/check2">Kiểm tra lần 2</a>
-                <a class="collapse-item" href="/check/check-final">Kiểm tra cuối</a>
-                <a class="collapse-item" href="/check/check-logic">Kiểm tra logic</a>
+                <h6 class="collapse-header">Sau nhập liệu:</h6>
+                <a class="collapse-item" asp-controller="Check" asp-action="Check1">Kiểm tra lần 1</a>
+                <a class="collapse-item" asp-controller="Check" asp-action="Check2">Kiểm tra lần 2</a>
             </div>
         </div>
     </li>
     <li class="nav-item">
-        <a class="nav-link" href="/extract">
-            <i class="fas fa-fw fa-keyboard"></i>
-            <span>Nhập liệu</span>
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link" href="/export">
+        <a class="nav-link" asp-controller="Export" asp-action="Index">
             <i class="fas fa-fw fa-file-export"></i>
             <span>Export</span>
         </a>
@@ -61,7 +59,7 @@
         </a>
     </li>
     <li class="nav-item">
-        <a class="nav-link" href="/home/speechdemo">
+        <a class="nav-link" asp-controller="Home" asp-action="SpeechDemo">
             <i class="fas fa-fw fa-microphone"></i>
             <span>Demo giọng nói</span>
         </a>

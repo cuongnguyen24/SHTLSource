@@ -1,5 +1,6 @@
 using Core.Application.Services;
 using Core.Domain.Enums;
+using Infrastructure.Data.Repositories.Acc;
 using Infrastructure.Data.Repositories.Stg;
 using Infrastructure.Identity;
 using Microsoft.AspNetCore.Authorization;
@@ -18,15 +19,18 @@ public class ExtractController : BaseController
     private readonly IDocumentService _docService;
     private readonly IDocumentWorkflowService _workflowService;
     private readonly IFormCellRepository _cellRepo;
+    private readonly IUserRepository _userRepo;
 
     public ExtractController(
         IDocumentService docService,
         IDocumentWorkflowService workflowService,
-        IFormCellRepository cellRepo)
+        IFormCellRepository cellRepo,
+        IUserRepository userRepo)
     {
         _docService = docService;
         _workflowService = workflowService;
         _cellRepo = cellRepo;
+        _userRepo = userRepo;
     }
 
     // GET /extract - Danh sách tài liệu chờ nhập liệu
@@ -78,6 +82,17 @@ public class ExtractController : BaseController
 
         var cells = await _cellRepo.GetByDocumentAsync(id);
         ViewBag.Cells = cells;
+        var userIds = new[] { doc.CreatedBy, doc.ExtractedBy, doc.Checked1By, doc.Checked2By }
+            .Where(x => x > 0)
+            .Distinct()
+            .ToList();
+        var names = new Dictionary<int, string>();
+        foreach (var uid in userIds)
+        {
+            var u = await _userRepo.GetByIdAsync(uid);
+            names[uid] = u?.FullName ?? u?.UserName ?? $"User #{uid}";
+        }
+        ViewBag.UserNames = names;
         return View(doc);
     }
 

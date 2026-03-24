@@ -14,6 +14,16 @@ public class DocumentDto
     public int? IssuedYear { get; set; }
     public string? Author { get; set; }
     public string? Noted { get; set; }
+    public string? Field1 { get; set; }
+    public string? Field2 { get; set; }
+    public string? Field3 { get; set; }
+    public string? Field4 { get; set; }
+    public string? Field5 { get; set; }
+    public string? Field6 { get; set; }
+    public string? Field7 { get; set; }
+    public string? Field8 { get; set; }
+    public string? Checked1ReturnReason { get; set; }
+    public string? Checked2ReturnReason { get; set; }
     public int DocTypeId { get; set; }
     public string? DocTypeName { get; set; }
     public int FolderId { get; set; }
@@ -30,6 +40,12 @@ public class DocumentDto
     public DateTime Created { get; set; }
     public string? CreatedByName { get; set; }
     public int CreatedBy { get; set; }
+    public DateTime? ExtractedAt { get; set; }
+    public int ExtractedBy { get; set; }
+    public DateTime? Checked1At { get; set; }
+    public int Checked1By { get; set; }
+    public DateTime? Checked2At { get; set; }
+    public int Checked2By { get; set; }
 
     // Workflow flags
     public bool IsCheckedScan1 { get; set; }
