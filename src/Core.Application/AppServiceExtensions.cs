@@ -21,6 +21,7 @@ public static class AppServiceExtensions
         services.AddScoped<IAxeDocTypeAdminService, AxeDocTypeAdminService>();
         services.AddScoped<IAxeSyncTypeAdminService, AxeSyncTypeAdminService>();
         services.AddScoped<IDocumentSyncUploadService, DocumentSyncUploadService>();
+        services.AddScoped<IDocumentFormViewModelBuilder, DocumentFormViewModelBuilder>();
         return services;
     }
 }

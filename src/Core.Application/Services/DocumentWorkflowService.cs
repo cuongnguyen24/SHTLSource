@@ -220,7 +220,8 @@ public class DocumentWorkflowService : IDocumentWorkflowService
         var job = new ExportJob
         {
             ChannelId = user.ChannelId,
-            ExportType = exportType,
+            ExportTypeId = 0, // TODO: Map exportType string to ExportTypeId
+            Name = $"Export document {documentId}",
             FilterJson = $"{{\"documentId\":{documentId}}}",
             Status = QueueStatus.Pending,
             CreatedAt = DateTime.UtcNow,

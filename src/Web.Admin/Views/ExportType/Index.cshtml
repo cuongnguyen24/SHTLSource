@@ -1,0 +1,125 @@
+@model IEnumerable<Core.Domain.Entities.Stg.ExportType>
+@{
+    ViewData["Title"] = "Loại xuất dữ liệu";
+}
+
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Danh sách loại xuất dữ liệu</h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover" id="dataTable" width="100%" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th style="width: 50px;">ID</th>
+                        <th>Tên</th>
+                        <th>Mã</th>
+                        <th>Mô tả</th>
+                        <th style="width: 120px;">File Excel</th>
+                        <th style="width: 100px;">Trạng thái</th>
+                        <th style="width: 150px;">Ngày tạo</th>
+                        <th style="width: 120px;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model != null && Model.Any())
+                    {
+                        foreach (var item in Model)
+                        {
+                            <tr>
+                                <td>@item.Id</td>
+                                <td>
+                                    <strong>@item.Name</strong>
+                                </td>
+                                <td>
+                                    <code>@item.Code</code>
+                                </td>
+                                <td>@item.Description</td>
+                                <td class="text-center">
+                                    @if (!string.IsNullOrEmpty(item.ExcelFileName))
+                                    {
+                                        <i class="fas fa-file-excel text-success"></i>
+                                        <small class="d-block">@item.ExcelFileName</small>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    @if (item.IsActive)
+                                    {
+                                        <span class="badge badge-success">Hoạt động</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-secondary">Tắt</span>
+                                    }
+                                </td>
+                                <td>
+                                    <small>@item.Created.ToString("dd/MM/yyyy HH:mm")</small>
+                                </td>
+                                <td class="text-center">
+                                    <a href="@Url.Action("Edit", "ExportType", new { id = item.Id })" 
+                                       class="btn btn-sm btn-primary" title="Sửa">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-danger btn-delete" 
+                                            data-id="@item.Id" 
+                                            data-name="@item.Name" 
+                                            title="Xóa">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center text-muted">
+                                <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
+                                Chưa có loại xuất dữ liệu nào
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Delete handler
+            $('.btn-delete').on('click', function() {
+                const id = $(this).data('id');
+                const name = $(this).data('name');
+                
+                if (confirm(`Bạn có chắc chắn muốn xóa loại xuất "${name}"?`)) {
+                    $.ajax({
+                        url: '@Url.Action("Delete", "ExportType")',
+                        type: 'POST',
+                        data: { 
+                            id: id,
+                            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                alert(response.message);
+                                location.reload();
+                            } else {
+                                alert(response.message);
+                            }
+                        },
+                        error: function() {
+                            alert('Có lỗi xảy ra khi xóa');
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+}

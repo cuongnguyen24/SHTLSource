@@ -1,4 +1,5 @@
 using Core.Application.Services;
+using Core.Application.Services.Axe;
 using Core.Domain.Enums;
 using Infrastructure.Data.Repositories.Acc;
 using Infrastructure.Data.Repositories.Stg;
@@ -20,17 +21,20 @@ public class ExtractController : BaseController
     private readonly IDocumentWorkflowService _workflowService;
     private readonly IFormCellRepository _cellRepo;
     private readonly IUserRepository _userRepo;
+    private readonly IDocumentFormViewModelBuilder _formBuilder;
 
     public ExtractController(
         IDocumentService docService,
         IDocumentWorkflowService workflowService,
         IFormCellRepository cellRepo,
-        IUserRepository userRepo)
+        IUserRepository userRepo,
+        IDocumentFormViewModelBuilder formBuilder)
     {
         _docService = docService;
         _workflowService = workflowService;
         _cellRepo = cellRepo;
         _userRepo = userRepo;
+        _formBuilder = formBuilder;
     }
 
     // GET /extract - Danh sách tài liệu chờ nhập liệu
@@ -77,23 +81,15 @@ public class ExtractController : BaseController
     [HttpGet]
     public async Task<IActionResult> Form(long id)
     {
-        var doc = await _docService.GetByIdAsync(id, CurrentUser);
-        if (doc is null) return NotFound();
-
-        var cells = await _cellRepo.GetByDocumentAsync(id);
-        ViewBag.Cells = cells;
-        var userIds = new[] { doc.CreatedBy, doc.ExtractedBy, doc.Checked1By, doc.Checked2By }
-            .Where(x => x > 0)
-            .Distinct()
-            .ToList();
-        var names = new Dictionary<int, string>();
-        foreach (var uid in userIds)
+        try
         {
-            var u = await _userRepo.GetByIdAsync(uid);
-            names[uid] = u?.FullName ?? u?.UserName ?? $"User #{uid}";
+            var vm = await _formBuilder.BuildForExtractAsync(ChannelId, id);
+            return View(vm);
         }
-        ViewBag.UserNames = names;
-        return View(doc);
+        catch (InvalidOperationException)
+        {
+            return NotFound();
+        }
     }
 
     // POST /extract/submit

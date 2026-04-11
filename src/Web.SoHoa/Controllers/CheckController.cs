@@ -1,4 +1,5 @@
 using Core.Application.Services;
+using Core.Application.Services.Axe;
 using Core.Domain.Enums;
 using Infrastructure.Data.Repositories.Acc;
 using Infrastructure.Data.Repositories.Stg;
@@ -20,17 +21,20 @@ public class CheckController : BaseController
     private readonly IDocumentWorkflowService _workflowService;
     private readonly IFormCellRepository _cellRepo;
     private readonly IUserRepository _userRepo;
+    private readonly IDocumentFormViewModelBuilder _formBuilder;
 
     public CheckController(
         IDocumentService docService,
         IDocumentWorkflowService workflowService,
         IFormCellRepository cellRepo,
-        IUserRepository userRepo)
+        IUserRepository userRepo,
+        IDocumentFormViewModelBuilder formBuilder)
     {
         _docService = docService;
         _workflowService = workflowService;
         _cellRepo = cellRepo;
         _userRepo = userRepo;
+        _formBuilder = formBuilder;
     }
 
     // --- CHECK 1 ---
@@ -61,12 +65,16 @@ public class CheckController : BaseController
     [AuthorizeModule(ModuleCode.CheckFirst)]
     public async Task<IActionResult> Check1Form(long id)
     {
-        var doc = await _docService.GetByIdAsync(id, CurrentUser);
-        if (doc is null) return NotFound();
-        ViewBag.Cells = await _cellRepo.GetByDocumentAsync(id);
-        ViewBag.UserNames = await BuildUserMapAsync(doc);
-        SetPageHeader($"Kiểm tra lần 1 - Hồ sơ #{id}", "check1");
-        return View(doc);
+        try
+        {
+            var vm = await _formBuilder.BuildForCheck1Async(ChannelId, id);
+            SetPageHeader($"Kiểm tra lần 1 - Hồ sơ #{id}", "check1");
+            return View(vm);
+        }
+        catch (InvalidOperationException)
+        {
+            return NotFound();
+        }
     }
 
     [HttpPost("check1/submit")]
@@ -90,27 +98,16 @@ public class CheckController : BaseController
     [AuthorizeModule(ModuleCode.CheckSecond)]
     public async Task<IActionResult> Check2Form(long id)
     {
-        var doc = await _docService.GetByIdAsync(id, CurrentUser);
-        if (doc is null) return NotFound();
-        ViewBag.Cells = await _cellRepo.GetByDocumentAsync(id);
-        ViewBag.UserNames = await BuildUserMapAsync(doc);
-        SetPageHeader($"Kiểm tra lần 2 - Hồ sơ #{id}", "check2");
-        return View(doc);
-    }
-
-    private async Task<Dictionary<int, string>> BuildUserMapAsync(DocumentDto doc)
-    {
-        var userIds = new[] { doc.CreatedBy, doc.ExtractedBy, doc.Checked1By, doc.Checked2By }
-            .Where(x => x > 0)
-            .Distinct()
-            .ToList();
-        var names = new Dictionary<int, string>();
-        foreach (var uid in userIds)
+        try
         {
-            var u = await _userRepo.GetByIdAsync(uid);
-            names[uid] = u?.FullName ?? u?.UserName ?? $"User #{uid}";
+            var vm = await _formBuilder.BuildForCheck2Async(ChannelId, id);
+            SetPageHeader($"Kiểm tra lần 2 - Hồ sơ #{id}", "check2");
+            return View(vm);
         }
-        return names;
+        catch (InvalidOperationException)
+        {
+            return NotFound();
+        }
     }
 
     [HttpPost("check2/submit")]

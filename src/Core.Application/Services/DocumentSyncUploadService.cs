@@ -199,7 +199,7 @@ public sealed class DocumentSyncUploadService : IDocumentSyncUploadService
                     if (!allFields.TryGetValue(st.IdField, out var sf))
                         continue;
                     var raw = GetPathValue(pathValues, st.Title);
-                    StgFieldToDocumentMapper.Apply(doc, sf.Name, raw);
+                    StgFieldToDocumentMapper.ApplyValue(doc, sf.Name, raw);
                 }
 
                 if (string.IsNullOrWhiteSpace(doc.Name))

@@ -93,3 +93,4 @@ $RECYCLE.BIN/
 **/appsettings.Local.json
 secrets.json
 
+.gitnexus

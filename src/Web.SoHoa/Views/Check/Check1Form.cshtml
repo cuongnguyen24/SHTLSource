@@ -1,8 +1,9 @@
-@model Shared.Contracts.Dtos.DocumentDto
+@model Shared.Contracts.ViewModels.DocumentFormViewModel
 @using Core.Domain.Enums
 @using Web.Shared
 @{
-    ViewData["Title"] = $"Check lần 1 - Hồ sơ #{Model.Id}";
+    var doc = Model.Document;
+    ViewData["Title"] = $"Check lần 1 - Hồ sơ #{doc?.Id ?? 0}";
     ViewData["PageTitle"] = "Kiểm tra lần 1";
     ViewData["PageIcon"] = "clipboard-check";
     ViewData["Breadcrumbs"] = new List<BreadcrumbItem>
@@ -10,18 +11,20 @@
         new() { Text = "Tổng quan", Url = Url.Action("Index", "Home") },
         new() { Text = "Nhập liệu", Url = Url.Action("Index", "Extract") },
         new() { Text = "Kiểm tra lần 1", Url = Url.Action("Check1", "Check") },
-        new() { Text = $"Hồ sơ #{Model.Id}" }
+        new() { Text = $"Hồ sơ #{doc?.Id ?? 0}" }
     };
-    var previewUrl = Url.Action("Preview", "Scan", new { id = Model.Id }) ?? $"/scan/preview/{Model.Id}";
-    var pdfUrl = Url.Action("Pdf", "Scan", new { id = Model.Id }) ?? $"/scan/pdf/{Model.Id}";
+    var previewUrl = Url.Action("Preview", "Scan", new { id = doc?.Id }) ?? $"/scan/preview/{doc?.Id}";
+    var pdfUrl = Url.Action("Pdf", "Scan", new { id = doc?.Id }) ?? $"/scan/pdf/{doc?.Id}";
     var submitUrl = Url.Action("DoCheck1", "Check") ?? "/check/check1/submit";
-    var cells = ViewBag.Cells as IEnumerable<Core.Domain.Entities.Stg.FormCell> ?? Enumerable.Empty<Core.Domain.Entities.Stg.FormCell>();
-    var userNames = ViewBag.UserNames as IDictionary<int, string> ?? new Dictionary<int, string>();
+    
     string UserNameOf(int id)
     {
         if (id <= 0) return "Chưa có";
-        return userNames.TryGetValue(id, out var n) ? n : $"User #{id}";
+        return Model.UserNames.TryGetValue(id, out var n) ? n : $"User #{id}";
     }
+    
+    // Group fields by GroupId
+    var fieldsByGroup = Model.FieldSettings.GroupBy(f => f.GroupId).ToDictionary(g => g.Key, g => g.ToList());
 }
 
 <partial name="_ShtlPageHeader" />
@@ -48,55 +51,40 @@
 
                 <div class="tab-content">
                 <div class="tab-pane fade show active" id="tabInfo">
-                    <div class="form-group mb-2">
-                    <label class="small font-weight-bold mb-1">Tên tài liệu</label>
-                    <input id="ckName" class="form-control form-control-sm" value="@Model.Name" />
-                </div>
-                <div class="form-row">
-                    <div class="form-group col-6 mb-2">
-                        <label class="small font-weight-bold mb-1">Số hiệu</label>
-                        <input id="ckSymbolNo" class="form-control form-control-sm" value="@Model.SymbolNo" />
-                    </div>
-                    <div class="form-group col-6 mb-2">
-                        <label class="small font-weight-bold mb-1">Số hồ sơ</label>
-                        <input id="ckRecordNo" class="form-control form-control-sm" value="@Model.RecordNo" />
-                    </div>
-                </div>
-                <div class="form-group mb-2">
-                    <label class="small font-weight-bold mb-1">Cơ quan ban hành</label>
-                    <input id="ckIssuedBy" class="form-control form-control-sm" value="@Model.IssuedBy" />
-                </div>
-                <div class="form-group mb-2">
-                    <label class="small font-weight-bold mb-1">Tác giả / Người ký</label>
-                    <input id="ckAuthor" class="form-control form-control-sm" value="@Model.Author" />
-                </div>
-                <div class="form-row">
-                    <div class="form-group col-6 mb-2"><label class="small mb-1">Field1</label><input id="ckField1" class="form-control form-control-sm" value="@Model.Field1" /></div>
-                    <div class="form-group col-6 mb-2"><label class="small mb-1">Field2</label><input id="ckField2" class="form-control form-control-sm" value="@Model.Field2" /></div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group col-6 mb-2"><label class="small mb-1">Field3</label><input id="ckField3" class="form-control form-control-sm" value="@Model.Field3" /></div>
-                    <div class="form-group col-6 mb-2"><label class="small mb-1">Field4</label><input id="ckField4" class="form-control form-control-sm" value="@Model.Field4" /></div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group col-6 mb-2"><label class="small mb-1">Field5</label><input id="ckField5" class="form-control form-control-sm" value="@Model.Field5" /></div>
-                    <div class="form-group col-6 mb-2"><label class="small mb-1">Field6</label><input id="ckField6" class="form-control form-control-sm" value="@Model.Field6" /></div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group col-6 mb-2"><label class="small mb-1">Field7</label><input id="ckField7" class="form-control form-control-sm" value="@Model.Field7" /></div>
-                    <div class="form-group col-6 mb-2"><label class="small mb-1">Field8</label><input id="ckField8" class="form-control form-control-sm" value="@Model.Field8" /></div>
-                </div>
-                <div class="form-group mb-2">
-                    <label class="small font-weight-bold mb-1">Ghi chú tài liệu</label>
-                    <textarea id="ckNoted" class="form-control form-control-sm" rows="2">@Model.Noted</textarea>
-                </div>
+                    @* Render dynamic fields theo group *@
+                    @foreach (var group in Model.FieldGroups.Values.OrderBy(g => g.Weight))
+                    {
+                        if (!fieldsByGroup.ContainsKey(group.Id) || !fieldsByGroup[group.Id].Any())
+                            continue;
+                        
+                        @if (Model.FieldGroups.Count > 1)
+                        {
+                            <div class="small font-weight-bold text-primary mb-2 mt-3">@group.Name</div>
+                        }
+                        
+                        @foreach (var field in fieldsByGroup[group.Id].OrderBy(f => f.Weight))
+                        {
+                            ViewBag.FieldValue = Model.FieldValues.GetValueOrDefault(field.FieldName);
+                            @await Html.PartialAsync("_DynamicFieldRenderer", field)
+                        }
+                    }
+                    
+                    @* Fallback: render fields không có group *@
+                    @if (fieldsByGroup.ContainsKey(0) && fieldsByGroup[0].Any())
+                    {
+                        @foreach (var field in fieldsByGroup[0].OrderBy(f => f.Weight))
+                        {
+                            ViewBag.FieldValue = Model.FieldValues.GetValueOrDefault(field.FieldName);
+                            @await Html.PartialAsync("_DynamicFieldRenderer", field)
+                        }
+                    }
                 </div>
 
                 <div class="tab-pane fade" id="tabCells">
-                    @if (cells.Any())
+                    @if (Model.Cells.Any())
                     {
                         <div class="small font-weight-bold mb-2 text-primary">Dữ liệu ô nhận từ bước nhập liệu</div>
-                    foreach (var c in cells)
+                    foreach (var c in Model.Cells)
                     {
                         var current = c.Checked1Value ?? c.ExtractedValue ?? c.Value;
                         <div class="form-group mb-2">
@@ -113,27 +101,27 @@
 
                 <div class="tab-pane fade" id="tabProfile">
                     <div class="small border rounded p-2 mb-2">
-                        <div><strong>Upload/Khởi tạo:</strong> @UserNameOf(Model.CreatedBy)</div>
-                        <div class="text-muted">Thời gian: @Model.Created.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss")</div>
+                        <div><strong>Upload/Khởi tạo:</strong> @UserNameOf(doc?.CreatedBy ?? 0)</div>
+                        <div class="text-muted">Thời gian: @(doc?.Created.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss") ?? "Chưa có")</div>
                     </div>
                     <div class="small border rounded p-2 mb-2">
-                        <div><strong>Nhập liệu:</strong> @UserNameOf(Model.ExtractedBy)</div>
-                        <div class="text-muted">Thời gian: @(Model.ExtractedAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss") ?? "Chưa có")</div>
+                        <div><strong>Nhập liệu:</strong> @UserNameOf(doc?.ExtractedBy ?? 0)</div>
+                        <div class="text-muted">Thời gian: @(doc?.ExtractedAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss") ?? "Chưa có")</div>
                     </div>
                     <div class="small border rounded p-2 mb-2">
-                        <div><strong>Check lần 1:</strong> @UserNameOf(Model.Checked1By)</div>
-                        <div class="text-muted">Thời gian: @(Model.Checked1At?.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss") ?? "Chưa có")</div>
-                        @if (!string.IsNullOrWhiteSpace(Model.Checked1ReturnReason))
+                        <div><strong>Check lần 1:</strong> @UserNameOf(doc?.Checked1By ?? 0)</div>
+                        <div class="text-muted">Thời gian: @(doc?.Checked1At?.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss") ?? "Chưa có")</div>
+                        @if (!string.IsNullOrWhiteSpace(doc?.Checked1ReturnReason))
                         {
-                            <div class="text-warning mt-1"><strong>Lý do trả về:</strong> @Model.Checked1ReturnReason</div>
+                            <div class="text-warning mt-1"><strong>Lý do trả về:</strong> @doc.Checked1ReturnReason</div>
                         }
                     </div>
                     <div class="small border rounded p-2">
-                        <div><strong>Check lần 2:</strong> @UserNameOf(Model.Checked2By)</div>
-                        <div class="text-muted">Thời gian: @(Model.Checked2At?.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss") ?? "Chưa có")</div>
-                        @if (!string.IsNullOrWhiteSpace(Model.Checked2ReturnReason))
+                        <div><strong>Check lần 2:</strong> @UserNameOf(doc?.Checked2By ?? 0)</div>
+                        <div class="text-muted">Thời gian: @(doc?.Checked2At?.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss") ?? "Chưa có")</div>
+                        @if (!string.IsNullOrWhiteSpace(doc?.Checked2ReturnReason))
                         {
-                            <div class="text-warning mt-1"><strong>Lý do trả về:</strong> @Model.Checked2ReturnReason</div>
+                            <div class="text-warning mt-1"><strong>Lý do trả về:</strong> @doc.Checked2ReturnReason</div>
                         }
                     </div>
                 </div>
@@ -164,30 +152,25 @@ async function submitCheck(result) {
     const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
     const note = document.getElementById('txtNote')?.value || '';
     const payload = {
-        documentId: @Model.Id,
+        documentId: @(doc?.Id ?? 0),
         step: @((int)WorkflowStep.Check1),
         result: result,
-        name: document.getElementById('ckName')?.value || null,
-        symbolNo: document.getElementById('ckSymbolNo')?.value || null,
-        recordNo: document.getElementById('ckRecordNo')?.value || null,
-        issuedBy: document.getElementById('ckIssuedBy')?.value || null,
-        author: document.getElementById('ckAuthor')?.value || null,
-        noted: document.getElementById('ckNoted')?.value || null,
-        field1: document.getElementById('ckField1')?.value || null,
-        field2: document.getElementById('ckField2')?.value || null,
-        field3: document.getElementById('ckField3')?.value || null,
-        field4: document.getElementById('ckField4')?.value || null,
-        field5: document.getElementById('ckField5')?.value || null,
-        field6: document.getElementById('ckField6')?.value || null,
-        field7: document.getElementById('ckField7')?.value || null,
-        field8: document.getElementById('ckField8')?.value || null,
         note: note,
         returnReason: result === 3 ? note : null,
         cells: []
     };
+    
+    // Collect dynamic fields
+    document.querySelectorAll('input[name^="field_"], textarea[name^="field_"], select[name^="field_"]').forEach(input => {
+        const fieldName = input.name;
+        payload[fieldName] = input.value || null;
+    });
+    
+    // Collect cells
     document.querySelectorAll('.ck-cell').forEach(i => {
         payload.cells.push({ id: parseInt(i.dataset.cellId), value: i.value });
     });
+    
     try {
         const res = await fetch('@submitUrl', {
             method: 'POST',
