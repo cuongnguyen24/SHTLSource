@@ -1,6 +1,6 @@
 # Build output
-bin/
-obj/
+[Bb]in/
+[Oo]bj/
 **/bin/
 **/obj/
 
@@ -8,6 +8,11 @@ obj/
 project.lock.json
 project.fragment.lock.json
 artifacts/
+
+# MSBuild / diagnostics
+*.binlog
+*.log
+msbuild.*.txt
 
 # User-specific files
 *.user
@@ -51,11 +56,26 @@ log/
 **/publish/
 **/out/
 
-# Generated web assets
+# ASP.NET DataProtection key ring (machine-specific; see Program.cs dp-keys)
+**/dp-keys/
+
+# Generated / restored web assets
 **/wwwroot/lib/
 **/wwwroot/dist/
 **/wwwroot/bundle*
 **/wwwroot/*.map
+
+# Node (GitNexus CLI, tooling)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local env / secrets
+.env
+.env.*
+!.env.example
 
 # ReSharper / Rider
 _ReSharper*/
@@ -68,6 +88,8 @@ TestResults/
 *.trx
 *.coverage
 *.coveragexml
+coverage/
+*.opencover.xml
 
 # Azure / IIS
 .publishsettings
@@ -88,9 +110,10 @@ $RECYCLE.BIN/
 .LSOverride
 *.icloud
 
-# Dev config overrides
+# Dev config overrides (không commit override máy cục bộ)
 **/appsettings.Development.json
 **/appsettings.Local.json
 secrets.json
 
+# GitNexus index (tái tạo bằng `npx gitnexus analyze`)
 .gitnexus

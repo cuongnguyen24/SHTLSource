@@ -256,3 +256,8 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'ix_doc_type_sync_types_c
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'ix_doc_type_sync_types_doctype' AND object_id = OBJECT_ID(N'core_stg.doc_type_sync_types'))
     CREATE INDEX ix_doc_type_sync_types_doctype ON core_stg.doc_type_sync_types(channel_id, doc_type_id);
 GO
+
+-- Gốc thư mục scan (Windows): bỏ tiền tố này khỏi đường dẫn file trước khi map Format + lưu storage giữ cấu trúc con
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'core_stg.doc_type_sync_types') AND name = N'scan_path_root')
+    ALTER TABLE core_stg.doc_type_sync_types ADD scan_path_root NVARCHAR(1024) NULL;
+GO

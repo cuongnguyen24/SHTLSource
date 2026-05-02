@@ -1,9 +1,0 @@
-@model int
-@{
-    ViewData["Title"] = "Lỗi " + Model;
-}
-<div class="text-center py-5">
-    <div class="text-gray-800 mb-3" style="font-size: 5rem; font-weight: 800;">@Model</div>
-    <p class="lead text-gray-700">Yêu cầu không thể hoàn tất (mã HTTP @Model).</p>
-    <a class="btn btn-primary" asp-controller="Home" asp-action="Index"><i class="fas fa-home mr-2"></i>Trang chủ tài khoản</a>
-</div>
