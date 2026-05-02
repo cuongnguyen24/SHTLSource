@@ -22,6 +22,8 @@ builder.Services.AddControllersWithViews()
     .AddApplicationPart(typeof(WebSharedMarker).Assembly)
     .AddJsonOptions(o => o.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase);
 
+builder.Services.AddAntiforgery(o => o.HeaderName = "RequestVerificationToken");
+
 builder.Services.Configure<ShellOptions>(
     builder.Configuration.GetSection(ShellOptions.SectionName));
 
@@ -53,16 +55,7 @@ if (app.Environment.IsDevelopment())
     app.UseDeveloperExceptionPage();
 else
 {
-    // Views đã gỡ — không chuyển sang Razor Error.
-    app.UseExceptionHandler(errorApp =>
-    {
-        errorApp.Run(async context =>
-        {
-            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-            context.Response.ContentType = "text/plain; charset=utf-8";
-            await context.Response.WriteAsync("500 — Giao diện Razor đã gỡ. Cần thêm lại Views.");
-        });
-    });
+    app.UseExceptionHandler("/dashboard/Home/Error");
     app.UseHsts();
 }
 

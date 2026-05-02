@@ -1,0 +1,244 @@
+/**
+ * Navigation Menu - Quản lý Lưu trữ Tài liệu
+ * Design: Icon Grid (theo ảnh Dashboard prototype)
+ * Reference: NAVIGATION_REFACTOR_PLAN.md
+ */
+
+/* ── ICON GRID WRAPPER ────────────────────────────── */
+.filemanager-nav-wrapper {
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    padding: 30px 20px;
+    border-radius: 8px;
+    margin-bottom: 24px;
+}
+
+.filemanager-nav-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+}
+
+/* ── ICON ITEM ───────────────────────────────────── */
+.nav-icon-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    padding: 10px;
+    border-radius: 8px;
+    min-width: 100px;
+}
+
+.nav-icon-item:hover {
+    transform: translateY(-5px);
+    text-decoration: none;
+}
+
+.nav-icon-item.active {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* ── ICON CIRCLE ─────────────────────────────────── */
+.nav-icon-circle {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+}
+
+.nav-icon-item:hover .nav-icon-circle {
+    transform: scale(1.1);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.nav-icon-circle i {
+    font-size: 26px;
+    color: #fff;
+}
+
+/* ── ICON LABEL ──────────────────────────────────── */
+.nav-icon-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    text-align: center;
+    line-height: 1.3;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* ── RESPONSIVE ──────────────────────────────────── */
+@media (max-width: 768px) {
+    .filemanager-nav-wrapper {
+        padding: 20px 10px;
+    }
+
+    .filemanager-nav-grid {
+        gap: 15px;
+    }
+
+    .nav-icon-item {
+        min-width: 80px;
+        padding: 8px;
+    }
+
+    .nav-icon-circle {
+        width: 50px;
+        height: 50px;
+    }
+
+    .nav-icon-circle i {
+        font-size: 22px;
+    }
+
+    .nav-icon-label {
+        font-size: 11px;
+    }
+}
+
+@media (max-width: 576px) {
+    .filemanager-nav-grid {
+        gap: 10px;
+    }
+
+    .nav-icon-item {
+        min-width: 70px;
+    }
+
+    .nav-icon-circle {
+        width: 45px;
+        height: 45px;
+    }
+
+    .nav-icon-circle i {
+        font-size: 20px;
+    }
+}
+
+/* ── OLD NAV CARD STYLES (kept for backward compatibility) ──── */
+.nav-card {
+    display: block;
+    padding: 20px;
+    background: #fff;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: all 0.15s ease;
+    height: 100%;
+}
+
+.nav-card:hover {
+    border-color: #1F3864;
+    box-shadow: 0 4px 12px rgba(31, 56, 100, 0.1);
+    transform: translateY(-2px);
+    text-decoration: none;
+}
+
+.nav-card:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(31, 56, 100, 0.08);
+}
+
+.nav-card.active {
+    border-color: #1F3864;
+    background: linear-gradient(to bottom right, #ffffff, #f8faff);
+}
+
+/* Card Icon */
+.nav-card-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 12px;
+}
+
+.nav-card-icon i {
+    font-size: 20px;
+}
+
+/* Card Text */
+.nav-card-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1F3864;
+    margin-bottom: 4px;
+}
+
+.nav-card-desc {
+    font-size: 12px;
+    color: #64748b;
+    line-height: 1.4;
+}
+
+/* Active state text */
+.nav-card.active .nav-card-title {
+    color: #152A4E;
+}
+
+.nav-card.active .nav-card-desc {
+    color: #4A5578;
+}
+
+/* ── LEGACY TABS OVERRIDE (if needed for transition) ──── */
+.filemanager-nav.nav-tabs {
+    border-bottom-color: #e5e7eb;
+}
+
+.filemanager-nav .nav-link {
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 12px 20px;
+    transition: all 0.15s;
+}
+
+.filemanager-nav .nav-link:hover {
+    border-bottom-color: #d1d5db;
+    color: #1F3864;
+}
+
+.filemanager-nav .nav-link.active {
+    border-bottom-color: #1F3864;
+    color: #1F3864;
+    font-weight: 600;
+}
+
+/* ── UTILITY CLASSES ────────────────────────────── */
+.nav-divider {
+    height: 1px;
+    background: linear-gradient(to right, transparent, #e5e7eb, transparent);
+    margin: 20px 0;
+}
+
+.nav-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-radius: 4px;
+    margin-left: 8px;
+}
+
+.nav-badge.new {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+.nav-badge.beta {
+    background: #e0e7ff;
+    color: #4f46e5;
+}
+

@@ -1,0 +1,64 @@
+@{
+    ViewData["Title"] = "Demo giọng nói";
+}
+@section Breadcrumb {
+    <li class="breadcrumb-item active">Speech demo</li>
+}
+
+<div class="layout-expanded">
+    <div class="card-figma">
+        <div class="card-header-figma">
+            <h3 class="card-title-figma mb-0"><i class="fas fa-microphone mr-2" style="color: var(--primary);"></i>Nhận dạng giọng nói (trình duyệt)</h3>
+        </div>
+        <div class="card-content-figma">
+            <p class="text-muted small">Dùng Web Speech API (Chrome). Cho phép quyền microphone khi được hỏi.</p>
+            <div class="d-flex flex-wrap mb-3" style="gap:8px;">
+                <button type="button" id="btnSpeechStart" class="btn-figma btn-figma-primary btn-sm"><i class="fas fa-play mr-1"></i>Bắt đầu</button>
+                <button type="button" id="btnSpeechStop" class="btn-figma btn-figma-outline btn-sm" disabled><i class="fas fa-stop mr-1"></i>Dừng</button>
+            </div>
+            <div class="form-group-figma mb-0">
+                <label class="label-figma" for="speechResult">Kết quả</label>
+                <textarea id="speechResult" class="form-control" rows="6" readonly placeholder="…"></textarea>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            var btnStart = document.getElementById('btnSpeechStart');
+            var btnStop = document.getElementById('btnSpeechStop');
+            var ta = document.getElementById('speechResult');
+            if (!SpeechRecognition) {
+                ta.value = 'Trình duyệt không hỗ trợ SpeechRecognition.';
+                btnStart.disabled = true;
+                return;
+            }
+            var rec = new SpeechRecognition();
+            rec.lang = 'vi-VN';
+            rec.continuous = true;
+            rec.interimResults = true;
+            rec.onresult = function (e) {
+                var t = '';
+                for (var i = e.resultIndex; i < e.results.length; i++)
+                    t += e.results[i][0].transcript;
+                ta.value = t;
+            };
+            rec.onerror = function () { ta.value += '\n[lỗi nhận dạng]'; };
+            btnStart.onclick = function () {
+                try {
+                    rec.start();
+                    btnStart.disabled = true;
+                    btnStop.disabled = false;
+                } catch (x) { }
+            };
+            btnStop.onclick = function () {
+                rec.stop();
+                btnStart.disabled = false;
+                btnStop.disabled = true;
+            };
+        })();
+    </script>
+}

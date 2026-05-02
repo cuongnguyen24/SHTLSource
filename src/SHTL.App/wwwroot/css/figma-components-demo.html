@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Figma Components Demo - Hệ thống Quản lý CSDL KCN</title>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Be Vietnam Pro -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- CSS Hệ thống -->
+    <link rel="stylesheet" href="theme-figma.css">
+    <link rel="stylesheet" href="figma-components-extended.css">
+    
+    <style>
+        :root {
+            --primary: #1B4F8A;
+            --primary-light: #EBF3FB;
+            --secondary: #64748B;
+            --border: #E2E8F0;
+            --bg-body: #F0F4F8;
+            --bg-white: #FFFFFF;
+            --success: #16A34A;
+            --danger: #DC2626;
+            --warning: #D97706;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            padding: 20px;
+            overflow-x: hidden;
+            overflow-y: auto;
+            font-family: 'Be Vietnam Pro', sans-serif;
+            color: #1e293b;
+            line-height: 1.5;
+        }
+
+        .demo-container {
+            max-width: 1240px;
+            margin: 0 auto;
+        }
+
+        .demo-title {
+            text-align: center;
+            color: var(--primary);
+            margin-bottom: 30px;
+            font-weight: 700;
+        }
+
+        .demo-label {
+            display: inline-block;
+            padding: 4px 12px;
+            background: var(--primary-light);
+            color: var(--primary);
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        section {
+            margin-bottom: 40px;
+        }
+
+        section h2 {
+            font-size: 18px;
+            color: #0f172a;
+            margin-bottom: 16px;
+            padding-left: 12px;
+            border-left: 4px solid var(--primary);
+            font-weight: 700;
+        }
+
+        /* Layout 2 Khung - Seamless */
+        .layout-expanded {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .frame-figma {
+            background: var(--bg-white);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .frame-figma-combined {
+            padding: 0 !important;
+            overflow: hidden;
+        }
+
+        .frame-header {
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Filter Section */
+        .frame-filter {
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background-color: var(--bg-white);
+        }
+
+        .advanced-filter-area {
+            display: none;
+            padding: 0 20px 20px 20px;
+            background-color: var(--bg-white);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .advanced-filter-area.show {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #F1F5F9;
+        }
+
+        .filter-item label {
+            display: block;
+            font-size: 11px;
+            font-weight: 700;
+            color: #475569;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        /* Table Section */
+        .frame-body {
+            border-top: 1px solid var(--border);
+        }
+
+        .table-figma th {
+            background-color: #F8FAFC !important;
+            font-weight: 700 !important;
+            text-transform: uppercase;
+            font-size: 11px !important;
+            padding: 12px 16px !important;
+            border-bottom: 1px solid var(--border) !important;
+        }
+
+        .col-stt { width: 50px; text-align: center; color: #64748B; font-weight: 600; }
+
+        /* Custom tooltips */
+        .btn-action-figma {
+            position: relative;
+        }
+
+        .btn-action-figma[data-tooltip]::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translate(-50%, -8px);
+            background: #1e293b;
+            color: #fff;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s ease;
+            z-index: 10000;
+            pointer-events: none;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-action-figma:hover[data-tooltip]::after {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Footer Section - REFINED PAGINATION (MATCHING IMAGE) */
+        .frame-footer {
+            padding: 18px 24px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--bg-white);
+        }
+
+        .pagination-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pagination-list {
+            display: flex;
+            gap: 4px;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .pagination-item {
+            min-width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            color: var(--secondary);
+            background: #fff;
+            transition: all 0.2s;
+        }
+
+        .pagination-item:hover:not(.active):not(.disabled) {
+            background: #F8FAFC;
+        }
+
+        .pagination-item.active {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+
+        .pagination-item.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .page-size-selector {
+            height: 32px;
+            min-width: 60px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 0 10px;
+            font-size: 13px;
+            color: #1e293b;
+            font-weight: 500;
+            margin-right: 4px;
+        }
+
+        /* UI Controls Section Styles */
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
+        }
+
+        .control-row {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+
+        .control-item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .control-item label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .control-item.full-width {
+            flex: 1 1 100%;
+        }
+
+        /* Custom Checkbox/Radio */
+        .checkbox-label-figma {
+            display: flex !important;
+            align-items: center !important;
+            gap: 12px !important;
+            cursor: pointer !important;
+            font-size: 14px !important;
+            user-select: none !important;
+            font-weight: 500 !important;
+            padding: 4px 8px !important;
+            transition: all 0.2s !important;
+            border-radius: 4px !important;
+            width: 100% !important;
+            max-width: none !important;
+            flex-grow: 1 !important;
+        }
+
+        .checkbox-label-figma:hover {
+            background: var(--primary-light) !important;
+        }
+
+        .checkbox-figma input {
+            cursor: pointer;
+            width: 18px;
+            height: 18px;
+            accent-color: var(--primary);
+            margin: 0;
+        }
+
+        /* Select2 Simulated */
+        .select-search-container {
+            position: relative;
+            width: 280px;
+        }
+
+        .select-search-input {
+            width: 100%;
+            height: 38px;
+            padding-right: 32px;
+            padding-left: 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .select-search-icon {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--secondary);
+            font-size: 12px;
+        }
+
+        .select-search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            margin-top: 4px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+            display: none;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .select-search-container:focus-within .select-search-results {
+            display: block;
+        }
+
+        .select-option {
+            padding: 10px 12px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .select-option:hover {
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+
+        /* Textarea & Editor Simulation */
+        .textarea-figma {
+            width: 100%;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 12px;
+            font-size: 14px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .editor-container {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .editor-toolbar {
+            padding: 8px;
+            background: #F8FAFC;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .toolbar-btn {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid transparent;
+            border-radius: 4px;
+            cursor: pointer;
+            color: #475569;
+            font-size: 14px;
+        }
+
+        .toolbar-btn:hover {
+            background: #E2E8F0;
+            color: #1e293b;
+        }
+
+        .editor-content {
+            padding: 16px;
+            min-height: 180px;
+            outline: none;
+            font-size: 14px;
+            color: #1e293b;
+        }
+
+        /* Helpers */
+        .btn-figma-success { background-color: var(--success); color: #fff; border: none; }
+        .btn-figma-success:hover { background-color: #15803d; }
+        .btn-figma-danger { background-color: var(--danger); color: #fff; border: none; }
+        .btn-figma-danger:hover { background-color: #b91c1c; }
+        .btn-figma-ghost { background: transparent; color: var(--secondary); border: none; }
+        .btn-figma-ghost:hover { background: #F1F5F9; color: var(--primary); }
+
+        .badge-figma {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="demo-container">
+    <h1 class="demo-title">Hệ thống Thành phần UI (Figma Standard)</h1>
+
+    <!-- 1. LAYOUT 2 KHUNG -->
+    <section>
+        <div class="demo-label">STANDARD LAYOUT</div>
+        <h2>1. Layout 2 Khung - Bộ lọc & Phân trang</h2>
+        
+        <div class="layout-expanded">
+            <!-- Khung 1: Header -->
+            <div class="frame-figma">
+                <div class="frame-header">
+                    <div style="display: flex; align-items: center;">
+                        <div style="width: 32px; height: 32px; background: var(--primary-light); color: var(--primary); border-radius: 6px; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+                            <i class="fas fa-building"></i>
+                        </div>
+                        <div>
+                            <h6 style="margin: 0; font-weight: 700; color: var(--primary); font-size: 15px;">Quản lý Danh sách Doanh nghiệp</h6>
+                            <div style="font-size: 11px; color: var(--secondary);">Mẫu chức năng hiển thị dữ liệu tập trung</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn-figma btn-figma-primary" style="height: 32px; padding: 0 12px; font-size: 13px;">
+                            <i class="fas fa-plus"></i> Thêm mới
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Khung 2: Nội dung chính -->
+            <div class="frame-figma frame-figma-combined">
+                <div class="frame-filter">
+                    <div style="flex: 1; max-width: 450px; display: flex; gap: 8px;">
+                        <div style="position: relative; flex: 1;">
+                            <input type="text" id="searchInput" class="input-figma" placeholder="Tìm tên doanh nghiệp, MST..." style="height: 36px; padding-left: 36px; font-size: 13px; width: 100%;">
+                            <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--secondary);"></i>
+                        </div>
+                        <button type="button" class="btn-figma btn-figma-primary" style="height: 36px; padding: 0 16px; font-size: 13px; font-weight: 600;">
+                            Tìm kiếm
+                        </button>
+                    </div>
+                    <!-- Advanced Filter - ICON ONLY -->
+                    <button type="button" id="toggleFilter" class="btn-figma btn-figma-outline" style="height: 36px; width: 36px; padding: 0; display: flex; align-items: center; justify-content: center;" data-tooltip="Bộ lọc nâng cao">
+                        <i class="fas fa-filter"></i>
+                    </button>
+                    <button type="button" class="btn-figma btn-figma-outline" style="height: 36px; width: 36px; padding: 0; display: flex; align-items: center; justify-content: center;" data-tooltip="Làm mới">
+                        <i class="fas fa-redo-alt"></i>
+                    </button>
+                </div>
+
+                <div id="advancedFilter" class="advanced-filter-area">
+                    <div class="filter-grid">
+                        <div class="filter-item">
+                            <label>Khu công nghiệp</label>
+                            <select class="select-figma" style="width: 100%; height: 36px;">
+                                <option value="">Tất cả</option>
+                                <option>KCN Amata</option>
+                                <option>KCN Long Thành</option>
+                                <option>KCN Biên Hòa 2</option>
+                            </select>
+                        </div>
+                        <div class="filter-item">
+                            <label>Trạng thái</label>
+                            <select class="select-figma" style="width: 100%; height: 36px;">
+                                <option value="">Tất cả</option>
+                                <option>Đang hoạt động</option>
+                                <option>Tạm ngừng</option>
+                            </select>
+                        </div>
+                        <div class="filter-item">
+                            <label>Thời gian thành lập</label>
+                            <input type="date" class="input-figma" style="width: 100%; height: 36px;">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="frame-body">
+                    <table class="table-figma">
+                        <thead>
+                            <tr>
+                                <th class="col-stt">STT</th>
+                                <th style="width: 120px;">Mã số thuế</th>
+                                <th>Tên doanh nghiệp</th>
+                                <th style="width: 100px;">Loại hình</th>
+                                <th style="width: 150px;">Khu công nghiệp</th>
+                                <th style="width: 140px;" class="text-center">Trạng thái</th>
+                                <th style="width: 110px;" class="text-center">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableData">
+                            <!-- JS render rows -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="frame-footer">
+                    <div style="font-size: 13px; color: #64748B;">
+                        Hiển thị <span id="startRange" style="font-weight: 700;">1</span> - <span id="endRange" style="font-weight: 700;">5</span> / <span id="totalCount" style="font-weight: 700;">10</span> mục
+                    </div>
+                    
+                    <div class="pagination-right">
+                        <select id="pageSizeSelect" class="page-size-selector">
+                            <option value="5">5</option>
+                            <option value="10">10</option>
+                            <option value="25" selected>25</option>
+                        </select>
+                        
+                        <ul class="pagination-list" id="paginationList">
+                            <!-- JS render pagination: [<] [1] [>] -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 2. UI CONTROLS SECTION - COMPREHENSIVE TOOLKIT -->
+    <section>
+        <div class="demo-label">UI CONTROLS TOOLKIT</div>
+        <h2>2. Các thành phần điều khiển (Inputs, Editor, Controls)</h2>
+        
+        <div class="frame-figma" style="padding: 32px;">
+            <div class="control-group">
+                <!-- Row 1: Buttons -->
+                <div class="control-item">
+                    <label>Nút bấm (Buttons)</label>
+                    <div class="control-row">
+                        <button class="btn-figma btn-figma-primary">Primary Action</button>
+                        <button class="btn-figma btn-figma-outline">Secondary Action</button>
+                        <button class="btn-figma btn-figma-success">Confirm/Save</button>
+                        <button class="btn-figma btn-figma-danger">Delete/Cancel</button>
+                        <button class="btn-figma btn-figma-ghost">Ghost Link</button>
+                        <div style="display: flex; gap: 8px; margin-left: auto;">
+                            <button class="btn-action-figma btn-action-edit" data-tooltip="Chỉnh sửa"><i class="fas fa-pen"></i></button>
+                            <button class="btn-action-figma btn-action-delete" data-tooltip="Xóa bỏ"><i class="fas fa-trash-alt"></i></button>
+                            <button class="btn-action-figma btn-action-view" style="background:#555" data-tooltip="Xem chi tiết"><i class="fas fa-eye"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <hr style="border: 0; border-top: 1px solid var(--border); margin: 0;">
+
+                <!-- Row 2: Standard Inputs -->
+                <div class="control-row">
+                    <div class="control-item">
+                        <label>Tên người dùng (Text)</label>
+                        <input type="text" class="input-figma" placeholder="Nhập họ và tên..." style="width: 250px; height: 38px;">
+                    </div>
+                    <div class="control-item">
+                        <label>Mật khẩu (Password)</label>
+                        <div style="position: relative; width: 250px;">
+                            <input type="password" class="input-figma" value="password123" style="width: 100%; height: 38px; padding-right: 36px;">
+                            <i class="fas fa-eye" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--secondary); cursor: pointer;"></i>
+                        </div>
+                    </div>
+                    <div class="control-item">
+                        <label>Số lượng (Number)</label>
+                        <input type="number" class="input-figma" value="100" style="width: 120px; height: 38px;">
+                    </div>
+                    <div class="control-item">
+                        <label>Ngày thành lập (Date)</label>
+                        <input type="date" class="input-figma" style="width: 200px; height: 38px; cursor: pointer;" onclick="this.showPicker()">
+                    </div>
+                </div>
+
+                <hr style="border: 0; border-top: 1px solid var(--border); margin: 0;">
+
+                <!-- Row 3: Checkboxes & Radios -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 40px; margin-bottom: 30px; border-bottom: 1px solid var(--border); padding-bottom: 24px;">
+                    <div class="control-item">
+                        <label style="margin-bottom: 12px; display: block;">Checkboxes</label>
+                        <div style="display: flex; flex-direction: column; gap: 16px;">
+                            <label class="checkbox-label-figma"><input type="checkbox" checked style="flex-shrink: 0;" class="checkbox-figma"> <span>Ghi nhớ thông tin đăng nhập cho lần sau</span></label>
+                            <label class="checkbox-label-figma"><input type="checkbox" style="flex-shrink: 0;" class="checkbox-figma"> <span>Tôi đồng ý với Điều khoản dịch vụ & Chính sách bảo mật của hệ thống</span></label>
+                        </div>
+                    </div>
+                    <div class="control-item">
+                        <label style="margin-bottom: 12px; display: block;">Radios</label>
+                        <div style="display: flex; flex-direction: column; gap: 16px;">
+                            <label class="checkbox-label-figma"><input type="radio" name="sex_demo" checked style="flex-shrink: 0;" class="radio-figma"> <span>Nam (Male) - Giới tính nam</span></label>
+                            <label class="checkbox-label-figma"><input type="radio" name="sex_demo" style="flex-shrink: 0;" class="radio-figma"> <span>Nữ (Female) - Giới tính nữ</span></label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Row 4: File Attachment & Tag Selects -->
+                <div class="control-row" style="margin-bottom: 30px;">
+                    <div class="control-item">
+                        <label>Tệp đính kèm hồ sơ <span style="color: var(--danger)">*</span></label>
+                        <div class="input-figma" style="width: 400px; height: 46px; display: flex; align-items: center; padding: 0 16px; gap: 12px; cursor: pointer; background: #fff; position: relative; border-style: dashed; border-width: 2px; border-color: var(--primary);">
+                            <i class="fas fa-cloud-upload-alt" style="color: var(--primary); font-size: 18px;"></i>
+                            <span style="color: var(--secondary); font-size: 13px; font-weight: 500;">Bấm để chọn tệp hoặc kéo thả vào đây</span>
+                            <input type="file" id="fileInput" multiple style="position: absolute; inset: 0; opacity: 0; cursor: pointer;">
+                        </div>
+                        <div id="fileList" style="margin-top: 12px; font-size: 13px; display: flex; flex-direction: column; gap: 6px;"></div>
+                    </div>
+                    
+                    <div class="control-item">
+                        <label>Multi-tag Select (Interactive Dropdown)</label>
+                        <div class="select-search-container" id="multiTagDropdownContainer">
+                            <div class="input-figma" id="multiTagContainer" style="width: 400px; min-height: 46px; display: flex; align-items: center; padding: 6px 12px; gap: 8px; background: #fff; flex-wrap: wrap; cursor: text; border-color: var(--border);">
+                                <!-- Tags will be here -->
+                                <input type="text" id="multiTagInput" placeholder="Chọn hoặc nhập tag..." style="border: none; outline: none; flex: 1; min-width: 120px; font-size: 13px;">
+                                <i class="fas fa-chevron-down" style="font-size: 10px; color: var(--secondary)"></i>
+                            </div>
+                            <div class="select-search-results" id="multiTagResults">
+                                <div class="select-option" data-val="Giao thông">Giao thông vận tải</div>
+                                <div class="select-option" data-val="Môi trường">Bảo vệ môi trường</div>
+                                <div class="select-option" data-val="Xây dựng">Công trình xây dựng</div>
+                                <div class="select-option" data-val="Kỹ thuật">Kỹ thuật hạ tầng</div>
+                                <div class="select-option" data-val="Sản xuất">Sản xuất công nghiệp</div>
+                                <div class="select-option" data-val="Logistics">Dịch vụ Logistics</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <hr style="border: 0; border-top: 1px solid var(--border); margin: 0;">
+
+                <!-- Row 5: Selects -->
+                <div class="control-row">
+                    <div class="control-item">
+                        <label>Single Select</label>
+                        <select class="select-figma" style="width: 250px; height: 38px;">
+                            <option>Lựa chọn danh mục</option>
+                            <option>Hồ sơ pháp lý</option>
+                            <option>Báo cáo tài chính</option>
+                        </select>
+                    </div>
+                    <div class="control-item">
+                        <label>Select2 Searchable (Interactive)</label>
+                        <div class="select-search-container" id="searchableSelectContainer">
+                            <input type="text" class="select-search-input" id="searchableInput" placeholder="Tìm kiếm doanh nghiệp...">
+                            <i class="fas fa-search select-search-icon"></i>
+                            <div class="select-search-results" id="searchResults">
+                                <!-- JS will populate this -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <hr style="border: 0; border-top: 1px solid var(--border); margin: 0;">
+
+                <!-- Row 5: Textarea (Large) -->
+                <div class="control-item full-width">
+                    <label>Ghi chú (Textarea)</label>
+                    <textarea class="textarea-figma" placeholder="Nhập mô tả chi tiết tại đây..."></textarea>
+                    <div style="text-align: right; font-size: 11px; color: var(--secondary); margin-top: 4px;">0 / 500 ký tự</div>
+                </div>
+
+                <!-- Row 6: Rich Text Editor (Simulated) -->
+                <div class="control-item full-width">
+                    <label>Nội dung chi tiết (Rich Text Editor)</label>
+                    <div class="editor-container">
+                        <div class="editor-toolbar">
+                            <div class="toolbar-btn"><i class="fas fa-bold"></i></div>
+                            <div class="toolbar-btn"><i class="fas fa-italic"></i></div>
+                            <div class="toolbar-btn"><i class="fas fa-underline"></i></div>
+                            <div style="width: 1px; height: 20px; background: var(--border); margin: 6px 4px;"></div>
+                            <div class="toolbar-btn"><i class="fas fa-list-ul"></i></div>
+                            <div class="toolbar-btn"><i class="fas fa-list-ol"></i></div>
+                            <div style="width: 1px; height: 20px; background: var(--border); margin: 6px 4px;"></div>
+                            <div class="toolbar-btn"><i class="fas fa-align-left"></i></div>
+                            <div class="toolbar-btn"><i class="fas fa-align-center"></i></div>
+                            <div class="toolbar-btn"><i class="fas fa-image"></i></div>
+                            <div class="toolbar-btn" style="margin-left: auto;"><i class="fas fa-code"></i></div>
+                        </div>
+                        <div class="editor-content" contenteditable="true">
+                            <p><b>Chào mừng</b> đến với hệ thống quản lý KCN.</p>
+                            <p>Đây là mẫu dữ liệu soạn thảo văn bản với đầy đủ định dạng: <i>Bold</i>, <i>Italic</i>, <u>Underline</u>...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 3. OTHER HELPERS -->
+    <section>
+        <h2>3. Trạng thái & Chỉ báo (Indicators)</h2>
+        <div style="display: flex; gap: 20px;">
+            <div class="frame-figma" style="padding: 20px; flex: 1;">
+                <div style="font-weight: 700; margin-bottom: 16px; font-size: 14px; color: var(--primary);">Status Indicators</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <span class="status-dot-text status-active"><span class="status-dot"></span><span>Hồ sơ hợp lệ</span></span>
+                    <span class="status-dot-text status-inactive"><span class="status-dot"></span><span>Hồ sơ thiếu hụt</span></span>
+                    <span class="status-dot-text status-pending"><span class="status-dot"></span><span>Đang phê duyệt</span></span>
+                    <span class="status-dot-text" style="color: var(--warning)"><span class="status-dot" style="background: var(--warning)"></span><span>Chờ cập nhật</span></span>
+                </div>
+            </div>
+            <div class="frame-figma" style="padding: 20px; flex: 1;">
+                <div style="font-weight: 700; margin-bottom: 16px; font-size: 14px; color: var(--primary);">Badge Variants</div>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <span class="badge-figma" style="background: #D1FAE5; color: #065F46;">Thành công</span>
+                    <span class="badge-figma" style="background: #FEE2E2; color: #991B1B;">Lỗi hệ thống</span>
+                    <span class="badge-figma" style="background: #FEF3C7; color: #92400E;">Cảnh báo</span>
+                    <span class="badge-figma" style="background: #DBEAFE; color: #1E40AF;">Thông tin</span>
+                </div>
+            </div>
+        </div>
+        <!-- SECTION 3: ADVANCED COMPONENTS (FIGMA SITE) -->
+        <section>
+            <h2>Bổ sung: Component nâng cao (High-Fidelity)</h2>
+            <div class="frame-figma" style="padding: 30px;">
+                
+                <!-- Severity / Dashboard Cards -->
+                <label class="demo-label">Severity Cards (Dashboard Stats)</label>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 40px;">
+                    <div style="padding: 20px; background: #FFF5F5; border: 1px solid #FEB2B2; border-radius: 12px; display: flex; align-items: center; gap: 16px;">
+                        <div style="width: 48px; height: 48px; background: #F56565; color: #fff; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px;"><i class="fas fa-exclamation-triangle"></i></div>
+                        <div>
+                            <div style="font-size: 12px; color: #C53030; font-weight: 700; text-transform: uppercase;">Khẩn cấp</div>
+                            <div style="font-size: 24px; font-weight: 800; color: #742A2A;">12</div>
+                        </div>
+                    </div>
+                    <div style="padding: 20px; background: #FFFAF0; border: 1px solid #FBD38D; border-radius: 12px; display: flex; align-items: center; gap: 16px;">
+                        <div style="width: 48px; height: 48px; background: #ED8936; color: #fff; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px;"><i class="fas fa-bolt"></i></div>
+                        <div>
+                            <div style="font-size: 12px; color: #9C4221; font-weight: 700; text-transform: uppercase;">Quan trọng</div>
+                            <div style="font-size: 24px; font-weight: 800; color: #7B341E;">45</div>
+                        </div>
+                    </div>
+                    <div style="padding: 20px; background: #F0FFF4; border: 1px solid #9AE6B4; border-radius: 12px; display: flex; align-items: center; gap: 16px;">
+                        <div style="width: 48px; height: 48px; background: #48BB78; color: #fff; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px;"><i class="fas fa-check-circle"></i></div>
+                        <div>
+                            <div style="font-size: 12px; color: #22543D; font-weight: 700; text-transform: uppercase;">Hoàn thành</div>
+                            <div style="font-size: 24px; font-weight: 800; color: #1C4532;">284</div>
+                        </div>
+                    </div>
+                    <div style="padding: 20px; background: #EBF8FF; border: 1px solid #90CDF4; border-radius: 12px; display: flex; align-items: center; gap: 16px;">
+                        <div style="width: 48px; height: 48px; background: #4299E1; color: #fff; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px;"><i class="fas fa-info-circle"></i></div>
+                        <div>
+                            <div style="font-size: 12px; color: #2A4365; font-weight: 700; text-transform: uppercase;">Theo dõi</div>
+                            <div style="font-size: 24px; font-weight: 800; color: #1A365D;">1,024</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabs & Form OCR Upload -->
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 30px;">
+                    <div>
+                        <label class="demo-label">Tabs & Dual-line Context</label>
+                        <div style="display: flex; border-bottom: 2px solid #E2E8F0; margin-bottom: 20px;">
+                            <div style="padding: 10px 20px; color: var(--primary); font-weight: 700; border-bottom: 2px solid var(--primary); cursor: pointer;">Thông tin chung</div>
+                            <div style="padding: 10px 20px; color: var(--secondary); font-weight: 500; cursor: pointer;">Tài liệu pháp lý</div>
+                            <div style="padding: 10px 20px; color: var(--secondary); font-weight: 500; cursor: pointer;">Lịch sử thao tác</div>
+                        </div>
+                        <div class="frame-figma" style="border-radius: 4px;">
+                            <table class="table-figma" style="width: 100%;">
+                                <thead style="background: #f8fafc;">
+                                    <tr>
+                                        <th style="font-size: 11px; padding: 12px;">Dự án / Doanh nghiệp</th>
+                                        <th style="font-size: 11px; padding: 12px;">Trạng thái</th>
+                                        <th style="font-size: 11px; padding: 12px;">Mã số GCN</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td style="padding: 12px;">
+                                            <div style="font-weight:700; color: var(--primary);">Nhà máy sản xuất linh kiện ABC</div>
+                                            <div style="font-size: 12px; color: var(--secondary); margin-top: 2px;">Khu công nghiệp Amata - Đồng Nai</div>
+                                        </td>
+                                        <td style="padding: 12px;">
+                                            <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13px;">
+                                                <span style="width: 10px; height: 10px; border-radius: 50%; background: #38A169;"></span> Đang hoạt động
+                                            </div>
+                                        </td>
+                                        <td style="padding: 12px;">
+                                            <code style="background: #F1F5F9; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-weight: 700; color: #1E293B;">ALT-2025-X102</code>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="control-item">
+                        <label class="demo-label">OCR Scan Upload (Specialized)</label>
+                        <div style="border: 2px dashed #CBD5E0; border-radius: 12px; padding: 40px 20px; text-align: center; background: #F8FAFC; transition: all 0.2s; cursor: pointer;" onmouseover="this.style.borderColor='var(--primary)'; this.style.background='#EBF3FB'" onmouseout="this.style.borderColor='#CBD5E0'; this.style.background='#F8FAFC'">
+                            <div style="width: 60px; height: 60px; background: #fff; border-radius: 50%; box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+                                <i class="fas fa-print" style="color: var(--primary); font-size: 24px;"></i>
+                            </div>
+                            <div style="font-size: 14px; font-weight: 700; color: #1A202C; margin-bottom: 4px;">Quét tài liệu (OCR)</div>
+                            <div style="font-size: 12px; color: #718096;">Hỗ trợ nhận diện thông tin từ ảnh scan GCNĐKĐT</div>
+                            <div style="margin-top: 16px; padding: 6px 16px; background: var(--primary); color: #fff; border-radius: 6px; display: inline-block; font-size: 12px; font-weight: 600;">CHỌN FILE SCAN</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+
+<script>
+    // --- MOCK DATA ---
+    const DATA = [
+        { mst: '3600686584', name: 'Samsung Electronics Vietnam', type: 'FDI', kcn: 'Amata', status: 'active' },
+        { mst: '3600145872', name: 'Changshin Vietnam Co., Ltd.', type: 'FDI', kcn: 'Long Thành', status: 'active' },
+        { mst: '3600234567', name: 'Công ty TNHH Dệt may Đồng Nai', type: 'Trong nước', kcn: 'Biên Hòa 2', status: 'active' },
+        { mst: '3600312458', name: 'Hyosung Vietnam Co., Ltd.', type: 'FDI', kcn: 'Long Thành', status: 'active' },
+        { mst: '3600567890', name: 'Công ty CP Gỗ Đồng Nai', type: 'Trong nước', kcn: 'Amata', status: 'inactive' },
+        { mst: '3600999999', name: 'Nhà máy Sản xuất Giày Adidas', type: 'FDI', kcn: 'Biên Hòa 2', status: 'active' },
+        { mst: '3600888888', name: 'Tập đoàn Masan Consumer', type: 'Trong nước', kcn: 'Long Thành', status: 'active' },
+        { mst: '3600777777', name: 'Công ty Logistics BEST Express', type: 'FDI', kcn: 'Biên Hòa 2', status: 'inactive' },
+        { mst: '3600666666', name: 'Vinaplast Plastic Co.', type: 'Trong nước', kcn: 'Amata', status: 'active' },
+        { mst: '3600555555', name: 'Dong Nai Textile Complex', type: 'Trong nước', kcn: 'Biên Hòa 2', status: 'active' }
+    ];
+
+    let currentPage = 1;
+    let pageSize = 5;
+
+    const tableBody = document.getElementById('tableData');
+    const paginationList = document.getElementById('paginationList');
+    const pageSizeSelect = document.getElementById('pageSizeSelect');
+    const toggleBtn = document.getElementById('toggleFilter');
+    const filterArea = document.getElementById('advancedFilter');
+
+    function renderTable() {
+        const start = (currentPage - 1) * pageSize;
+        const end = start + pageSize;
+        const pagedData = DATA.slice(start, end);
+        
+        tableBody.innerHTML = '';
+        pagedData.forEach((item, index) => {
+            const stt = start + index + 1;
+            const statusHtml = item.status === 'active' 
+                ? `<div class="status-dot-text status-active"><span class="status-dot"></span><span>Đang hoạt động</span></div>`
+                : `<div class="status-dot-text status-inactive"><span class="status-dot"></span><span>Tạm ngừng</span></div>`;
+            
+            const badgeType = item.type === 'FDI' 
+                ? `<span class="badge-figma" style="background: #EBF3FB; color: #1B4F8A;">FDI</span>` 
+                : `<span class="badge-figma" style="background: #F3F4F6; color: #374151;">Trong nước</span>`;
+
+            const row = `
+                <tr>
+                    <td class="col-stt">${stt}</td>
+                    <td><span style="font-family: monospace; color: #64748b;">${item.mst}</span></td>
+                    <td style="font-weight: 700;">${item.name}</td>
+                    <td>${badgeType}</td>
+                    <td>${item.kcn}</td>
+                    <td class="text-center">${statusHtml}</td>
+                    <td class="text-center">
+                        <div class="table-actions-figma">
+                            <button class="btn-action-figma btn-action-edit" data-tooltip="Sửa"><i class="fas fa-pen"></i></button>
+                            <button class="btn-action-figma btn-action-delete" data-tooltip="Xóa"><i class="fas fa-trash-alt"></i></button>
+                            <button class="btn-action-figma btn-action-view" data-tooltip="Xem" style="background: #555"><i class="fas fa-eye"></i></button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            tableBody.innerHTML += row;
+        });
+
+        document.getElementById('startRange').innerText = DATA.length > 0 ? start + 1 : 0;
+        document.getElementById('endRange').innerText = Math.min(end, DATA.length);
+        document.getElementById('totalCount').innerText = DATA.length;
+        
+        renderPagination();
+    }
+
+    function renderPagination() {
+        const totalPages = Math.ceil(DATA.length / pageSize);
+        paginationList.innerHTML = '';
+        
+        // Prev button
+        const prevLi = document.createElement('li');
+        prevLi.className = `pagination-item ${currentPage === 1 ? 'disabled' : ''}`;
+        prevLi.innerHTML = '<i class="fas fa-chevron-left"></i>';
+        prevLi.onclick = () => { if(currentPage > 1) { currentPage--; renderTable(); } };
+        paginationList.appendChild(prevLi);
+        
+        // Active page number only (matching image)
+        const li = document.createElement('li');
+        li.className = `pagination-item active`;
+        li.innerText = currentPage;
+        paginationList.appendChild(li);
+        
+        // Next button
+        const nextLi = document.createElement('li');
+        nextLi.className = `pagination-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}`;
+        nextLi.innerHTML = '<i class="fas fa-chevron-right"></i>';
+        nextLi.onclick = () => { if(currentPage < totalPages) { currentPage++; renderTable(); } };
+        paginationList.appendChild(nextLi);
+    }
+
+    toggleBtn.onclick = () => filterArea.classList.toggle('show');
+    
+    pageSizeSelect.onchange = (e) => {
+        pageSize = parseInt(e.target.value);
+        currentPage = 1;
+        renderTable();
+    };
+
+    // --- INTERACTIVE SELECTS LOGIC ---
+    
+    // 1. Searchable Select2
+    const searchInput = document.getElementById('searchableInput');
+    const searchResults = document.getElementById('searchResults');
+    const allOptions = [
+        "Samsung Electronics Vietnam", "LG Display Vietnam", "Vingroup - VinFast", 
+        "Masan High-Tech Materials", "Viettel Group", "FPT Software", 
+        "Thaco Group", "Hoa Phat Steel", "Petrolimex", "Vietcombank"
+    ];
+
+    function updateSearchResults(query) {
+        const filtered = allOptions.filter(opt => opt.toLowerCase().includes(query.toLowerCase()));
+        searchResults.innerHTML = filtered.map(opt => `<div class="select-option">${opt}</div>`).join('');
+        searchResults.style.display = filtered.length ? 'block' : 'none';
+        
+        // Add click events to options
+        searchResults.querySelectorAll('.select-option').forEach(opt => {
+            opt.onclick = () => {
+                searchInput.value = opt.innerText;
+                searchResults.style.display = 'none';
+            };
+        });
+    }
+
+    searchInput.oninput = (e) => updateSearchResults(e.target.value);
+    searchInput.onfocus = () => updateSearchResults(searchInput.value);
+    
+    // Close search results when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!document.getElementById('searchableSelectContainer').contains(e.target)) {
+            searchResults.style.display = 'none';
+        }
+    });
+
+    // 2. Multi-tag Select with Dropdown
+    const multiTagResults = document.getElementById('multiTagResults');
+    const multiTagInput = document.getElementById('multiTagInput');
+    const multiTagContainer = document.getElementById('multiTagContainer');
+    let tags = ['Kỹ thuật', 'Sản xuất'];
+
+    function renderTags() {
+        multiTagContainer.querySelectorAll('.badge-figma').forEach(t => t.remove());
+        tags.forEach((tag, index) => {
+            const span = document.createElement('span');
+            span.className = 'badge-figma';
+            span.style.background = 'var(--primary-light)';
+            span.style.color = 'var(--primary)';
+            span.innerHTML = `${tag} <i class="fas fa-times" style="font-size: 9px; margin-left: 6px; cursor: pointer;"></i>`;
+            span.querySelector('i').onclick = (e) => {
+                e.stopPropagation();
+                tags.splice(index, 1);
+                renderTags();
+            };
+            multiTagContainer.insertBefore(span, multiTagInput);
+        });
+    }
+
+    multiTagInput.onfocus = () => {
+        multiTagResults.style.display = 'block';
+    };
+
+    multiTagInput.oninput = (e) => {
+        const query = e.target.value.toLowerCase();
+        const options = multiTagResults.querySelectorAll('.select-option');
+        options.forEach(opt => {
+            const text = opt.innerText.toLowerCase();
+            opt.style.display = text.includes(query) ? 'block' : 'none';
+        });
+        multiTagResults.style.display = 'block';
+    };
+
+    multiTagResults.querySelectorAll('.select-option').forEach(opt => {
+        opt.onclick = (e) => {
+            e.stopPropagation();
+            const val = opt.getAttribute('data-val');
+            if (!tags.includes(val)) {
+                tags.push(val);
+                renderTags();
+            }
+            multiTagInput.value = '';
+            multiTagResults.style.display = 'none';
+        };
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!document.getElementById('multiTagDropdownContainer').contains(e.target)) {
+            multiTagResults.style.display = 'none';
+        }
+    });
+
+    multiTagContainer.onclick = () => multiTagInput.focus();
+    renderTags();
+
+    // 3. File Input Interaction
+    const fileInput = document.getElementById('fileInput');
+    const fileList = document.getElementById('fileList');
+
+    fileInput.onchange = (e) => {
+        const files = Array.from(e.target.files);
+        fileList.innerHTML = files.map(f => `
+            <div style="display: flex; align-items: center; gap: 8px; background: var(--primary-light); padding: 4px 10px; border-radius: 4px;">
+                <i class="fas fa-file-alt"></i>
+                <span>${f.name}</span>
+                <i class="fas fa-times" style="margin-left: auto; cursor: pointer;" onclick="this.parentElement.remove()"></i>
+            </div>
+        `).join('');
+    };
+
+    renderTable();
+</script>
+
+</body>
+</html>

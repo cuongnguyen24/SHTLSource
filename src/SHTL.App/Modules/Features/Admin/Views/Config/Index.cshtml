@@ -1,0 +1,54 @@
+@model IEnumerable<ConfigItemDto>
+@{
+    ViewData["Title"] = "Cấu hình thông số";
+}
+@section Breadcrumb { <li class="breadcrumb-item active">Cấu hình</li> }
+<div class="layout-expanded">
+    <div class="frame-figma mb-3"><div class="frame-header"><h6 class="mb-0 font-weight-bold" style="color:var(--primary);">Tham số hệ thống</h6></div></div>
+    <div class="frame-figma frame-figma-combined p-0">
+        <div class="p-3">
+        @Html.AntiForgeryToken()
+        <div class="table-container-figma">
+            <table class="table table-sm table-figma table-hover mb-0">
+                <thead><tr><th>Key</th><th>Giá trị</th><th>Nhóm</th><th></th></tr></thead>
+                <tbody>
+                @foreach (var c in Model)
+                {
+                    <tr>
+                        <td><code>@c.Key</code></td>
+                        <td style="max-width:320px;word-break:break-all;">@(c.Value ?? "")</td>
+                        <td>@c.GroupName</td>
+                        <td><button type="button" class="btn-figma btn-figma-outline btn-sm btn-edit-cfg" data-key="@c.Key" data-val="@(c.Value ?? "")">Sửa</button></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        </div>
+    </div>
+</div>
+@section Scripts {
+<script>
+$(function () {
+    $('.btn-edit-cfg').on('click', function () {
+        var key = $(this).data('key');
+        var val = $(this).data('val');
+        var nv = prompt('Giá trị mới cho ' + key + ':', val);
+        if (nv === null) return;
+        var token = $('input[name="__RequestVerificationToken"]').val();
+        $.ajax({
+            url: '@Url.Action("SaveConfig", "Config")',
+            type: 'POST',
+            headers: { 'RequestVerificationToken': token },
+            contentType: 'application/json',
+            data: JSON.stringify({ key: key, value: nv }),
+            success: function (r) {
+                if (r.success) { toastr.success(r.message || 'Đã lưu'); location.reload(); }
+                else toastr.error(r.message || 'Lỗi');
+            },
+            error: function () { toastr.error('Lỗi mạng'); }
+        });
+    });
+});
+</script>
+}

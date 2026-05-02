@@ -1,0 +1,85 @@
+@model IReadOnlyList<DocTypeSyncListItemDto>
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Loại đồng bộ";
+    var search = ViewBag.Search as string ?? "";
+    var hotData = Model.Select(r => new Dictionary<string, object?>
+    {
+        ["id"] = r.Id,
+        ["docType"] = r.DocTypeName,
+        ["name"] = r.Name,
+        ["describe"] = r.Describe ?? "",
+        ["format"] = r.Format ?? "",
+        ["weight"] = r.Weight,
+        ["isDefault"] = r.IsDefault ? "Có" : "Không"
+    }).ToList();
+    var json = JsonSerializer.Serialize(hotData);
+    var editTpl = Url.Action("Edit", "LoaiDongBo", new { area = "sohoa", id = 987654321 });
+}
+@section Breadcrumb {
+    <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="Home" asp-action="Index">Tổng quan</a></li>
+    <li class="breadcrumb-item active">Loại đồng bộ</li>
+}
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable@14.1.0/dist/handsontable.full.min.css" />
+}
+
+<div class="layout-expanded">
+    <div class="frame-figma mb-3">
+        <div class="frame-header">
+            <div class="d-flex align-items-center">
+                <div class="mr-3 d-flex align-items-center justify-content-center" style="width:32px;height:32px;background:var(--primary-light);color:var(--primary);border-radius:6px;"><i class="fas fa-sync-alt"></i></div>
+                <div>
+                    <h6 class="mb-0 font-weight-bold" style="color:var(--primary);">Loại đồng bộ</h6>
+                    <div class="text-muted small">Cấu hình đồng bộ theo loại tài liệu</div>
+                </div>
+            </div>
+            <a asp-area="sohoa" asp-controller="LoaiDongBo" asp-action="Create" class="btn-figma btn-figma-primary btn-sm"><i class="fas fa-plus mr-1"></i>Tạo mới</a>
+        </div>
+    </div>
+    <div class="frame-figma frame-figma-combined">
+        <div class="frame-filter">
+            <form method="get" class="d-flex align-items-center flex-wrap" style="gap:8px;">
+                <div class="search-input-figma" style="min-width:260px;">
+                    <input type="text" name="q" value="@search" placeholder="Tìm kiếm…" />
+                    <i class="fas fa-search search-icon"></i>
+                </div>
+                <button type="submit" class="btn-figma btn-figma-primary">Tìm</button>
+            </form>
+        </div>
+        <div class="p-3">
+            <p id="sync-hot-loading" class="text-muted small mb-2"><i class="fas fa-spinner fa-spin mr-1"></i>Đang tải…</p>
+            <div id="sync-hot-empty" class="alert alert-light border d-none mb-0">Chưa có bản ghi.</div>
+            <div id="sync-hot" class="d-none"></div>
+            <p class="text-muted small mt-2 mb-0">Nhấp đúp để sửa.</p>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/handsontable@14.1.0/dist/handsontable.full.min.js"></script>
+    <script src="~/js/shtl-handsontable.js" asp-append-version="true"></script>
+    <script>
+        (function () {
+            var editTpl = @Html.Raw(JsonSerializer.Serialize(editTpl));
+            var data = @Html.Raw(json);
+            var cols = [
+                { data: 'id', title: 'ID', type: 'numeric', readOnly: true },
+                { data: 'docType', title: 'Loại TL', readOnly: true },
+                { data: 'name', title: 'Tên', readOnly: true },
+                { data: 'describe', title: 'Mô tả', readOnly: true },
+                { data: 'format', title: 'Format', readOnly: true },
+                { data: 'weight', title: 'TT', readOnly: true },
+                { data: 'isDefault', title: 'Mặc định', readOnly: true }
+            ];
+            var hot = window.ShtlHot.initReadOnly('sync-hot', document.getElementById('sync-hot-loading'), document.getElementById('sync-hot-empty'), cols, data, { height: 420 });
+            if (hot) {
+                hot.addHook('afterOnCellDblClick', function (_e, coords) {
+                    if (!coords || coords.row < 0) return;
+                    var id = hot.getDataAtRowProp(coords.row, 'id');
+                    if (id) window.location.href = editTpl.replace('987654321', String(id));
+                });
+            }
+        })();
+    </script>
+}

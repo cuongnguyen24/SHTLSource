@@ -1,0 +1,83 @@
+@model PaginatedResult<UserDto>
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Người dùng";
+    var search = ViewBag.Search as string ?? "";
+    var hotData = Model.Items.Select(u => new Dictionary<string, object?> {
+        ["id"] = u.Id,
+        ["userName"] = u.UserName,
+        ["fullName"] = u.FullName,
+        ["email"] = u.Email,
+        ["dept"] = u.DeptName ?? "",
+        ["active"] = u.IsActive ? "Có" : "Không",
+        ["admin"] = u.IsAdmin ? "Có" : "Không"
+    }).ToList();
+    var json = JsonSerializer.Serialize(hotData);
+}
+@section Breadcrumb {
+    <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home">Tổng quan</a></li>
+    <li class="breadcrumb-item active">Người dùng</li>
+}
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable@14.1.0/dist/handsontable.full.min.css" />
+}
+<div class="layout-expanded">
+    <div class="frame-figma mb-3">
+        <div class="frame-header">
+            <div class="d-flex align-items-center">
+                <div class="mr-3 d-flex align-items-center justify-content-center" style="width:32px;height:32px;background:var(--primary-light);color:var(--primary);border-radius:6px;"><i class="fas fa-users"></i></div>
+                <div><h6 class="mb-0 font-weight-bold" style="color:var(--primary);">Quản lý người dùng</h6><div class="text-muted small">Danh sách tài khoản hệ thống</div></div>
+            </div>
+            <a asp-action="Create" class="btn-figma btn-figma-primary btn-sm"><i class="fas fa-plus mr-1"></i>Thêm mới</a>
+        </div>
+    </div>
+    <div class="frame-figma frame-figma-combined">
+        <div class="frame-filter">
+            <form method="get" class="d-flex align-items-center flex-wrap" style="gap:8px;">
+                <div class="search-input-figma" style="min-width:260px;">
+                    <input type="text" name="q" value="@search" placeholder="Tìm tên, email, tài khoản..." />
+                    <i class="fas fa-search search-icon"></i>
+                </div>
+                <input type="hidden" name="size" value="@Model.PageSize" />
+                <button type="submit" class="btn-figma btn-figma-primary">Tìm kiếm</button>
+            </form>
+        </div>
+        <div class="p-3">
+            <p id="user-hot-loading" class="text-muted small mb-2"><i class="fas fa-spinner fa-spin mr-1"></i>Đang tải lưới...</p>
+            <div id="user-hot-empty" class="alert alert-light border d-none mb-0">Không có người dùng.</div>
+            <div id="user-hot" class="d-none"></div>
+            <partial name="_Pager" model="Model" />
+            <div class="mt-3 small">
+                <a asp-action="Index" asp-controller="User">Làm mới</a>
+                <span class="text-muted mx-2">|</span>
+                <span class="text-muted">Click dòng → Sửa (theo ID trong bảng).</span>
+            </div>
+        </div>
+    </div>
+</div>
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/handsontable@14.1.0/dist/handsontable.full.min.js"></script>
+    <script src="~/js/shtl-handsontable.js" asp-append-version="true"></script>
+    <script>
+        (function () {
+            var data = @Html.Raw(json);
+            var cols = [
+                { data: 'id', title: 'ID', type: 'numeric', readOnly: true },
+                { data: 'userName', title: 'Tài khoản', readOnly: true },
+                { data: 'fullName', title: 'Họ tên', readOnly: true },
+                { data: 'email', title: 'Email', readOnly: true },
+                { data: 'dept', title: 'Phòng ban', readOnly: true },
+                { data: 'active', title: 'Hoạt động', readOnly: true },
+                { data: 'admin', title: 'Admin', readOnly: true }
+            ];
+            var hot = window.ShtlHot.initReadOnly('user-hot', document.getElementById('user-hot-loading'), document.getElementById('user-hot-empty'), cols, data, { height: 440 });
+            if (hot) {
+                hot.addHook('afterOnCellDblClick', function (_e, coords) {
+                    if (!coords || coords.row < 0) return;
+                    var id = hot.getDataAtRowProp(coords.row, 'id');
+                    if (id) window.location.href = '@Url.Action("Edit", "User")?id=' + id;
+                });
+            }
+        })();
+    </script>
+}

@@ -1,0 +1,552 @@
+@using Microsoft.Extensions.Configuration
+@using System.Security.Claims
+@using SHTL.Modules.Infrastructure.Identity
+@inject IConfiguration Configuration
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>@ViewData["Title"] - SHTL</title>
+
+    <!-- Google Font: Be Vietnam Pro -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Bootstrap 4.6 (for Grid, Utilities only) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="~/css/bs4-figma-compat.css" asp-append-version="true" />
+
+    <!-- Toastr Notifications -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+
+    <!-- SweetAlert2 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap4.min.css">
+
+    <!-- jsTree CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.15/themes/default/style.min.css" />
+
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/@@ttskch/select2-bootstrap4-theme@1.5.2/dist/select2-bootstrap4.min.css" rel="stylesheet" />
+
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/jquery-datetimepicker/2.5.20/jquery.datetimepicker.min.css" rel="stylesheet"/>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+    <link rel="stylesheet" type="text/css" href="https://npmcdn.com/flatpickr/dist/themes/dark.css">
+
+    <!-- Figma Theme CSS (Priority - Load First) -->
+    <link rel="stylesheet" href="~/css/theme-figma.css" asp-append-version="true" />
+
+    <!-- Figma Extended Components (Pagination, Table Actions, Search) -->
+    <link rel="stylesheet" href="~/css/figma-components-extended.css" asp-append-version="true" />
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+
+    <!-- Shared Pagination Style -->
+    <link rel="stylesheet" href="~/css/pagination-figma.css" asp-append-version="true" />
+
+    <!-- File Upload Component -->
+    <link rel="stylesheet" href="~/css/file-upload.css" asp-append-version="true" />
+
+    <link rel="stylesheet" href="~/css/style-custom.css" asp-append-version="true" />
+
+    <style>
+        /* Shared Select2 Figma Style Fixes */
+        .select2-container--bootstrap4 .select2-selection--single .select2-selection__placeholder {
+            color: #94a3b8 !important;
+            font-size: 13px !important;
+        }
+        .select2-container--bootstrap4 .select2-selection__clear {
+            margin-right: 24px !important;
+            color: #94a3b8 !important;
+            font-size: 16px !important;
+            font-weight: 700 !important;
+            line-height: 1 !important;
+        }
+        .select2-search__field {
+            font-size: 13px !important;
+        }
+        /* Ensure dropdown is visible in modals */
+        .modal-body {
+            overflow: visible !important;
+        }
+        /* Fix Select2 z-index in Bootstrap Modals */
+        .select2-container--open {
+            z-index: 99999999 !important;
+        }
+
+        /* Fix SweetAlert2 z-index to stay above Bootstrap Modals */
+        .swal2-container {
+            z-index: 100000000 !important;
+        }
+
+        /* SweetAlert2 Typography - Matching Figma Style */
+        .swal2-popup {
+            font-family: 'Be Vietnam Pro', sans-serif !important;
+            border-radius: 12px !important;
+            padding: 1.5rem !important;
+        }
+        .swal2-title {
+            font-size: 18px !important;
+            font-weight: 600 !important;
+            color: #1e293b !important;
+            margin-bottom: 0.5rem !important;
+        }
+        .swal2-html-container {
+            font-size: 14px !important;
+            color: #64748b !important;
+            line-height: 1.6 !important;
+        }
+        .swal2-styled {
+            font-size: 13px !important;
+            font-weight: 500 !important;
+            border-radius: 8px !important;
+            padding: 8px 20px !important;
+        }
+        .swal2-icon {
+            margin: 1rem auto 0.5rem !important;
+            transform: scale(0.8) !important;
+        }
+    </style>
+
+    @await RenderSectionAsync("Styles", required: false)
+    
+</head>
+<body class="hold-transition">
+    <div class="layout-wrapper">
+        <!-- Sidebar -->
+        <aside class="sidebar-figma">
+            @{
+                var sidebarPartial = ViewData["SidebarPartial"] as string ?? "_SidebarDashboard";
+            }
+            <partial name="@sidebarPartial" />
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="main-content">
+            <!-- Header Toolbar -->
+            <header class="header-container" style="height: var(--header-height); background: var(--background); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; position: sticky; top: 0; z-index: 1001;">
+                <!-- Left: Toggle + Breadcrumbs -->
+                <div class="d-flex align-items-center">
+                    <!-- Sidebar Toggle Button (shown on both mobile and desktop) -->
+                    <button class="btn btn-link text-muted p-0 mr-3" id="sidebarToggle" aria-label="Toggle Menu" style="font-size: 18px;">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    
+                    <!-- Breadcrumbs -->
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb bg-transparent p-0 m-0" style="font-size: 13px; display: flex; align-items: center; gap: 6px;">
+                            <li class="breadcrumb-item d-flex align-items-center">
+                                <a asp-area="dashboard" asp-controller="Home" asp-action="Index" class="text-muted" style="text-decoration: none; font-weight: 400;">Trang chủ</a>
+                            </li>
+                            @if (IsSectionDefined("Breadcrumb"))
+                            {
+                                <li class="text-muted mx-1" style="font-size: 11px; opacity: 0.5;">/</li>
+                                @RenderSection("Breadcrumb")
+                            }
+                        </ol>
+                    </nav>
+                </div>
+
+                <!-- Right: Time + Notifications + User Profile -->
+                <div class="d-flex align-items-center">
+                    <!-- Refresh Time -->
+                    <div class="d-none d-md-flex align-items-center text-muted mr-4 border-right pr-4" style="font-size: 12px; gap: 8px;">
+                        <i class="fas fa-sync-alt" style="font-size: 11px;"></i>
+                        <span id="current-time-display">Cập nhật lúc --:-- — --/--/----</span>
+                    </div>
+
+                    <!-- Bell Notification -->
+                    <div class="dropdown mr-4">
+                        <button class="btn btn-link p-0 position-relative text-dark" data-toggle="dropdown" style="text-decoration: none;">
+                            <i class="far fa-bell" style="font-size: 19px; color: var(--text-main);"></i>
+                            <span class="badge badge-danger position-absolute d-flex align-items-center justify-content-center" 
+                                  style="top: -5px; right: -7px; font-size: 9px; border-radius: 50%; width: 16px; height: 16px; padding: 0; background-color: #C53030;" 
+                                  id="notification-badge">3</span>
+                        </button>
+                    </div>
+
+                    <!-- User Profile Header with Dropdown -->
+                    <div class="dropdown border-left pl-4">
+                        <div class="d-flex align-items-center" style="gap: 12px; cursor: pointer;" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center" 
+                                 style="width: 30px; height: 30px; background: var(--primary-light); color: var(--primary); font-size: 11px; font-weight: 700;">
+                                @{
+                                    var fn = User.FindFirstValue(ClaimKeys.FullName);
+                                    var disp = string.IsNullOrEmpty(fn) ? (User.Identity?.Name ?? "U") : fn;
+                                }
+                                @(disp.Substring(0, 1).ToUpper())
+                            </div>
+                            <div class="d-none d-sm-block">
+                                <div style="font-size: 13px; font-weight: 600; color: var(--text-main); line-height: 1.2;">
+                                    @disp
+                                </div>
+                                <div style="font-size: 11px; color: var(--text-muted);">
+                                    @(User.IsInRole("admin") ? "Quản trị viên" : "Người dùng")
+                                </div>
+                            </div>
+                            <i class="fas fa-chevron-down ml-2 text-muted" style="font-size: 10px;"></i>
+                        </div>
+                        <div class="dropdown-menu dropdown-menu-right shadow-lg border-0 mt-2" style="border-radius: var(--radius-md); min-width: 180px; padding: 4px;">
+                            <a class="dropdown-item d-flex align-items-center px-3 py-2" asp-area="account" asp-controller="Profile" asp-action="Index"
+                               style="gap: 10px; border-radius: 6px; color: var(--text-main); font-size: 13.5px;">
+                                <i class="fas fa-user text-muted" style="font-size: 14px;"></i><span>Hồ sơ</span>
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            <form asp-area="account" asp-controller="Account" asp-action="Logout" method="post" id="logoutFormHeader">
+                                <button type="submit" class="dropdown-item d-flex align-items-center px-3 py-2" style="gap: 10px; border-radius: 6px; color: var(--text-main); font-size: 13.5px; transition: var(--transition-all);">
+                                    <i class="fas fa-sign-out-alt text-muted" style="font-size: 14px;"></i>
+                                    <span>Đăng xuất</span>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Body Content Area -->
+            <main class="content-body" id="page-content-scroll">
+                <div class="container-fluid">
+                    @RenderBody()
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal Common -->
+    <div class="modal fade" id="commonModal" tabindex="-1" role="dialog" aria-hidden="true"></div>
+
+    <!-- Global File Preview Modal (dùng toàn site, điều khiển bằng FilePreview.open()) -->
+    <partial name="_FilePreviewModal" />
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/jquery.validate.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/localization/messages_vi.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validation-unobtrusive/4.0.0/jquery.validate.unobtrusive.min.js"></script>
+
+    <!-- Bootstrap 4 (vẫn giữ cho các component hiện tại) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Toastr -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <!-- Moment.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- jsTree JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.15/jstree.min.js"></script>
+
+    <!-- Select2 JS (Load before figma-ui.js) -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    
+    <!-- Custom JS -->
+    <script src="~/js/figma-ui.js" asp-append-version="true"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    
+    <!-- DataTables & Helper (Shared) -->
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap4.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-datetimepicker/2.5.20/jquery.datetimepicker.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
+
+    <script src="~/js/utils.js" asp-append-version="true"></script>
+    <script src="~/js/main.js" asp-append-version="true"></script>
+    
+@*     <script>
+        $(function() {
+            // Global Select2 initialization for premium Figma components
+            if (typeof window.initSelect2 === 'function') {
+                // Initialize both .select2-modern (legacy) and .select2 (new standard)
+                window.initSelect2('.select2-modern, .select2');
+            }
+        });
+    </script> *@
+    
+    <!-- Figma DataTables Helper -->
+    <script src="~/js/figma-datatables-helper.js" asp-append-version="true"></script>
+
+    <!-- File Upload Component -->
+    <script src="~/js/file-upload.js" asp-append-version="true"></script>
+
+    <!-- Shared Metadata Helpers -->
+    <script src="~/js/filemanager/metadata-core.js" asp-append-version="true"></script>
+
+    <!-- File Preview Module (dùng toàn site) -->
+    <script src="~/js/file-preview.js" asp-append-version="true"></script>
+
+    <script src="~/js/shtl-ajax.js" asp-append-version="true"></script>
+
+    <script>
+        // Update header time display every minute
+        function updateHeaderTime() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const year = now.getFullYear();
+
+            const display = `${hours}:${minutes} — ${day}/${month}/${year}`;
+            const element = document.getElementById('current-time-display');
+            if (element) {
+                element.innerText = display;
+                element.title = `Cập nhật lúc ${hours}:${minutes}`;
+            }
+        }
+
+        $(document).ready(function() {
+            // Initialize time display
+            updateHeaderTime();
+            setInterval(updateHeaderTime, 60000);
+
+            // ========================================
+            // SIDEBAR TOGGLE LOGIC (Desktop + Mobile)
+            // ========================================
+            
+            // Load sidebar state from localStorage
+            const sidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+            const $body = $('body');
+            const $layoutWrapper = $('.layout-wrapper');
+            
+            // Apply saved state on page load
+            if (sidebarCollapsed && $(window).width() >= 768) {
+                $body.addClass('sidebar-collapsed');
+            }
+            
+            // Sidebar toggle button click
+            $('#sidebarToggle').on('click', function() {
+                if ($(window).width() >= 768) {
+                    // Desktop: Toggle collapsed state
+                    $body.toggleClass('sidebar-collapsed');
+                    const isCollapsed = $body.hasClass('sidebar-collapsed');
+                    localStorage.setItem('sidebarCollapsed', isCollapsed);
+                } else {
+                    // Mobile: Toggle active/show state (slide in/out)
+                    $('.sidebar-figma').toggleClass('active show');
+                    $body.toggleClass('sidebar-open');
+                }
+            });
+
+            // Close sidebar when clicking outside on mobile
+            $(document).on('click', function(e) {
+                if ($(window).width() < 768) {
+                    if (!$(e.target).closest('.sidebar-figma, #sidebarToggle').length) {
+                        $('.sidebar-figma').removeClass('active show');
+                        $body.removeClass('sidebar-open');
+                    }
+                }
+            });
+
+            // Handle window resize - reset mobile/desktop states
+            let resizeTimer;
+            $(window).on('resize', function() {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(function() {
+                    if ($(window).width() >= 768) {
+                        // Desktop mode - remove mobile classes, restore saved collapsed state
+                        $('.sidebar-figma').removeClass('active show');
+                        $body.removeClass('sidebar-open');
+                        const savedCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+                        if (savedCollapsed) {
+                            $body.addClass('sidebar-collapsed');
+                        } else {
+                            $body.removeClass('sidebar-collapsed');
+                        }
+                    } else {
+                        // Mobile mode - remove desktop collapsed class
+                        $body.removeClass('sidebar-collapsed');
+                    }
+                }, 250);
+            });
+
+            // ========================================
+            // COLLAPSED SIDEBAR SUBMENU POPOVER
+            // ========================================
+            
+            let activePopover = null;
+            
+            // Handle click on menu items with submenus when sidebar is collapsed
+            $(document).on('click', '.sidebar-collapsed .nav-link-figma[data-has-submenu="true"]', function(e) {
+                // SAFETY CHECK: Only proceed if sidebar is actually collapsed (width <= 70px)
+                if ($('.sidebar-figma').outerWidth() > 70) return;
+                
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Close existing popover if any
+                if (activePopover) {
+                    activePopover.remove();
+                    activePopover = null;
+                }
+                
+                const $this = $(this);
+                const menuTitle = $this.data('menu-title');
+                const menuItems = $this.data('menu-items');
+                
+                if (!menuItems || menuItems.length === 0) return;
+                
+                // Get position
+                const rect = this.getBoundingClientRect();
+                const top = rect.top;
+                
+                // Create popover
+                let popoverHtml = '<div class="sidebar-submenu-popover show" style="top: ' + top + 'px;">';
+                popoverHtml += '<div style="padding: 8px 12px; font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border-color); margin-bottom: 4px;">' + menuTitle + '</div>';
+                
+                menuItems.forEach(function(item) {
+                    const activeClass = item.active ? 'active' : '';
+                    const url = '/' + item.controller + '/' + item.action;
+                    popoverHtml += '<a href="' + url + '" class="submenu-item ' + activeClass + '">' + item.title + '</a>';
+                });
+                
+                popoverHtml += '</div>';
+                
+                activePopover = $(popoverHtml);
+                $('body').append(activePopover);
+                
+                // Position adjustment if goes off screen
+                const popoverHeight = activePopover.outerHeight();
+                const windowHeight = $(window).height();
+                if (top + popoverHeight > windowHeight) {
+                    activePopover.css('top', Math.max(10, windowHeight - popoverHeight - 10) + 'px');
+                }
+            });
+            
+            // Close popover when clicking outside
+            $(document).on('click', function(e) {
+                if (activePopover && !$(e.target).closest('.sidebar-submenu-popover, .nav-link-figma').length) {
+                    activePopover.remove();
+                    activePopover = null;
+                }
+            });
+            
+            // Close popover when sidebar is expanded
+            $('#sidebarToggle').on('click', function() {
+                if (activePopover) {
+                    activePopover.remove();
+                    activePopover = null;
+                }
+            });
+
+            // Toastr Notifications from TempData
+            @{
+                var successMsg = TempData["Success"] != null ? Json.Serialize(TempData["Success"].ToString()) : null;
+                var errorMsg = TempData["Error"] != null ? Json.Serialize(TempData["Error"].ToString()) : null;
+                var warningMsg = TempData["Warning"] != null ? Json.Serialize(TempData["Warning"].ToString()) : null;
+                var infoMsg = TempData["Info"] != null ? Json.Serialize(TempData["Info"].ToString()) : null;
+            }
+
+            @if (successMsg != null)
+            {
+                <text>
+                toastr.success(@Html.Raw(successMsg), 'Thành công', {
+                    timeOut: 5000,
+                    closeButton: true,
+                    progressBar: true,
+                    positionClass: 'toast-top-right'
+                });
+                </text>
+            }
+            @if (errorMsg != null)
+            {
+                <text>
+                toastr.error(@Html.Raw(errorMsg), 'Lỗi', {
+                    timeOut: 8000,
+                    closeButton: true,
+                    progressBar: true,
+                    positionClass: 'toast-top-right'
+                });
+                </text>
+            }
+            @if (warningMsg != null)
+            {
+                <text>
+                toastr.warning(@Html.Raw(warningMsg), 'Cảnh báo', {
+                    timeOut: 5000,
+                    closeButton: true,
+                    progressBar: true,
+                    positionClass: 'toast-top-right'
+                });
+                </text>
+            }
+            @if (infoMsg != null)
+            {
+                <text>
+                toastr.info(@Html.Raw(infoMsg), 'Thông tin', {
+                    timeOut: 5000,
+                    closeButton: true,
+                    progressBar: true,
+                    positionClass: 'toast-top-right'
+                });
+                </text>
+            }
+
+            // ========================================
+            // GLOBAL AJAX ERROR HANDLER - Session Expiration
+            // ========================================
+            
+            // Setup global AJAX error handler for 401 Unauthorized
+            $(document).ajaxError(function(event, jqXHR, ajaxSettings, thrownError) {
+                // Check if response is 401 Unauthorized (session expired or invalid token)
+                if (jqXHR.status === 401) {
+                    console.warn('Session expired (401 Unauthorized). Redirecting to login...');
+                    
+                    // Show notification before redirect
+                    toastr.warning('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', 'Hết phiên', {
+                        timeOut: 3000,
+                        closeButton: true,
+                        progressBar: true,
+                        positionClass: 'toast-top-right'
+                    });
+                    
+                    // Redirect to login after 1 second
+                    setTimeout(function() {
+                        window.location.href = '/account/Account/Login?returnUrl=' + encodeURIComponent(window.location.pathname + window.location.search);
+                    }, 1000);
+                }
+                // Check if response is 403 Forbidden (no permission)
+                else if (jqXHR.status === 403) {
+                    toastr.error('Bạn không có quyền thực hiện thao tác này.', 'Không có quyền', {
+                        timeOut: 5000,
+                        closeButton: true,
+                        progressBar: true,
+                        positionClass: 'toast-top-right'
+                    });
+                }
+            });
+
+            // Smooth scroll behavior for content area
+            $('#page-content-scroll').on('scroll', function() {
+                const scrollTop = $(this).scrollTop();
+                if (scrollTop > 20) {
+                    $('.header-container').addClass('scrolled');
+                } else {
+                    $('.header-container').removeClass('scrolled');
+                }
+            });
+
+            // Auto-hide notifications after some time
+            setTimeout(function() {
+                $('.alert').fadeOut('slow');
+            }, 10000);
+
+        });
+    </script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

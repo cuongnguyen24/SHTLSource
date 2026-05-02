@@ -1,0 +1,87 @@
+@model DocTypeEditPageDto
+@* Ma trận trường STG — khớp key form F{id}, FN{id}, … (DocTypeFieldSettingsBuilder). *@
+<div class="table-container-figma mb-0" style="max-height:420px; overflow:auto;">
+    <table class="table table-sm table-figma mb-0">
+        <thead>
+            <tr>
+                <th style="width:48px;">Dùng</th>
+                <th>Trường gốc</th>
+                <th>Tiêu đề (FN)</th>
+                <th>Loại (FT)</th>
+                <th style="width:56px;">Hàng</th>
+                <th style="width:56px;">Cột</th>
+                <th style="width:72px;">Nhóm</th>
+                <th style="width:72px;">Pattern</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var f in Model.AllFields.Where(x => x.IsActive && !x.IsRecord))
+        {
+            var st = Model.Settings.FirstOrDefault(s => s.IdField == f.Id && !s.IsCatalog);
+            var on = f.IsRequired || st != null;
+            <tr>
+                <td>
+                    @if (f.IsRequired)
+                    {
+                        <input type="hidden" name="F@(f.Id)" value="true" />
+                        <span class="badge badge-secondary">Bắt buộc</span>
+                    }
+                    else
+                    {
+                        <div class="custom-control custom-checkbox">
+                            <input type="checkbox" class="custom-control-input" id="f_@f.Id" name="F@(f.Id)" value="true" @(on ? "checked" : null) />
+                            <label class="custom-control-label" for="f_@f.Id"></label>
+                        </div>
+                    }
+                </td>
+                <td><small class="text-muted">@f.Name</small></td>
+                <td><input type="text" class="form-control form-control-sm" name="FN@(f.Id)" value="@(st?.Title ?? f.Title)" /></td>
+                <td><input type="text" class="form-control form-control-sm" name="FT@(f.Id)" value="@(st?.IType ?? "text")" /></td>
+                <td><input type="number" class="form-control form-control-sm" name="FR@(f.Id)" value="@(st?.IRow)" /></td>
+                <td><input type="number" class="form-control form-control-sm" name="FC@(f.Id)" value="@(st?.ICol)" /></td>
+                <td>
+                    <select class="form-control form-control-sm" name="FG@(f.Id)">
+                        <option value="0">—</option>
+                        @foreach (var g in Model.FieldGroups)
+                        {
+                            if (st?.IdFieldGroup == g.Id)
+                            { <option value="@g.Id" selected="selected">@g.Name</option> }
+                            else
+                            { <option value="@g.Id">@g.Name</option> }
+                        }
+                    </select>
+                </td>
+                <td>
+                    <select class="form-control form-control-sm" name="FPT@(f.Id)">
+                        <option value="0">—</option>
+                        @foreach (var p in Model.PatternTypes)
+                        {
+                            if (st?.IdPatternType == p.Id)
+                            { <option value="@p.Id" selected="selected">@p.Name</option> }
+                            else
+                            { <option value="@p.Id">@p.Name</option> }
+                        }
+                    </select>
+                </td>
+            </tr>
+            <tr class="bg-light">
+                <td colspan="8" class="py-2">
+                    <div class="form-row small">
+                        <div class="col-md-3"><label class="mb-0 text-muted">Fix</label><input class="form-control form-control-sm" name="FFixV@(f.Id)" value="@st?.FixValue" /></div>
+                        <div class="col-md-3"><label class="mb-0 text-muted">Min/Max</label><div class="d-flex" style="gap:4px;"><input class="form-control form-control-sm" name="FMinV@(f.Id)" value="@st?.MinValue" placeholder="Min" /><input class="form-control form-control-sm" name="FMaxV@(f.Id)" value="@st?.MaxValue" placeholder="Max" /></div></div>
+                        <div class="col-md-2"><label class="mb-0 text-muted">Len</label><div class="d-flex" style="gap:4px;"><input type="number" class="form-control form-control-sm" name="FMinL@(f.Id)" value="@st?.MinLen" /><input type="number" class="form-control form-control-sm" name="FMaxL@(f.Id)" value="@st?.MaxLen" /></div></div>
+                        <div class="col-md-2"><label class="mb-0 text-muted">Danh mục</label><select class="form-control form-control-sm" name="FCT@(f.Id)"><option value="0">—</option>@foreach (var c in Model.CategoryTypes) { if (st?.IdCategoryType == c.Id) { <option value="@c.Id" selected="selected">@c.Name</option> } else { <option value="@c.Id">@c.Name</option> } }</select></div>
+                        <div class="col-md-2"><label class="mb-0 text-muted">Custom</label><input class="form-control form-control-sm" name="FPC@(f.Id)" value="@st?.PatternCustom" /></div>
+                    </div>
+                    <div class="form-row small mt-1">
+                        <div class="col-auto custom-control custom-checkbox"><input type="checkbox" class="custom-control-input" id="fro_@f.Id" name="FIsRO@(f.Id)" value="true" @(st?.IsReadOnly == true ? "checked" : null) /><label class="custom-control-label" for="fro_@f.Id">Chỉ đọc</label></div>
+                        <div class="col-auto custom-control custom-checkbox"><input type="checkbox" class="custom-control-input" id="fu_@f.Id" name="FIsU@(f.Id)" value="true" @(st?.IsUpperCase == true ? "checked" : null) /><label class="custom-control-label" for="fu_@f.Id">Upper</label></div>
+                        <div class="col-auto custom-control custom-checkbox"><input type="checkbox" class="custom-control-input" id="fc_@f.Id" name="FIsC@(f.Id)" value="true" @(st?.IsCapitalize == true ? "checked" : null) /><label class="custom-control-label" for="fc_@f.Id">Capitalize</label></div>
+                        <div class="col"><label class="mb-0 text-muted">Format</label><input class="form-control form-control-sm" name="FFormat@(f.Id)" value="@st?.Format" /></div>
+                    </div>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>

@@ -1,0 +1,19 @@
+@model int
+@{
+    ViewData["Title"] = $"Mã lỗi {Model}";
+    Layout = "_Layout";
+    ViewData["SidebarPartial"] = "_SidebarDashboard";
+}
+@section Breadcrumb {
+    <li class="breadcrumb-item active">@Model</li>
+}
+
+<div class="d-flex justify-content-center py-5">
+    <div class="card-figma text-center" style="max-width: 420px;">
+        <div class="card-content-figma py-5 px-4">
+            <h2 class="font-weight-bold mb-2" style="color: var(--primary);">@Model</h2>
+            <p class="text-muted small mb-4">Yêu cầu không thể xử lý với mã trạng thái này.</p>
+            <a asp-area="dashboard" asp-controller="Home" asp-action="Index" class="btn-figma btn-figma-primary">Về trang chủ</a>
+        </div>
+    </div>
+</div>

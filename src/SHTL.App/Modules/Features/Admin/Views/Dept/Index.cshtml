@@ -1,0 +1,42 @@
+@model IEnumerable<DeptDto>
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Phòng ban";
+    var rows = Model.Select(d => new Dictionary<string, object?> { ["id"] = d.Id, ["name"] = d.Name, ["code"] = d.Code ?? "", ["parent"] = d.ParentId?.ToString() ?? "" }).ToList();
+    var json = JsonSerializer.Serialize(rows);
+}
+@section Breadcrumb {
+    <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home">Tổng quan</a></li>
+    <li class="breadcrumb-item active">Phòng ban</li>
+}
+@section Styles { <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable@14.1.0/dist/handsontable.full.min.css" /> }
+<div class="layout-expanded">
+    <div class="frame-figma mb-3">
+        <div class="frame-header">
+            <h6 class="mb-0 font-weight-bold" style="color:var(--primary);">Phòng ban</h6>
+            <a asp-action="Create" class="btn-figma btn-figma-primary btn-sm"><i class="fas fa-plus mr-1"></i>Thêm</a>
+        </div>
+    </div>
+    <div class="frame-figma p-3">
+        <p id="ld" class="text-muted small"><i class="fas fa-spinner fa-spin mr-1"></i>Đang tải...</p>
+        <div id="em" class="alert alert-light border d-none">Không có dữ liệu.</div>
+        <div id="ht" class="d-none"></div>
+    </div>
+</div>
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/handsontable@14.1.0/dist/handsontable.full.min.js"></script>
+    <script src="~/js/shtl-handsontable.js" asp-append-version="true"></script>
+    <script>
+        (function () {
+            var data = @Html.Raw(json);
+            var cols = [
+                { data: 'id', title: 'ID', type: 'numeric', readOnly: true },
+                { data: 'name', title: 'Tên', readOnly: true },
+                { data: 'code', title: 'Mã', readOnly: true },
+                { data: 'parent', title: 'Parent', readOnly: true }
+            ];
+            var hot = window.ShtlHot.initReadOnly('ht', document.getElementById('ld'), document.getElementById('em'), cols, data, { height: 360 });
+            if (hot) hot.addHook('afterOnCellDblClick', function (_e, c) { if (c && c.row >= 0) location.href = '@Url.Action("Edit", "Dept")?id=' + hot.getDataAtRowProp(c.row, 'id'); });
+        })();
+    </script>
+}

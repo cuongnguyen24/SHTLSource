@@ -22,8 +22,14 @@ public class UserDto
 
 public class LoginRequest
 {
+    [Required(ErrorMessage = "Vui lòng nhập tên đăng nhập")]
+    [Display(Name = "Tên đăng nhập / Email")]
     public string UserName { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Vui lòng nhập mật khẩu")]
+    [DataType(DataType.Password)]
     public string Password { get; set; } = string.Empty;
+
     public bool RememberMe { get; set; }
 }
 

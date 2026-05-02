@@ -1,0 +1,86 @@
+@model DocTypeSortablePageDto
+@{
+    ViewData["Title"] = "Sắp xếp trường";
+}
+@section Breadcrumb {
+    <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="LoaiTaiLieu" asp-action="Index">Loại tài liệu</a></li>
+    <li class="breadcrumb-item active">Sắp xếp trường</li>
+}
+
+<div class="layout-expanded">
+    <div class="frame-figma mb-3">
+        <div class="frame-header">
+            <div>
+                <h6 class="mb-0 font-weight-bold" style="color:var(--primary);">@Model.DocType.Name</h6>
+                <div class="text-muted small">Kéo dòng để đổi thứ tự. Tick “Tìm kiếm” map tới <code>Ticks</code> (ID cấu hình trường).</div>
+            </div>
+            <a asp-area="sohoa" asp-controller="LoaiTaiLieu" asp-action="Edit" asp-route-id="@Model.DocType.Id" class="btn-figma btn-figma-outline btn-sm">Về form</a>
+        </div>
+    </div>
+
+    <form asp-area="sohoa" asp-controller="LoaiTaiLieu" asp-action="SortableSubmit" asp-route-id="@Model.DocType.Id" method="post" id="frmSortable">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="IDFieldSettings" id="IDFieldSettings" value="" />
+        <div class="card-figma">
+            <div class="card-content-figma p-0">
+                <div class="table-container-figma mb-0">
+                    <table class="table table-figma mb-0">
+                        <thead>
+                            <tr>
+                                <th style="width:40px;"></th>
+                                <th>Trường</th>
+                                <th style="width:100px;">Tìm kiếm</th>
+                                <th style="width:80px;">ID cấu hình</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sortBody">
+                        @foreach (var s in Model.Settings)
+                        {
+                            var fn = Model.FieldById.TryGetValue(s.IdField, out var f) ? f.Title : ("#" + s.IdField);
+                            <tr data-sid="@s.Id">
+                                <td class="text-muted align-middle"><i class="fas fa-grip-vertical sort-handle" style="cursor:grab;"></i></td>
+                                <td class="align-middle">@fn</td>
+                                <td class="align-middle text-center">
+                                    <input type="checkbox" name="Ticks" value="@s.Id" @(s.IsSearch ? "checked" : null) />
+                                </td>
+                                <td class="align-middle"><code>@s.Id</code></td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="mt-3 text-right">
+            <button type="submit" class="btn-figma btn-figma-primary"><i class="fas fa-save mr-1"></i>Lưu thứ tự</button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            var body = document.getElementById('sortBody');
+            var form = document.getElementById('frmSortable');
+            if (!body || !form) return;
+            // Đơn giản: kéo-thả bằng mousedown + chèn dòng (không phụ thuộc jQuery UI).
+            var dragRow = null;
+            body.querySelectorAll('tr').forEach(function (tr) {
+                tr.setAttribute('draggable', 'true');
+                tr.addEventListener('dragstart', function (e) { dragRow = tr; e.dataTransfer.effectAllowed = 'move'; });
+                tr.addEventListener('dragover', function (e) { e.preventDefault(); });
+                tr.addEventListener('drop', function (e) {
+                    e.preventDefault();
+                    if (!dragRow || dragRow === tr) return;
+                    var rect = tr.getBoundingClientRect();
+                    var before = (e.clientY - rect.top) < rect.height / 2;
+                    body.insertBefore(dragRow, before ? tr : tr.nextSibling);
+                });
+            });
+            form.addEventListener('submit', function () {
+                var ids = Array.prototype.map.call(body.querySelectorAll('tr[data-sid]'), function (r) { return r.getAttribute('data-sid'); });
+                document.getElementById('IDFieldSettings').value = ids.join(',');
+            });
+        })();
+    </script>
+}

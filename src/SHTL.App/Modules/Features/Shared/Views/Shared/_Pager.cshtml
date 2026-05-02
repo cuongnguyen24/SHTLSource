@@ -1,0 +1,27 @@
+@model object
+@{
+    if (Model == null) { return; }
+    var t = Model.GetType();
+    var pi = (int)(t.GetProperty("PageIndex")?.GetValue(Model) ?? 1);
+    var ps = (int)(t.GetProperty("PageSize")?.GetValue(Model) ?? 20);
+    var tc = (long)(t.GetProperty("TotalCount")?.GetValue(Model) ?? 0L);
+    var tp = (int)(t.GetProperty("TotalPages")?.GetValue(Model) ?? 0);
+
+    string PageUrl(int page)
+    {
+        var d = Context.Request.Query.ToDictionary(x => x.Key, x => x.Value.ToString());
+        d["page"] = page.ToString();
+        d["size"] = ps.ToString();
+        return "?" + string.Join("&", d.Select(kv => $"{Uri.EscapeDataString(kv.Key)}={Uri.EscapeDataString(kv.Value)}"));
+    }
+}
+@if (tp > 1)
+{
+    <nav class="d-flex align-items-center justify-content-between flex-wrap mt-3" aria-label="Phân trang">
+        <div class="text-muted small">Trang @pi / @tp — @tc bản ghi</div>
+        <ul class="pagination pagination-sm mb-0">
+            <li class="page-item @(pi <= 1 ? "disabled" : null)"><a class="page-link" href="@PageUrl(Math.Max(1, pi - 1))">Trước</a></li>
+            <li class="page-item @(pi >= tp ? "disabled" : null)"><a class="page-link" href="@PageUrl(Math.Min(tp, pi + 1))">Sau</a></li>
+        </ul>
+    </nav>
+}

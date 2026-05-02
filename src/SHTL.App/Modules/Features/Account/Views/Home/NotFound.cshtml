@@ -1,0 +1,19 @@
+@{
+    ViewData["Title"] = "Không tìm thấy";
+    Layout = "_Layout";
+    ViewData["SidebarPartial"] = "_SidebarDashboard";
+}
+@section Breadcrumb {
+    <li class="breadcrumb-item active">404</li>
+}
+
+<div class="d-flex justify-content-center py-5">
+    <div class="card-figma text-center" style="max-width: 420px;">
+        <div class="card-content-figma py-5 px-4">
+            <div class="mb-3" style="font-size: 3rem; color: var(--warning);"><i class="fas fa-search"></i></div>
+            <h4 class="font-weight-bold mb-2">Không tìm thấy trang</h4>
+            <p class="text-muted small mb-4">Đường dẫn không tồn tại.</p>
+            <a asp-area="account" asp-controller="Home" asp-action="Index" class="btn-figma btn-figma-primary">Về tài khoản</a>
+        </div>
+    </div>
+</div>

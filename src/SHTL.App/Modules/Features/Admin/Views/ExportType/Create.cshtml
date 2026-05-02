@@ -1,0 +1,45 @@
+@model CreateExportTypeRequest
+@{ ViewData["Title"] = "Tạo loại xuất"; }
+@section Breadcrumb { <li class="breadcrumb-item"><a asp-action="Index">Loại xuất</a></li><li class="breadcrumb-item active">Tạo</li> }
+<div class="layout-expanded">
+    <div class="frame-figma mb-3">
+        <div class="frame-header">
+            <div class="d-flex align-items-center">
+                <div class="mr-3 d-flex align-items-center justify-content-center" style="width:36px;height:36px;background:var(--primary-light);color:var(--primary);border-radius:8px;"><i class="fas fa-file-export"></i></div>
+                <div>
+                    <h6 class="mb-0 font-weight-bold" style="color:var(--primary);">Tạo loại xuất</h6>
+                    <div class="text-muted small">Khai báo mã, tên và mô tả; có thể đính kèm mẫu Excel.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card-figma">
+        <div class="card-content-figma">
+            <div asp-validation-summary="All" class="text-danger mb-3"></div>
+            <form asp-action="Create" method="post" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+                <div class="form-group-figma">
+                    <label asp-for="Name" class="label-figma"></label>
+                    <input asp-for="Name" class="form-control" />
+                </div>
+                <div class="form-group-figma">
+                    <label asp-for="Code" class="label-figma"></label>
+                    <input asp-for="Code" class="form-control" />
+                </div>
+                <div class="form-group-figma">
+                    <label asp-for="Description" class="label-figma"></label>
+                    <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                </div>
+                <div class="form-group-figma">
+                    <label class="label-figma">File Excel (tuỳ chọn)</label>
+                    <input type="file" name="excelFile" class="form-control-file" accept=".xlsx,.xls" />
+                </div>
+                <div class="d-flex flex-wrap" style="gap:8px;">
+                    <button type="submit" class="btn-figma btn-figma-primary">Lưu</button>
+                    <a asp-action="Index" class="btn-figma btn-figma-outline">Hủy</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

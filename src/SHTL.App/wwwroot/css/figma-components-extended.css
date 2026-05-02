@@ -1,0 +1,1084 @@
+/* 
+   ============================================================================
+   FIGMA EXTENDED COMPONENTS - Pagination, Table Actions, Search, Page Headers
+   ============================================================================
+   Bổ sung cho theme-figma.css với các components còn thiếu
+   ============================================================================
+*/
+
+/* ========== PAGE HEADER WITH ICON & BUTTON ========== */
+.page-header-figma {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--border-color, #E2E8F0);
+}
+
+.page-title-figma {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--primary, #1B4F8A);
+    margin: 0;
+}
+
+.page-title-figma i {
+    font-size: 1.5rem;
+    color: var(--primary, #1B4F8A);
+}
+
+.page-actions-figma {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+/* ========== TABLE CONTROLS (Show Entries + Search) ========== */
+.table-controls-figma {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+    padding: 1rem;
+    background: var(--muted, #F7FAFC);
+    border-radius: 8px;
+}
+
+.show-entries-figma {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--text-main, #1A202C);
+}
+
+.show-entries-figma label {
+    margin: 0;
+    font-weight: 500;
+}
+
+.show-entries-figma select {
+    padding: 0.375rem 2rem 0.375rem 0.75rem;
+    border: 1px solid var(--input-border, #CBD5E0);
+    border-radius: 6px;
+    background-color: var(--input-background, #FFFFFF);
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23718096' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.5rem center;
+}
+
+.show-entries-figma select:hover {
+    border-color: var(--primary, #1B4F8A);
+}
+
+.show-entries-figma select:focus {
+    outline: none;
+    border-color: var(--primary, #1B4F8A);
+    box-shadow: 0 0 0 3px rgba(27, 79, 138, 0.1);
+}
+
+/* ========== SEARCH INPUT ========== */
+.search-figma {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.search-figma label {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-main, #1A202C);
+}
+
+.search-input-figma {
+    position: relative;
+    width: 280px;
+}
+
+.search-input-figma input {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    padding-right: 2.5rem;
+    border: 1px solid var(--input-border, #CBD5E0);
+    border-radius: 6px;
+    background-color: var(--input-background, #FFFFFF);
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+}
+
+.search-input-figma input::placeholder {
+    color: var(--text-muted, #718096);
+}
+
+.search-input-figma input:hover {
+    border-color: var(--primary, #1B4F8A);
+}
+
+.search-input-figma input:focus {
+    outline: none;
+    border-color: var(--primary, #1B4F8A);
+    box-shadow: 0 0 0 3px rgba(27, 79, 138, 0.1);
+}
+
+.search-input-figma .search-icon {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted, #718096);
+    pointer-events: none;
+}
+
+/* ========== TABLE ACTION BUTTONS ========== */
+.table-actions-figma {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
+.btn-action-figma {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    text-decoration: none;
+}
+
+/* Edit Button (Blue) - Updated icon: fa-pen */
+.btn-action-edit {
+    background-color: #3182CE;
+    color: #FFFFFF;
+}
+
+.btn-action-edit:hover {
+    background-color: #2C5AA0;
+    color: #FFFFFF;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(49, 130, 206, 0.3);
+    text-decoration: none;
+}
+
+.btn-action-edit:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(49, 130, 206, 0.2);
+}
+
+/* Delete Button (Red) - Updated icon: fa-trash-alt */
+.btn-action-delete {
+    background-color: #E53E3E;
+    color: #FFFFFF;
+}
+
+.btn-action-delete:hover {
+    background-color: #C53030;
+    color: #FFFFFF;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(229, 62, 62, 0.3);
+}
+
+.btn-action-delete:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(229, 62, 62, 0.2);
+}
+
+/* View Button (Info) - Updated icon: fa-eye */
+.btn-action-view {
+    background-color: #3182CE;
+    color: #FFFFFF;
+}
+
+.btn-action-view:hover {
+    background-color: #2C5AA0;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(49, 130, 206, 0.3);
+}
+
+/* Tooltip: handled by Bootstrap tooltip with container='body' to escape overflow clipping */
+
+/* ========== STATUS BADGES IN TABLE ========== */
+.status-badge-figma {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.status-badge-active {
+    background-color: #C6F6D5;
+    color: #22543D;
+}
+
+.status-badge-inactive {
+    background-color: #FED7D7;
+    color: #742A2A;
+}
+
+.status-badge-pending {
+    background-color: #FEEBC8;
+    color: #7C2D12;
+}
+
+/* ========== PAGINATION (Bottom of Table) - COMPACT STYLE ========== */
+.pagination-figma-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    margin-top: 1rem;
+    background: transparent;
+    border-top: none !important;
+}
+
+.pagination-info-figma {
+    font-size: 0.875rem;
+    color: var(--text-muted, #718096);
+    font-weight: 400;
+}
+
+.pagination-figma {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.pagination-figma li {
+    margin: 0;
+}
+
+.pagination-figma a,
+.pagination-figma span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+    padding: 0.375rem 0.5rem;
+    border: 1px solid var(--border-color, #E2E8F0);
+    border-radius: 4px;
+    background-color: var(--background, #FFFFFF);
+    color: var(--text-main, #1A202C);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.pagination-figma a:hover {
+    background-color: var(--primary-light, #EBF3FB);
+    border-color: var(--primary, #1B4F8A);
+    color: var(--primary, #1B4F8A);
+}
+
+.pagination-figma .active span,
+.pagination-figma .active a {
+    background-color: var(--primary, #1B4F8A);
+    border-color: var(--primary, #1B4F8A);
+    color: var(--primary-foreground, #FFFFFF);
+    font-weight: 600;
+    cursor: default;
+}
+
+.pagination-figma .disabled span,
+.pagination-figma .disabled a {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* Pagination arrows */
+.pagination-figma .page-prev,
+.pagination-figma .page-next {
+    font-weight: 600;
+}
+
+/* ========== TABLE HEADER SORTING ICONS ========== */
+.table-figma th.sortable {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    padding-right: 2rem !important;
+}
+
+.table-figma th.sortable:hover {
+    background-color: var(--primary-light, #EBF3FB);
+}
+
+.table-figma th.sortable::after {
+    content: '⇅';
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0.3;
+    font-size: 0.875rem;
+}
+
+.table-figma th.sortable.asc::after {
+    content: '▲';
+    opacity: 1;
+    color: var(--primary, #1B4F8A);
+}
+
+.table-figma th.sortable.desc::after {
+    content: '▼';
+    opacity: 1;
+    color: var(--primary, #1B4F8A);
+}
+
+/* ========== EMPTY STATE ========== */
+.empty-state-figma {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--text-muted, #718096);
+}
+
+.empty-state-figma .empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.3;
+}
+
+.empty-state-figma h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--text-main, #1A202C);
+}
+
+.empty-state-figma p {
+    font-size: 0.875rem;
+    margin-bottom: 1.5rem;
+}
+
+/* ========== RESPONSIVE PAGINATION ========== */
+@media (max-width: 768px) {
+    .pagination-figma-container {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+    }
+    
+    .pagination-figma {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .table-controls-figma {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .search-input-figma {
+        width: 100%;
+    }
+    
+    .page-header-figma {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    
+    .page-actions-figma {
+        width: 100%;
+        justify-content: flex-start;
+    }
+}
+
+/* ========== LOADING SPINNER FOR TABLES ========== */
+.table-loading-figma {
+    position: relative;
+}
+
+.table-loading-figma::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(27, 79, 138, 0.1);
+    border-top-color: var(--primary, #1B4F8A);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* ========== TABLE ROW HOVER HIGHLIGHT ========== */
+.table-figma tbody tr {
+    transition: all 0.2s ease;
+}
+
+.table-figma tbody tr:hover {
+    background-color: rgba(27, 79, 138, 0.03);
+}
+
+/* ========== BADGE WITH ICON ========== */
+.badge-with-icon {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.badge-with-icon i {
+    font-size: 0.75rem;
+}
+
+/* ========== FRAME COMPONENTS (4-FRAME LAYOUT) ========== */
+.frame-figma {
+    background-color: var(--card-bg, #FFFFFF);
+    border: 1px solid var(--border-color, #E2E8F0);
+    border-radius: var(--radius-md, 8px);
+    margin-bottom: 0.75rem;
+    box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+    overflow: hidden;
+}
+
+.frame-header {
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.frame-filter {
+    padding: 0.75rem 1.25rem;
+    background-color: #F8FAFC;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border-bottom: 1px solid var(--border-color, #E2E8F0);
+}
+
+.frame-body {
+    padding: 0;
+    overflow: hidden;
+}
+
+.frame-footer {
+    padding: 0.5rem 1rem;
+    border-top: 1px solid var(--border-color, #E2E8F0);
+}
+
+/* ========== STATUS DOT COMPONENTS ========== */
+.status-dot-text {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+    font-size: 13px;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.status-active .status-dot { background-color: var(--success, #38A169); }
+.status-inactive .status-dot { background-color: var(--destructive, #E53E3E); }
+.status-pending .status-dot { background-color: var(--warning, #D69E2E); }
+
+/* ========== LAYOUT OPTIMIZATIONS ========== */
+main.content-body:has(.layout-expanded) {
+    padding: 0 !important;
+}
+
+main.content-body:has(.layout-expanded) > .container-fluid {
+    padding: 0 !important;
+}
+
+.layout-expanded {
+    padding: 10px 16px !important;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.layout-expanded .frame-figma {
+    margin-bottom: 0 !important;
+}
+
+header.header-container:has(+ main .layout-expanded) {
+    padding: 0 16px !important; 
+}
+
+/* Khung tiêu đề gọn gàng hơn */
+.frame-header {
+    padding: 8px 16px !important;
+    min-height: 48px;
+}
+
+/* Khung filter gọn gàng hơn */
+.frame-filter {
+    padding: 14px 16px !important;
+    background-color: #FFFFFF !important;
+}
+
+/* Khung footer (phân trang) gọn gàng hơn */
+.frame-footer {
+    padding: 0 !important; /* Reset padding để pagination-container xử lý */
+    background-color: #FFFFFF !important;
+}
+
+.frame-footer .pagination-figma-container {
+    padding: 8px 16px !important;
+    min-height: 48px;
+}
+
+/* Tinh chỉnh table bám sát Figma - Xử lý triệt để overflow-x và chống nháy (flickering) */
+.frame-body {
+    padding: 0;
+    overflow-x: auto; /* auto thay vì scroll để chỉ hiện khi cần, tránh nháy khi không có dữ liệu tràn */
+    overflow-y: hidden;
+    
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+    
+    display: block;
+    width: 100%;
+    /* Giữ chiều cao ổn định cho khu vực scroll để tránh nhấp nháy */
+    min-height: 0;
+}
+
+/* Tùy chỉnh thanh cuộn cho Webkit */
+.frame-body::-webkit-scrollbar {
+    height: 6px;
+}
+.frame-body::-webkit-scrollbar-track {
+    background: #f8fafc; /* Làm track sáng màu để giảm cảm giác nháy */
+    border-radius: 10px;
+}
+.frame-body::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 10px;
+    border: 1px solid #f8fafc; /* Tạo khoảng đệm */
+}
+.frame-body::-webkit-scrollbar-thumb:hover {
+    background-color: #94a3b8; /* Màu đậm hơn khi hover, không thay đổi kích thước */
+    border: 1px solid #f8fafc;
+}
+
+.table-figma {
+    width: 100% !important;
+    min-width: 100%; /* Đảm bảo luôn lấp đầy ít nhất là container */
+    table-layout: auto;
+    margin: 0 !important;
+    border-collapse: separate !important;
+    border-spacing: 0;
+}
+
+.table-figma thead th {
+    padding: 12px 16px !important;
+    background-color: #F8FAFC !important;
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+    border-bottom: 1px solid #E2E8F0 !important;
+    white-space: nowrap;
+}
+
+.table-figma tbody td {
+    padding: 12px 16px !important;
+    font-size: 14px;
+    color: #1e293b;
+    border-bottom: 1px solid #F1F5F9; /* Border hàng tinh tế */
+    vertical-align: middle;
+}
+
+/* "Môi màu" - Áp dụng zebra striping nhẹ nhàng theo chuẩn Enterprise */
+.table-figma tbody tr:nth-child(even) {
+    background-color: #F9FBFF; /* Màu xanh cực nhạt cho hàng chẵn */
+}
+
+.table-figma tbody tr:hover {
+    background-color: #F1F5F9 !important;
+}
+
+/* Loại bỏ border dòng cuối cùng */
+.table-figma tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Căn chỉnh phân trang và PageSize Dropdown */
+.pagination-right {
+    gap: 12px !important; /* Cân bằng khoảng cách */
+}
+
+/* Thu hẹp dropdown pageSize */
+.dataTables_length select,
+.pageSize-selector-figma {
+    min-width: 60px !important;
+    max-width: 60px !important;
+    padding: 0 20px 0 8px !important;
+    height: 28px !important; /* Nhỏ gọn hơn */
+    font-size: 13px !important;
+    border-radius: 4px !important;
+}
+
+/* Căn giữa nút phân trang */
+.pagination-figma-list {
+    gap: 4px !important;
+}
+
+.pagination-figma-item,
+.dataTables_wrapper .dataTables_paginate ul.pagination li.page-item a {
+    height: 28px !important;
+    min-width: 28px !important;
+    font-size: 12px !important;
+}
+/* ========== SỬA LỖI MODAL (TRANSPARENCY, CLICK & CLIPPING) ========== */
+.modal {
+    z-index: 2050 !important;
+    pointer-events: none !important; /* Quan trọng: Reset về chuẩn để clicks xuyên qua lớp phủ vào dialog */
+}
+
+.modal.show {
+    pointer-events: auto !important; /* Chỉ bắt sự kiện khi modal hiển thị */
+}
+
+.modal-backdrop {
+    z-index: 2040 !important;
+    background-color: rgba(0, 0, 0, 0.5) !important;
+    opacity: 1 !important;
+}
+
+.modal-dialog {
+    z-index: 2051 !important;
+    pointer-events: auto !important;
+    margin-top: 50px !important; /* Đẩy xuống một chút để không chạm header */
+}
+
+.modal-content-figma {
+    background-color: #FFFFFF !important; /* Đảm bảo nền trắng đục 100% */
+    background: #FFFFFF !important;
+    border: none !important;
+    border-radius: 12px !important;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    pointer-events: auto !important;
+    overflow: visible !important;
+}
+
+/* Header Modal */
+.modal-header-figma {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 24px !important;
+    background-color: #F8FAFC !important;
+    border-bottom: 1px solid #E2E8F0 !important;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+}
+
+.modal-header-figma .modal-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--primary, #1B4F8A);
+}
+
+/* Body Modal */
+.modal-body {
+    padding: 24px !important;
+    background-color: #FFFFFF !important;
+}
+
+/* Footer Modal */
+.modal-footer-figma {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 10px 24px !important;
+    background-color: #F8FAFC !important;
+    border-top: 1px solid #E2E8F0 !important;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+}
+
+/* Fix lỗi form group trong modal */
+.form-group-figma {
+    margin-bottom: 20px !important;
+}
+
+.form-group-figma label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 6px;
+}
+
+/* Đảm bảo Modal không bị cắt bởi các container cha */
+body.modal-open {
+    overflow: hidden !important; /* Block cuộn trang chính khi mở modal */
+}
+
+body.modal-open .layout-wrapper,
+body.modal-open .main-content,
+body.modal-open .content-body {
+    overflow: visible !important;
+    z-index: auto !important; /* Tránh tạo stacking context mới */
+}
+/* ========== SELECT2 FIGMA OPTIMIZATION ========== */
+.select2-container--bootstrap4 .select2-selection {
+    border: 1px solid #E2E8F0 !important;
+    border-radius: var(--radius-md) !important; /* Unified with standard input-figma */
+    min-height: 38px !important;
+    background-color: #F8FAFC !important; /* Light background from demo */
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.select2-container--bootstrap4 .select2-selection--single {
+    height: 38px !important;
+}
+
+.select2-container--bootstrap4 .select2-selection--single .select2-selection__rendered {
+    line-height: 37px !important;
+    padding-left: 16px !important;
+    padding-right: 35px !important; /* Space for search icon */
+    font-size: 13px;
+    color: #1e293b !important;
+}
+
+/* Add search icon to match "Select2 Searchable (Interactive)" demo */
+.select2-container--bootstrap4 .select2-selection--single::after {
+    content: '\f0dd';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    position: absolute;
+    right: 12px;
+    top: 45%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-size: 13px;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+
+/* Hide default caret to match demo */
+.select2-container--bootstrap4 .select2-selection--single .select2-selection__arrow {
+    display: none !important;
+}
+
+/* Clear Button (X) Styling and Positioning */
+.select2-container--bootstrap4 .select2-selection--single .select2-selection__clear {
+    position: absolute !important;
+    right: 12px !important;
+    top: 45% !important;
+    transform: translateY(-50%) !important;
+    background: transparent !important;
+    color: #94a3b8 !important;
+    font-size: 18px !important;
+    font-weight: 700 !important;
+    line-height: 1 !important;
+    margin: 0 !important;
+    padding: 0 4px !important;
+    z-index: 2 !important;
+    cursor: pointer !important;
+}
+
+.select2-container--bootstrap4 .select2-selection--single .select2-selection__clear:hover {
+    color: #ef4444 !important;
+}
+
+/* Hide search icon when clear button is present to avoid overlap */
+.select2-container--bootstrap4 .select2-selection--single:has(.select2-selection__clear)::after {
+    opacity: 0 !important;
+}
+
+.select2-container--bootstrap4 .select2-selection--single:has(.select2-selection__clear) .select2-selection__rendered {
+    padding-right: 50px !important;
+}
+
+/* Placeholder color alignment */
+.select2-container--bootstrap4 .select2-selection--single .select2-selection__placeholder {
+    color: #94a3b8 !important;
+}
+
+.select2-container--bootstrap4.select2-container--focus .select2-selection {
+    border-color: #1B4F8A !important;
+    box-shadow: 0 0 0 3px rgba(27, 79, 138, 0.1) !important;
+}
+
+.select2-dropdown {
+    border: 1px solid #E2E8F0 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+    overflow: hidden;
+}
+
+.select2-results__option {
+    padding: 8px 12px !important;
+    font-size: 13px !important;
+}
+
+.select2-container--bootstrap4 .select2-results__option--highlighted[aria-selected] {
+    background-color: #EBF3FB !important;
+    color: #1B4F8A !important;
+}
+
+/* ========== DASHED UPLOAD AREA ========== */
+.input-figma-dashed {
+    border: 2px dashed #1B4F8A !important;
+    border-radius: 8px !important;
+    background-color: #F8FAFC !important;
+    min-height: 46px;
+    transition: all 0.2s ease;
+}
+
+.input-figma-dashed:hover {
+    background-color: #EBF3FB !important;
+    border-color: #2C5AA0 !important;
+}
+
+.input-figma-dashed.drag-over {
+    background-color: #dbeafe !important;
+    border-color: #3b82f6 !important;
+    border-style: solid !important;
+}
+
+.demo-label-small {
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748B;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+    display: block;
+}
+
+/* ========== FIGMA CHECKBOX & RADIO LABELS ========== */
+.checkbox-label-figma {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    cursor: pointer !important;
+    font-size: 14px !important;
+    user-select: none !important;
+    font-weight: 500 !important;
+    padding: 6px 10px !important;
+    transition: all 0.2s !important;
+    border-radius: 6px !important;
+    width: 100% !important;
+    margin-bottom: 4px !important;
+}
+
+.checkbox-label-figma:hover {
+    background-color: var(--primary-light, #EBF3FB) !important;
+}
+
+/* Custom switch based on Figma colors */
+.custom-switch-figma .custom-control-input:checked ~ .custom-control-label::before {
+    background-color: var(--primary, #1B4F8A) !important;
+    border-color: var(--primary, #1B4F8A) !important;
+}
+
+.custom-switch-figma .custom-control-label {
+    padding-top: 2px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+/* Premium Figma Badges */
+.badge-figma {
+    display: inline-block;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: 6px;
+    text-transform: none;
+}
+
+.badge-figma-primary {
+    background-color: #e0f2fe !important;
+    color: #0369a1 !important;
+}
+
+.badge-figma-success {
+    background-color: #dcfce7 !important;
+    color: #15803d !important;
+}
+
+.badge-figma-info {
+    background-color: #f1f5f9 !important;
+    color: #475569 !important;
+    border: 1px solid #e2e8f0;
+}
+
+.badge-figma-warning {
+    background-color: #fef3c7 !important;
+    color: #b45309 !important;
+}
+
+.badge-figma-danger {
+    background-color: #fee2e2 !important;
+    color: #b91c1c !important;
+}
+
+/* Figma Label Improvement */
+.label-figma {
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    color: #475569 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    margin-bottom: 6px !important;
+    display: block !important;
+}
+
+/* ========== Đồng bộ Bootstrap .form-control trong shell Figma (toàn app) ==========
+   Chỉ áp dụng trong .layout-expanded / .card-figma / modal — trang login không dùng các lớp này. */
+.layout-expanded .form-group > label:not(.custom-control-label):not(.form-check-label),
+.card-figma .form-group > label:not(.custom-control-label):not(.form-check-label),
+.card-content-figma .form-group > label:not(.custom-control-label):not(.form-check-label),
+.modal-content .form-group > label:not(.custom-control-label):not(.form-check-label) {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text-main, #1e293b);
+    margin-bottom: 0.375rem;
+    display: block;
+}
+
+.layout-expanded input.form-control:not([type="file"]):not([type="range"]):not([type="checkbox"]):not([type="radio"]),
+.layout-expanded select.form-control,
+.card-figma input.form-control:not([type="file"]):not([type="range"]):not([type="checkbox"]):not([type="radio"]),
+.card-figma select.form-control,
+.card-content-figma input.form-control:not([type="file"]):not([type="range"]):not([type="checkbox"]):not([type="radio"]),
+.card-content-figma select.form-control,
+.frame-figma input.form-control:not([type="file"]):not([type="range"]):not([type="checkbox"]):not([type="radio"]),
+.frame-figma select.form-control,
+.frame-filter input.form-control:not([type="file"]):not([type="range"]):not([type="checkbox"]):not([type="radio"]),
+.frame-filter select.form-control,
+.table-figma input.form-control:not([type="file"]):not([type="range"]):not([type="checkbox"]):not([type="radio"]),
+.table-figma select.form-control,
+.modal-content input.form-control:not([type="file"]):not([type="range"]):not([type="checkbox"]):not([type="radio"]),
+.modal-content select.form-control {
+    width: 100%;
+    height: 38px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--text-main, #1e293b);
+    background-color: var(--input-background, #f8fafc);
+    border: 1px solid var(--input-border, #e2e8f0);
+    border-radius: var(--radius-md, 8px);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    outline: none;
+    box-shadow: none;
+}
+
+.layout-expanded select.form-control,
+.card-figma select.form-control,
+.card-content-figma select.form-control,
+.frame-figma select.form-control,
+.frame-filter select.form-control,
+.table-figma select.form-control,
+.modal-content select.form-control {
+    appearance: none;
+    padding-right: 2rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23718096' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 12px;
+    cursor: pointer;
+}
+
+.layout-expanded textarea.form-control,
+.card-figma textarea.form-control,
+.card-content-figma textarea.form-control,
+.frame-figma textarea.form-control,
+.modal-content textarea.form-control {
+    width: 100%;
+    min-height: 72px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--text-main, #1e293b);
+    background-color: var(--input-background, #f8fafc);
+    border: 1px solid var(--input-border, #e2e8f0);
+    border-radius: var(--radius-md, 8px);
+    resize: vertical;
+    outline: none;
+    box-shadow: none;
+}
+
+.layout-expanded .form-control:focus,
+.card-figma .form-control:focus,
+.card-content-figma .form-control:focus,
+.frame-figma .form-control:focus,
+.frame-filter .form-control:focus,
+.table-figma .form-control:focus,
+.modal-content .form-control:focus {
+    border-color: var(--primary, #1b4f8a);
+    box-shadow: 0 0 0 3px var(--ring, rgba(27, 79, 138, 0.2));
+}
+
+.layout-expanded .form-control-sm:not(textarea),
+.card-figma .form-control-sm:not(textarea),
+.card-content-figma .form-control-sm:not(textarea),
+.frame-figma .form-control-sm:not(textarea),
+.table-figma .form-control-sm:not(textarea),
+.modal-content .form-control-sm:not(textarea) {
+    height: 30px !important;
+    padding: 0.25rem 0.5rem !important;
+    font-size: 0.8125rem !important;
+}
+
+.layout-expanded textarea.form-control-sm,
+.card-figma textarea.form-control-sm,
+.card-content-figma textarea.form-control-sm,
+.table-figma textarea.form-control-sm,
+.modal-content textarea.form-control-sm {
+    min-height: 52px !important;
+    height: auto !important;
+}
+
+.layout-expanded select.form-control-sm,
+.card-figma select.form-control-sm,
+.card-content-figma select.form-control-sm,
+.table-figma select.form-control-sm,
+.modal-content select.form-control-sm {
+    padding-right: 1.75rem !important;
+    background-position: right 0.5rem center;
+}

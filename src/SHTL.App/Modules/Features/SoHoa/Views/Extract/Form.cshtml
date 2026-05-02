@@ -1,0 +1,159 @@
+@model DocumentFormViewModel
+@using System.Text.Json
+@using SHTL.Modules.Shared.Contracts.ViewModels
+@{
+    var doc = Model.Document!;
+    ViewData["Title"] = "Nhập liệu — " + doc.Name;
+    var submitUrl = Url.Action("Submit", "Extract", new { area = "sohoa" })!;
+    var previewUrl = Url.Content("~/scan/preview/" + doc.Id);
+    var indexUrl = Url.Action("Index", "Extract", new { area = "sohoa" })!;
+
+    string? Fv(FieldSettingViewModel f) =>
+        Model.FieldValues.TryGetValue(f.FieldName, out var x) ? x : f.FixValue;
+
+    var orderedFields = Model.FieldSettings.OrderBy(f => f.Weight).ToList();
+    var cells = Model.Cells.OrderBy(c => c.Page).ThenBy(c => c.Y).ThenBy(c => c.X).ToList();
+}
+@section Breadcrumb {
+    <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="Extract" asp-action="Index">Nhập liệu</a></li>
+    <li class="breadcrumb-item active">#@doc.Id</li>
+}
+
+<div class="layout-expanded">
+    <div class="frame-figma mb-3">
+        <div class="frame-header">
+            <div>
+                <h6 class="mb-0 font-weight-bold" style="color:var(--primary);">@doc.Name</h6>
+                <div class="text-muted small">Loại: @Model.DocType.Name · Bước hiện tại: @doc.CurrentStep</div>
+            </div>
+            <div class="d-flex flex-wrap" style="gap:8px;">
+                <a href="@previewUrl" class="btn-figma btn-figma-secondary btn-sm" target="_blank" rel="noopener"><i class="fas fa-file-pdf mr-1"></i>Xem PDF</a>
+                <a href="@indexUrl" class="btn-figma btn-figma-secondary btn-sm">Danh sách</a>
+                <button type="button" class="btn-figma btn-figma-primary btn-sm" id="btnExtractSubmit"><i class="fas fa-save mr-1"></i>Lưu &amp; hoàn thành nhập liệu</button>
+            </div>
+        </div>
+    </div>
+
+    <p id="extract-submit-hint" class="text-muted small d-none"><i class="fas fa-spinner fa-spin mr-1"></i>Đang gửi…</p>
+
+    @{
+        var groupOrder = orderedFields
+            .GroupBy(f => f.GroupId)
+            .OrderBy(g => Model.FieldGroups.TryGetValue(g.Key, out var gr) ? gr.Weight : 999);
+    }
+    @foreach (var grp in groupOrder)
+    {
+        var gtitle = Model.FieldGroups.TryGetValue(grp.Key, out var g)
+            ? (string.IsNullOrEmpty(g.GroupName) ? g.Name : g.GroupName)
+            : (grp.Key == 0 ? "Trường thông tin" : $"Nhóm #{grp.Key}");
+        <div class="card-figma mb-3">
+            <div class="card-header-figma"><h3 class="card-title-figma mb-0">@gtitle</h3></div>
+            <div class="card-content-figma">
+                <div class="row">
+                    @foreach (var fs in grp.OrderBy(f => f.Weight))
+                    {
+                        <div class="col-md-6">
+                            <partial name="_FieldInput" model="(fs, Fv(fs))" />
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (cells.Count > 0)
+    {
+        <div class="card-figma mb-3">
+            <div class="card-header-figma">
+                <h3 class="card-title-figma mb-0"><i class="fas fa-th mr-2" style="color:var(--primary);"></i>Ô nhập từ biểu mẫu / OCR</h3>
+            </div>
+            <div class="card-content-figma p-0">
+                <div class="table-container-figma mb-0" style="max-height:360px; overflow:auto;">
+                    <table class="table table-sm table-figma mb-0">
+                        <thead>
+                            <tr>
+                                <th>ID ô</th>
+                                <th>Tiêu đề</th>
+                                <th>Trang</th>
+                                <th>OCR / đã nhập</th>
+                                <th>Giá trị nhập</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var c in cells)
+                        {
+                            var showVal = string.IsNullOrEmpty(c.ExtractedValue) ? c.Value : c.ExtractedValue;
+                            <tr>
+                                <td><code>@c.Id</code></td>
+                                <td>@(c.Title ?? c.Field ?? "—")</td>
+                                <td>@c.Page</td>
+                                <td class="small text-muted text-truncate" style="max-width:180px;" title="@showVal">@showVal</td>
+                                <td style="min-width:200px;">
+                                    <input type="text" class="form-control form-control-sm ext-cell" data-cell-id="@c.Id" value="@c.ExtractedValue" placeholder="@c.Value" />
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<form id="antiEx" class="d-none">@Html.AntiForgeryToken()</form>
+
+@section Scripts {
+    <script src="~/js/shtl-ajax.js" asp-append-version="true"></script>
+    <script>
+        (function () {
+            var submitUrl = @Html.Raw(JsonSerializer.Serialize(submitUrl));
+            var docId = @doc.Id;
+
+            function token() {
+                return window.ShtlAjax.getRequestVerificationToken();
+            }
+
+            document.getElementById('btnExtractSubmit').onclick = function () {
+                var stg = {};
+                document.querySelectorAll('[data-stg-field]').forEach(function (el) {
+                    var k = el.getAttribute('data-stg-field');
+                    if (k) stg[k] = el.value;
+                });
+                var cells = [];
+                document.querySelectorAll('.ext-cell[data-cell-id]').forEach(function (el) {
+                    var id = parseInt(el.getAttribute('data-cell-id'), 10);
+                    if (id) cells.push({ id: id, value: el.value });
+                });
+                var body = { documentId: docId, cells: cells, stgFieldValues: stg };
+                for (var n = 9; n <= 15; n++) {
+                    var key = 'field' + n;
+                    if (stg[key] !== undefined && stg[key] !== '') body[key] = stg[key];
+                }
+                var hint = document.getElementById('extract-submit-hint');
+                hint.classList.remove('d-none');
+                fetch(submitUrl, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': token()
+                    },
+                    body: JSON.stringify(body)
+                }).then(function (r) { return r.json(); }).then(function (j) {
+                    hint.classList.add('d-none');
+                    if (j.success) {
+                        if (typeof toastr !== 'undefined') toastr.success(j.message || 'Đã lưu');
+                        window.location.href = @Html.Raw(JsonSerializer.Serialize(indexUrl));
+                    } else {
+                        if (typeof toastr !== 'undefined') toastr.error(j.message || 'Lỗi');
+                        else alert(j.message || 'Lỗi');
+                    }
+                }).catch(function () {
+                    hint.classList.add('d-none');
+                    if (typeof toastr !== 'undefined') toastr.error('Lỗi mạng');
+                });
+            };
+        })();
+    </script>
+}

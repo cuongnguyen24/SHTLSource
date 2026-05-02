@@ -44,6 +44,12 @@ public class ExtractRequest
 {
     public long DocumentId { get; set; }
     public List<FormCellValueDto> Cells { get; set; } = new();
+
+    /// <summary>
+    /// Cặp tên trường STG (vd. dc_title, field1…) → giá trị; server map vào entity tài liệu.
+    /// </summary>
+    public Dictionary<string, string?>? StgFieldValues { get; set; }
+
     // Fields trực tiếp vào document
     public string? Field1 { get; set; }
     public string? Field2 { get; set; }

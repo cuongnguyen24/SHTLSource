@@ -1,0 +1,164 @@
+@model PaginatedResult<DocumentDto>
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Scan / Upload";
+    var req = ViewBag.Request as DocumentFilterRequest ?? new DocumentFilterRequest();
+    var hotData = Model.Items.Select(d => new Dictionary<string, object?>
+    {
+        ["id"] = d.Id,
+        ["name"] = d.Name,
+        ["docType"] = d.DocTypeName ?? "",
+        ["step"] = d.CurrentStep.ToString(),
+        ["status"] = d.Status.ToString(),
+        ["fileName"] = d.FileName ?? "",
+        ["pageCount"] = d.PageCount,
+        ["created"] = d.Created.ToString("yyyy-MM-dd HH:mm"),
+        ["checked1"] = d.IsCheckedScan1 ? "Có" : "",
+        ["checked2"] = d.IsCheckedScan2 ? "Có" : ""
+    }).ToList();
+    var json = JsonSerializer.Serialize(hotData);
+    var deleteUrl = Url.Content("~/scan/delete");
+    var previewBase = Url.Content("~/scan/preview/");
+}
+@section Breadcrumb {
+    <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="Home" asp-action="Index">Tổng quan</a></li>
+    <li class="breadcrumb-item active">Scan / Upload</li>
+}
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable@14.1.0/dist/handsontable.full.min.css" />
+}
+
+<div class="layout-expanded">
+    <div class="frame-figma mb-3">
+        <div class="frame-header">
+            <div class="d-flex align-items-center">
+                <div class="mr-3 d-flex align-items-center justify-content-center" style="width:32px;height:32px;background:var(--primary-light);color:var(--primary);border-radius:6px;"><i class="fas fa-upload"></i></div>
+                <div>
+                    <h6 class="mb-0 font-weight-bold" style="color:var(--primary);">Tài liệu vừa upload</h6>
+                    <div class="text-muted small">Lọc theo thời gian và từ khóa; chọn dòng để xem chi tiết / xóa (chỉ khi chưa qua bước nhập liệu).</div>
+                </div>
+            </div>
+            <div class="d-flex flex-wrap align-items-center" style="gap:8px;">
+                <a asp-area="sohoa" asp-controller="Scan" asp-action="CheckScan1List" class="btn-figma btn-figma-outline btn-sm">Kiểm tra scan 1</a>
+                <a asp-area="sohoa" asp-controller="Scan" asp-action="CheckScan2List" class="btn-figma btn-figma-outline btn-sm">Kiểm tra scan 2</a>
+                <button type="button" class="btn-figma btn-figma-secondary btn-sm" id="btnDetail" disabled><i class="fas fa-info-circle mr-1"></i>Chi tiết</button>
+                <button type="button" class="btn-figma btn-figma-secondary btn-sm" id="btnPreview" disabled><i class="fas fa-file-pdf mr-1"></i>Xem PDF</button>
+                <button type="button" class="btn-figma btn-figma-outline btn-sm text-danger" style="border-color:rgba(220,53,69,.5);" id="btnDelete" disabled><i class="fas fa-trash mr-1"></i>Xóa</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="frame-figma frame-figma-combined">
+        <div class="frame-filter">
+            <form method="get" class="d-flex align-items-end flex-wrap" style="gap:10px;">
+                <div class="search-input-figma" style="min-width:220px;">
+                    <label class="small text-muted mb-1 d-block">Từ khóa</label>
+                    <input type="text" name="q" value="@req.Search" placeholder="Tên, ký hiệu…" />
+                    <i class="fas fa-search search-icon"></i>
+                </div>
+                <div>
+                    <label class="small text-muted mb-1 d-block">Từ ngày</label>
+                    <input type="date" name="from" class="form-control form-control-sm" value="@(req.StartDate?.ToString("yyyy-MM-dd"))" style="min-width:140px;" />
+                </div>
+                <div>
+                    <label class="small text-muted mb-1 d-block">Đến ngày</label>
+                    <input type="date" name="to" class="form-control form-control-sm" value="@(req.EndDate?.ToString("yyyy-MM-dd"))" style="min-width:140px;" />
+                </div>
+                <input type="hidden" name="size" value="@Model.PageSize" />
+                <button type="submit" class="btn-figma btn-figma-primary">Lọc</button>
+            </form>
+        </div>
+        <div class="p-3">
+            <p id="scan-hot-loading" class="text-muted small mb-2"><i class="fas fa-spinner fa-spin mr-1"></i>Đang tải bảng…</p>
+            <div id="scan-hot-empty" class="alert alert-light border d-none mb-0">Không có tài liệu.</div>
+            <div id="scan-hot" class="d-none"></div>
+            <partial name="_Pager" model="Model" />
+            <p class="text-muted small mt-2 mb-0"><i class="fas fa-mouse-pointer mr-1"></i>Click một dòng để chọn; double-click mở chi tiết.</p>
+        </div>
+    </div>
+</div>
+
+<form id="antiScan" class="d-none">@Html.AntiForgeryToken()</form>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/handsontable@14.1.0/dist/handsontable.full.min.js"></script>
+    <script src="~/js/shtl-handsontable.js" asp-append-version="true"></script>
+    <script>
+        (function () {
+            var detailTpl = @Html.Raw(JsonSerializer.Serialize(Url.Action("Detail", "Scan", new { area = "sohoa", id = 987654321L })));
+            var previewBase = @Html.Raw(JsonSerializer.Serialize(previewBase));
+            var deleteUrl = @Html.Raw(JsonSerializer.Serialize(deleteUrl));
+            var data = @Html.Raw(json);
+
+            var selId = null;
+            function syncToolbar() {
+                var on = selId != null && selId > 0;
+                document.getElementById('btnDetail').disabled = !on;
+                document.getElementById('btnPreview').disabled = !on;
+                document.getElementById('btnDelete').disabled = !on;
+            }
+
+            var cols = [
+                { data: 'id', title: 'ID', type: 'numeric', readOnly: true },
+                { data: 'name', title: 'Tên', readOnly: true },
+                { data: 'docType', title: 'Loại TL', readOnly: true },
+                { data: 'step', title: 'Bước', readOnly: true },
+                { data: 'status', title: 'TT', readOnly: true },
+                { data: 'fileName', title: 'File', readOnly: true },
+                { data: 'pageCount', title: 'Số trang', readOnly: true },
+                { data: 'created', title: 'Tạo lúc', readOnly: true },
+                { data: 'checked1', title: 'KS1', readOnly: true },
+                { data: 'checked2', title: 'KS2', readOnly: true }
+            ];
+            var hot = window.ShtlHot.initReadOnly('scan-hot', document.getElementById('scan-hot-loading'), document.getElementById('scan-hot-empty'), cols, data, { height: 460 });
+            if (hot) {
+                hot.addHook('afterSelectionEnd', function (r1, c1, r2, c2) {
+                    if (r1 < 0) return;
+                    selId = hot.getDataAtRowProp(r1, 'id');
+                    syncToolbar();
+                });
+                hot.addHook('afterOnCellDblClick', function (_e, coords) {
+                    if (!coords || coords.row < 0) return;
+                    var id = hot.getDataAtRowProp(coords.row, 'id');
+                    if (id) window.location.href = detailTpl.replace('987654321', String(id));
+                });
+            }
+
+            document.getElementById('btnDetail').onclick = function () {
+                if (selId) window.location.href = detailTpl.replace('987654321', String(selId));
+            };
+            document.getElementById('btnPreview').onclick = function () {
+                if (selId) window.location.href = previewBase + selId;
+            };
+            document.getElementById('btnDelete').onclick = function () {
+                if (!selId) return;
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({ title: 'Xóa tài liệu?', text: 'ID ' + selId, icon: 'warning', showCancelButton: true, confirmButtonText: 'Xóa', cancelButtonText: 'Hủy' })
+                        .then(function (r) { if (r.isConfirmed) doDelete(); });
+                } else if (confirm('Xóa tài liệu #' + selId + '?')) doDelete();
+            };
+
+            function token() {
+                var i = document.querySelector('#antiScan input[name="__RequestVerificationToken"]');
+                return i ? i.value : '';
+            }
+            function doDelete() {
+                var fd = new FormData();
+                fd.append('id', String(selId));
+                fd.append('__RequestVerificationToken', token());
+                fetch(deleteUrl, { method: 'POST', body: fd, credentials: 'same-origin' })
+                    .then(function (r) { return r.json(); })
+                    .then(function (j) {
+                        if (j.success) {
+                            if (typeof toastr !== 'undefined') toastr.success(j.message || 'Đã xóa');
+                            window.location.reload();
+                        } else {
+                            if (typeof toastr !== 'undefined') toastr.error(j.message || 'Không xóa được');
+                            else alert(j.message || 'Lỗi');
+                        }
+                    })
+                    .catch(function () { if (typeof toastr !== 'undefined') toastr.error('Lỗi mạng'); });
+            }
+        })();
+    </script>
+}

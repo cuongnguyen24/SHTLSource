@@ -1,0 +1,114 @@
+@model DocTypeOcrFixPageDto
+@using System.Linq
+@{
+    ViewData["Title"] = "OCR hậu xử lý";
+    var saveUrl = Url.Action("OcrFixSaveField", "LoaiTaiLieu", new { area = "sohoa" })!;
+    var previewUrl = Url.Action("OcrFixPreview", "LoaiTaiLieu", new { area = "sohoa" })!;
+}
+@section Breadcrumb {
+    <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="LoaiTaiLieu" asp-action="Index">Loại tài liệu</a></li>
+    <li class="breadcrumb-item active">OCR fix</li>
+}
+
+<div class="layout-expanded">
+    <div class="frame-figma mb-3">
+        <div class="frame-header">
+            <div>
+                <h6 class="mb-0 font-weight-bold" style="color:var(--primary);">@Model.DocType.Name</h6>
+                <div class="text-muted small">Chọn quy tắc OCR fix theo từng trường; lưu gọi API JSON (antiforgery qua header).</div>
+            </div>
+            <a asp-area="sohoa" asp-controller="LoaiTaiLieu" asp-action="Edit" asp-route-id="@Model.DocType.Id" class="btn-figma btn-figma-outline btn-sm">Về form</a>
+        </div>
+    </div>
+
+    @* Token ẩn để ShtlAjax.getRequestVerificationToken() đọc được *@
+    <form class="d-none">@Html.AntiForgeryToken()</form>
+
+@foreach (var s in Model.FieldSettings)
+{
+    var field = Model.FieldById.TryGetValue(s.IdField, out var f) ? f : null;
+    var title = field?.Title ?? s.Title ?? ("Field " + s.IdField);
+    var picked = Model.OcrFixRuleIdsByFieldId.TryGetValue(s.IdField, out var ruleIds) ? ruleIds.ToList() : new List<int>();
+    <div class="card-figma mb-3" data-field-id="@s.IdField">
+        <div class="card-header-figma d-flex justify-content-between align-items-center">
+            <h3 class="card-title-figma mb-0">@title</h3>
+            <div class="custom-control custom-checkbox mb-0">
+                <input type="checkbox" class="custom-control-input ocr-use" id="use_@s.IdField" @(s.IsOcrFix ? "checked" : null) />
+                <label class="custom-control-label" for="use_@s.IdField">Bật OCR fix</label>
+            </div>
+        </div>
+        <div class="card-content-figma">
+            <div class="form-group">
+                <label class="small text-muted">Quy tắc (giữ Ctrl để chọn nhiều)</label>
+                <select class="form-control ocr-rules" multiple size="6" data-field="@s.IdField">
+                    @foreach (var fix in Model.OcrFixes)
+                    {
+                        if (picked.Contains(fix.Id))
+                        { <option value="@fix.Id" selected="selected">@fix.Name (@fix.Type)</option> }
+                        else
+                        { <option value="@fix.Id">@fix.Name (@fix.Type)</option> }
+                    }
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="small text-muted">Văn bản thử</label>
+                <textarea class="form-control ocr-input" rows="2" placeholder="Nhập mẫu…"></textarea>
+            </div>
+            <div class="d-flex flex-wrap" style="gap:8px;">
+                <button type="button" class="btn-figma btn-figma-primary btn-sm btn-save-field"><i class="fas fa-save mr-1"></i>Lưu trường này</button>
+                <button type="button" class="btn-figma btn-figma-outline btn-sm btn-preview"><i class="fas fa-eye mr-1"></i>Xem trước</button>
+            </div>
+            <pre class="ocr-out small bg-light border rounded p-2 mt-2 mb-0 d-none"></pre>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script src="~/js/shtl-ajax.js" asp-append-version="true"></script>
+    <script>
+        (function () {
+            var saveUrl = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(saveUrl));
+            var previewUrl = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(previewUrl));
+            var idDoctype = @Model.DocType.Id;
+
+            function token() { return window.ShtlAjax.getRequestVerificationToken(); }
+
+            function buildFormData(card) {
+                var fd = new FormData();
+                fd.append('__RequestVerificationToken', token());
+                fd.append('idDoctype', String(idDoctype));
+                var fid = card.getAttribute('data-field-id');
+                fd.append('IDField', fid);
+                fd.append('IsUse', card.querySelector('.ocr-use').checked ? 'true' : 'false');
+                var sel = card.querySelector('.ocr-rules');
+                var parts = [];
+                for (var i = 0; i < sel.options.length; i++)
+                    if (sel.options[i].selected) parts.push(sel.options[i].value);
+                fd.append('FieldOCRFix_' + fid, parts.join(','));
+                fd.append('Input', card.querySelector('.ocr-input').value || '');
+                return fd;
+            }
+
+            document.querySelectorAll('.card-figma[data-field-id]').forEach(function (card) {
+                card.querySelector('.btn-save-field').addEventListener('click', function () {
+                    fetch(saveUrl, { method: 'POST', body: buildFormData(card), credentials: 'same-origin', headers: { 'RequestVerificationToken': token() } })
+                        .then(function (r) { return r.json(); })
+                        .then(function (j) {
+                            if (typeof toastr !== 'undefined') toastr[j.success ? 'success' : 'error'](j.message || (j.success ? 'OK' : 'Lỗi'));
+                        })
+                        .catch(function () { if (typeof toastr !== 'undefined') toastr.error('Lỗi mạng'); });
+                });
+                card.querySelector('.btn-preview').addEventListener('click', function () {
+                    var pre = card.querySelector('.ocr-out');
+                    fetch(previewUrl, { method: 'POST', body: buildFormData(card), credentials: 'same-origin', headers: { 'RequestVerificationToken': token() } })
+                        .then(function (r) { return r.json(); })
+                        .then(function (j) {
+                            pre.classList.remove('d-none');
+                            pre.textContent = j.result != null ? j.result : JSON.stringify(j);
+                        })
+                        .catch(function () { pre.classList.remove('d-none'); pre.textContent = 'Lỗi mạng'; });
+                });
+            });
+        })();
+    </script>
+}

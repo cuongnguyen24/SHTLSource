@@ -5,6 +5,7 @@ using SHTL.Modules.Core.Domain.Enums;
 using SHTL.Modules.Infrastructure.Data.Repositories.Log;
 using SHTL.Modules.Infrastructure.Data.Repositories.Stg;
 using Microsoft.Extensions.Logging;
+using SHTL.Modules.Core.Application.Services.Axe;
 using SHTL.Modules.Shared.Contracts;
 using SHTL.Modules.Shared.Contracts.Dtos;
 using StgExportType = SHTL.Modules.Core.Domain.Entities.Stg.ExportType;
@@ -362,6 +363,15 @@ public class DocumentWorkflowService : IDocumentWorkflowService
 
     private static void MapExtractFields(Document doc, ExtractRequest req)
     {
+        if (req.StgFieldValues is { Count: > 0 })
+        {
+            foreach (var kv in req.StgFieldValues)
+            {
+                if (string.IsNullOrWhiteSpace(kv.Key)) continue;
+                StgFieldToDocumentMapper.ApplyValue(doc, kv.Key, kv.Value);
+            }
+        }
+
         doc.Field1 = req.Field1 ?? doc.Field1;
         doc.Field2 = req.Field2 ?? doc.Field2;
         doc.Field3 = req.Field3 ?? doc.Field3;

@@ -1,0 +1,53 @@
+<!-- ============================================================
+     Global File Preview Modal
+     Khai báo một lần trong _Layout.cshtml, dùng bởi toàn bộ hệ thống.
+     Điều khiển bằng JavaScript: FilePreview.open(id, name, ext, options)
+     ============================================================ -->
+<style>
+    /* Đảm bảo modal-body không cắt nội dung preview */
+    #filePreviewModal .modal-body {
+        padding: 0 !important;
+        overflow: hidden !important;
+        position: relative;
+    }
+    /* Cho phép modal-dialog kéo dãn theo chiều cao màn hình */
+    #filePreviewModal .modal-dialog {
+        max-width: 92vw;
+        margin: 20px auto;
+    }
+    #filePreviewModal .modal-content-figma {
+        display: flex;
+        flex-direction: column;
+        max-height: calc(100vh - 40px);
+    }
+</style>
+<div class="modal fade" id="filePreviewModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content-figma">
+            <div class="modal-header-figma" style="display:flex; align-items:center; justify-content:space-between;">
+                <div class="d-flex align-items-center" style="gap:10px; min-width:0; flex:1;">
+                    <i id="filePreviewIcon" class="fas fa-file text-muted" style="font-size:18px; flex-shrink:0;"></i>
+                    <h5 class="modal-title mb-0 text-truncate" id="filePreviewTitle" style="font-size:15px;">Xem trước tài liệu</h5>
+                    <span id="filePreviewMeta" class="badge badge-secondary" style="font-size:10px; flex-shrink:0;"></span>
+                </div>
+                <button type="button" class="close ml-3" data-dismiss="modal" style="flex-shrink:0;">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body p-0" style="overflow:hidden;">
+                <div id="filePreviewContent"
+                     style="min-height:500px; background:#0f172a; display:flex; align-items:center; justify-content:center;">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="sr-only">Đang tải...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer-figma">
+                <div id="filePreviewInfo" class="mr-auto text-muted" style="font-size:12px;"></div>
+                <a href="#" id="filePreviewDownloadBtn" class="btn-figma btn-figma-primary">
+                    <i class="fas fa-download mr-1"></i> Tải về
+                </a>
+            </div>
+        </div>
+    </div>
+</div>

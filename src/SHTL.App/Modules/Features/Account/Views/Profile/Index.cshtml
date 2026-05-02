@@ -1,0 +1,47 @@
+@model ProfileVm
+@{
+    ViewData["Title"] = "Hồ sơ";
+}
+@section Breadcrumb {
+    <li class="breadcrumb-item active">Hồ sơ</li>
+}
+
+<div class="layout-expanded">
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card-figma">
+            <div class="card-header-figma d-flex align-items-center justify-content-between">
+                <h3 class="card-title-figma mb-0"><i class="fas fa-user mr-2" style="color: var(--primary);"></i>Thông tin tài khoản</h3>
+                @if (Model.IsAdmin)
+                {
+                    <span class="badge badge-primary">Admin</span>
+                }
+            </div>
+            <div class="card-content-figma">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4 text-muted small">Họ tên</dt>
+                    <dd class="col-sm-8">@(string.IsNullOrEmpty(Model.FullName) ? "—" : Model.FullName)</dd>
+                    <dt class="col-sm-4 text-muted small">Tài khoản</dt>
+                    <dd class="col-sm-8"><code>@Model.UserName</code></dd>
+                    <dt class="col-sm-4 text-muted small">Mã người dùng</dt>
+                    <dd class="col-sm-8">@Model.UserId</dd>
+                    <dt class="col-sm-4 text-muted small">Vai trò</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.Roles.Count == 0)
+                        {
+                            <span class="text-muted">—</span>
+                        }
+                        else
+                        {
+                            @foreach (var r in Model.Roles)
+                            {
+                                <span class="badge badge-light border mr-1 mb-1">@r</span>
+                            }
+                        }
+                    </dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+</div>

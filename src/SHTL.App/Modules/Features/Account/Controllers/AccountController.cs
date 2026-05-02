@@ -49,6 +49,10 @@ public class AccountController : Controller
 
     [AllowAnonymous]
     [HttpGet]
+    public IActionResult AccessDenied() => View();
+
+    [AllowAnonymous]
+    [HttpGet]
     public IActionResult Login(string? returnUrl)
     {
         if (User.Identity?.IsAuthenticated == true)

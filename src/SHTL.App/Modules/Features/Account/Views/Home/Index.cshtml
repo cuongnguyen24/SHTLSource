@@ -1,0 +1,17 @@
+@{
+    ViewData["Title"] = "Tài khoản";
+}
+@section Breadcrumb {
+    <li class="breadcrumb-item active">Tài khoản</li>
+}
+
+<div class="layout-expanded">
+<div class="card-figma">
+    <div class="card-content-figma py-4">
+        <h4 class="font-weight-bold mb-2">Khu vực tài khoản</h4>
+        <p class="text-muted mb-3">Chọn thao tác bên dưới.</p>
+        <a asp-area="account" asp-controller="Profile" asp-action="Index" class="btn-figma btn-figma-primary mr-2 mb-2"><i class="fas fa-user mr-1"></i>Hồ sơ</a>
+        <a asp-area="account" asp-controller="Home" asp-action="Privacy" class="btn-figma btn-figma-outline mb-2"><i class="fas fa-shield-alt mr-1"></i>Quyền riêng tư</a>
+    </div>
+</div>
+</div>

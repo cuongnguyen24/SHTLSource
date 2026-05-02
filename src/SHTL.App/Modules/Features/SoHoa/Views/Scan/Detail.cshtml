@@ -1,0 +1,76 @@
+@model DocumentDto
+@{
+    ViewData["Title"] = "Chi tiết tài liệu — " + Model.Name;
+    var isPdf = !string.IsNullOrEmpty(Model.Extension) && Model.Extension.Trim().TrimStart('.').Equals("pdf", StringComparison.OrdinalIgnoreCase)
+        || (Model.Name?.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) ?? false)
+        || (Model.FileName?.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) ?? false)
+        || (Model.FilePath?.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) ?? false);
+    var previewUrl = Url.Content("~/scan/preview/" + Model.Id);
+    var downloadUrl = Url.Content("~/scan/download/" + Model.Id);
+}
+@section Breadcrumb {
+    <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="Scan" asp-action="Index">Scan</a></li>
+    <li class="breadcrumb-item active">Chi tiết #@Model.Id</li>
+}
+
+<div class="layout-expanded">
+    <div class="frame-figma mb-3">
+        <div class="frame-header">
+            <div>
+                <h6 class="mb-0 font-weight-bold" style="color:var(--primary);">@Model.Name</h6>
+                <div class="text-muted small">ID: @Model.Id · Bước: @Model.CurrentStep · @Model.Status</div>
+            </div>
+            <div class="d-flex flex-wrap" style="gap:8px;">
+                <a asp-area="sohoa" asp-controller="Scan" asp-action="Index" class="btn-figma btn-figma-secondary btn-sm">Danh sách</a>
+                @if (isPdf)
+                {
+                    <a href="@previewUrl" class="btn-figma btn-figma-primary btn-sm" target="_blank" rel="noopener"><i class="fas fa-file-pdf mr-1"></i>Xem PDF</a>
+                    <a href="@downloadUrl" class="btn-figma btn-figma-outline btn-sm"><i class="fas fa-download mr-1"></i>Tải xuống</a>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card-figma mb-3">
+                <div class="card-header-figma"><h3 class="card-title-figma mb-0">Thông tin</h3></div>
+                <div class="card-content-figma">
+                    <dl class="row mb-0 small">
+                        <dt class="col-sm-4 text-muted">Loại tài liệu</dt>
+                        <dd class="col-sm-8">@(Model.DocTypeName ?? "—")</dd>
+                        <dt class="col-sm-4 text-muted">Ký hiệu / Số hồ sơ</dt>
+                        <dd class="col-sm-8">@(Model.SymbolNo ?? "—") / @(Model.RecordNo ?? "—")</dd>
+                        <dt class="col-sm-4 text-muted">Cơ quan ban hành</dt>
+                        <dd class="col-sm-8">@(Model.IssuedBy ?? "—")</dd>
+                        <dt class="col-sm-4 text-muted">Ngày ban hành</dt>
+                        <dd class="col-sm-8">@(Model.Issued?.ToString("yyyy-MM-dd") ?? "—")</dd>
+                        <dt class="col-sm-4 text-muted">Tác giả</dt>
+                        <dd class="col-sm-8">@(Model.Author ?? "—")</dd>
+                        <dt class="col-sm-4 text-muted">Ghi chú</dt>
+                        <dd class="col-sm-8">@(Model.Noted ?? "—")</dd>
+                        <dt class="col-sm-4 text-muted">File</dt>
+                        <dd class="col-sm-8"><code class="small">@(Model.FileName ?? Model.FilePath ?? "—")</code></dd>
+                        <dt class="col-sm-4 text-muted">Kích thước / Trang</dt>
+                        <dd class="col-sm-8">@Model.FileSize bytes · @Model.PageCount trang</dd>
+                        <dt class="col-sm-4 text-muted">Tạo bởi</dt>
+                        <dd class="col-sm-8">@(Model.CreatedByName ?? Model.CreatedBy.ToString()) · @Model.Created.ToString("yyyy-MM-dd HH:mm")</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card-figma mb-3">
+                <div class="card-header-figma"><h3 class="card-title-figma mb-0">Quy trình</h3></div>
+                <div class="card-content-figma small">
+                    <ul class="list-unstyled mb-0">
+                        <li><i class="fas fa-@(Model.IsCheckedScan1 ? "check text-success" : "minus text-muted") mr-2"></i>Kiểm tra scan 1</li>
+                        <li><i class="fas fa-@(Model.IsCheckedScan2 ? "check text-success" : "minus text-muted") mr-2"></i>Kiểm tra scan 2</li>
+                        <li><i class="fas fa-@(Model.IsZoned ? "check text-success" : "minus text-muted") mr-2"></i>Khoanh vùng</li>
+                        <li><i class="fas fa-@(Model.IsExtracted ? "check text-success" : "minus text-muted") mr-2"></i>Nhập liệu</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

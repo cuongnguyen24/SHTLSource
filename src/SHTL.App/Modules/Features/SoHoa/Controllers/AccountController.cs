@@ -51,5 +51,6 @@ public class AccountController : Controller
     }
 
     [HttpGet]
-    public IActionResult AccessDenied() => View();
+    public IActionResult AccessDenied() =>
+        RedirectToAction("AccessDenied", "Account", new { area = "account" });
 }

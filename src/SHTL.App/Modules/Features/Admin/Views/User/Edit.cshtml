@@ -1,0 +1,101 @@
+@model UpdateUserRequest
+@{
+    ViewData["Title"] = "Sửa người dùng";
+    var depts = ViewBag.Depts as IEnumerable<DeptDto> ?? Enumerable.Empty<DeptDto>();
+    var uname = ViewBag.UserNameReadOnly as string ?? "";
+}
+@section Breadcrumb {
+    <li class="breadcrumb-item"><a asp-action="Index" asp-controller="User">Người dùng</a></li>
+    <li class="breadcrumb-item active">@uname</li>
+}
+<div class="layout-expanded">
+    <div class="frame-figma mb-3">
+        <div class="frame-header">
+            <div class="d-flex align-items-center">
+                <div class="mr-3 d-flex align-items-center justify-content-center" style="width:36px;height:36px;background:var(--primary-light);color:var(--primary);border-radius:8px;"><i class="fas fa-user-edit"></i></div>
+                <div>
+                    <h6 class="mb-0 font-weight-bold" style="color:var(--primary);">Sửa người dùng</h6>
+                    <div class="text-muted small">@uname</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-7">
+            <div class="card-figma mb-3">
+                <div class="card-header-figma"><h3 class="card-title-figma mb-0">Thông tin</h3></div>
+                <div class="card-content-figma">
+                    <div asp-validation-summary="All" class="text-danger mb-3"></div>
+                    <form asp-action="Edit" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" asp-for="Id" />
+                        <div class="form-group-figma">
+                            <label class="label-figma">Tài khoản</label>
+                            <input class="form-control" value="@uname" readonly disabled />
+                        </div>
+                        <div class="form-group-figma">
+                            <label asp-for="FullName" class="label-figma"></label>
+                            <input asp-for="FullName" class="form-control" />
+                        </div>
+                        <div class="form-group-figma">
+                            <label asp-for="Email" class="label-figma"></label>
+                            <input asp-for="Email" class="form-control" />
+                        </div>
+                        <div class="form-group-figma">
+                            <label asp-for="Phone" class="label-figma"></label>
+                            <input asp-for="Phone" class="form-control" />
+                        </div>
+                        <div class="form-group-figma">
+                            <label asp-for="DeptId" class="label-figma"></label>
+                            <select asp-for="DeptId" class="form-control">
+                                @foreach (var d in depts)
+                                {
+                                    <option value="@d.Id">@d.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="form-group-figma">
+                            <label asp-for="PositionId" class="label-figma"></label>
+                            <input asp-for="PositionId" class="form-control" />
+                        </div>
+                        <div class="custom-control custom-checkbox mb-2">
+                            <input asp-for="IsActive" class="custom-control-input" id="userActive" />
+                            <label asp-for="IsActive" class="custom-control-label" for="userActive"></label>
+                        </div>
+                        <div class="custom-control custom-checkbox mb-3">
+                            <input asp-for="IsAdmin" class="custom-control-input" id="userAdmin" />
+                            <label asp-for="IsAdmin" class="custom-control-label" for="userAdmin"></label>
+                        </div>
+                        <div class="d-flex flex-wrap" style="gap:8px;">
+                            <button type="submit" class="btn-figma btn-figma-primary">Cập nhật</button>
+                            <a asp-action="Index" class="btn-figma btn-figma-outline">Quay lại</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="card-figma">
+                <div class="card-header-figma"><h3 class="card-title-figma mb-0">Đặt lại mật khẩu (admin)</h3></div>
+                <div class="card-content-figma">
+                    <form asp-action="ResetPassword" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="userId" value="@Model.Id" />
+                        <div class="form-group-figma">
+                            <label class="label-figma" for="npw">Mật khẩu mới</label>
+                            <input type="password" id="npw" name="NewPassword" class="form-control" required minlength="6" />
+                        </div>
+                        <div class="form-group-figma">
+                            <label class="label-figma" for="cpw">Xác nhận</label>
+                            <input type="password" id="cpw" name="ConfirmPassword" class="form-control" required minlength="6" />
+                        </div>
+                        <button type="submit" class="btn-figma btn-figma-destructive">Đặt lại mật khẩu</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

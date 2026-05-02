@@ -1,0 +1,26 @@
+@model IEnumerable<RecordTypeDto>
+@{ ViewData["Title"] = "Record Type"; }
+@section Breadcrumb { <li class="breadcrumb-item active">Record Type</li> }
+<div class="layout-expanded">
+    <div class="frame-figma mb-3">
+        <div class="frame-header">
+            <div class="d-flex align-items-center">
+                <div class="mr-3 d-flex align-items-center justify-content-center" style="width:36px;height:36px;background:var(--primary-light);color:var(--primary);border-radius:8px;"><i class="fas fa-folder"></i></div>
+                <div>
+                    <h6 class="mb-0 font-weight-bold" style="color:var(--primary);">Record Type</h6>
+                    <div class="text-muted small">Danh mục loại hồ sơ</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="frame-figma frame-figma-combined">
+        <div class="p-3">
+            <div class="table-container-figma">
+                <table class="table table-sm table-figma mb-0">
+                    <thead><tr><th>Id</th><th>Tên</th><th>Mã</th></tr></thead>
+                    <tbody>@foreach (var x in Model) { <tr><td>@x.Id</td><td>@x.Name</td><td><code>@x.Code</code></td></tr> }</tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
