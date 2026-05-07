@@ -19,11 +19,13 @@ public interface IDocumentService
 public class DocumentService : IDocumentService
 {
     private readonly IDocumentRepository _docRepo;
+    private readonly IAxeDocTypeRepository _docTypeRepo;
     private readonly IStorageService _storage;
 
-    public DocumentService(IDocumentRepository docRepo, IStorageService storage)
+    public DocumentService(IDocumentRepository docRepo, IAxeDocTypeRepository docTypeRepo, IStorageService storage)
     {
         _docRepo = docRepo;
+        _docTypeRepo = docTypeRepo;
         _storage = storage;
     }
 
@@ -41,10 +43,17 @@ public class DocumentService : IDocumentService
         };
         var items = await _docRepo.GetListAsync(filter, req.PageIndex, req.PageSize);
         var count = await _docRepo.CountAsync(filter);
+        var docTypeMap = (await _docTypeRepo.ListDocTypesBriefAsync())
+            .GroupBy(x => x.Id)
+            .ToDictionary(g => g.Key, g => g.First().Name);
 
         return new PaginatedResult<DocumentDto>
         {
-            Items = items.Select(MapToDto),
+            Items = items.Select(x =>
+            {
+                docTypeMap.TryGetValue(x.DocTypeId, out var docTypeName);
+                return MapToDto(x, docTypeName);
+            }),
             TotalCount = count,
             PageIndex = req.PageIndex,
             PageSize = req.PageSize
@@ -55,7 +64,11 @@ public class DocumentService : IDocumentService
     {
         var doc = await _docRepo.GetByIdAsync(id);
         if (doc is null) return null;
-        return MapToDto(doc);
+        var docTypeMap = (await _docTypeRepo.ListDocTypesBriefAsync())
+            .GroupBy(x => x.Id)
+            .ToDictionary(g => g.Key, g => g.First().Name);
+        docTypeMap.TryGetValue(doc.DocTypeId, out var docTypeName);
+        return MapToDto(doc, docTypeName);
     }
 
     public async Task<ApiResult<long>> CreateFromUploadAsync(UploadCallbackRequest req, ICurrentUser user)
@@ -125,7 +138,7 @@ public class DocumentService : IDocumentService
         return ApiResult.Ok("Đã cập nhật thông tin tài liệu");
     }
 
-    private static DocumentDto MapToDto(Document doc) => new()
+    private static DocumentDto MapToDto(Document doc, string? docTypeName = null) => new()
     {
         Id = doc.Id,
         Name = doc.Name,
@@ -147,6 +160,7 @@ public class DocumentService : IDocumentService
         Checked1ReturnReason = doc.Checked1ReturnReason,
         Checked2ReturnReason = doc.Checked2ReturnReason,
         DocTypeId = doc.DocTypeId,
+        DocTypeName = docTypeName,
         FolderId = (int)doc.FolderId,
         CurrentStep = doc.CurrentStep,
         Status = doc.Status,

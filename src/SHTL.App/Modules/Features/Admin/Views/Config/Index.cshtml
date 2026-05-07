@@ -1,53 +1,293 @@
 @model IEnumerable<ConfigItemDto>
 @{
     ViewData["Title"] = "Cấu hình thông số";
+    var configs = Model.OrderBy(x => x.GroupName).ThenBy(x => x.Key).ToList();
+    var groups = configs.Select(x => string.IsNullOrWhiteSpace(x.GroupName) ? "Khác" : x.GroupName!).Distinct().ToList();
 }
-@section Breadcrumb { <li class="breadcrumb-item active">Cấu hình</li> }
+@section Breadcrumb {
+    <li class="breadcrumb-item"><a asp-area="admin" asp-controller="Home" asp-action="Index">Tổng quan</a></li>
+    <li class="breadcrumb-item active">Cấu hình</li>
+}
+@section Styles {
+    <style>
+        .cfg-table { table-layout: fixed; }
+        .cfg-table tbody tr:hover { background-color: #f9f9f9; }
+        .cfg-table th, .cfg-table td { vertical-align: middle !important; }
+        .cfg-table td { padding-top: 6px; padding-bottom: 6px; }
+        .cfg-group-row { background: #f4f6f8; font-weight: 600; }
+        .cfg-group-row td { padding-top: 5px; padding-bottom: 5px; }
+        .action-btn { padding: 4px 8px; margin: 0 2px; font-size: 12px; }
+        .action-btn i { margin-right: 0; }
+        .cfg-value {
+            white-space: pre-wrap;
+            word-break: break-word;
+            display: flex;
+            align-items: center;
+            min-height: 28px;
+        }
+        .switch-wrap {
+            display: inline-flex;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 24px;
+        }
+        .switch-wrap label { margin: 0; }
+        .switch-wrap input[type=checkbox].checkbox-slider {
+            position: absolute;
+            opacity: 0;
+            width: 1px;
+            height: 1px;
+            pointer-events: none;
+        }
+        .switch-wrap input[type=checkbox].checkbox-slider ~ .text {
+            position: relative;
+            display: inline-block;
+            min-width: 56px;
+            height: 20px;
+            border-radius: 999px;
+            border: 1px solid #c9d3dd;
+            background: #fff;
+            transition: all .2s ease;
+            padding-left: 30px;
+            line-height: 18px;
+            color: #8a97a8;
+            font-size: 11px;
+            user-select: none;
+        }
+        .switch-wrap input[type=checkbox].checkbox-slider ~ .text:before {
+            content: "\f00d";
+            font-family: "Font Awesome 5 Free";
+            font-weight: 900;
+            position: absolute;
+            left: 3px;
+            top: 2px;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #eaf0f6;
+            color: #4a90e2;
+            text-align: center;
+            line-height: 14px;
+            font-size: 10px;
+            transition: all .2s ease;
+        }
+        .switch-wrap input[type=checkbox].checkbox-slider ~ .text:after {
+            content: "OFF";
+            letter-spacing: .3px;
+        }
+        .switch-wrap input[type=checkbox].checkbox-slider:checked ~ .text {
+            border-color: #4a90e2;
+            color: transparent;
+            padding-left: 0;
+        }
+        .switch-wrap input[type=checkbox].checkbox-slider:checked ~ .text:before {
+            content: "\f00c";
+            left: 38px;
+            background: #eaf0f6;
+            color: #4a90e2;
+        }
+        .switch-wrap input[type=checkbox].checkbox-slider:checked ~ .text:after {
+            content: "";
+        }
+    </style>
+}
+
 <div class="layout-expanded">
-    <div class="frame-figma mb-3"><div class="frame-header"><h6 class="mb-0 font-weight-bold" style="color:var(--primary);">Tham số hệ thống</h6></div></div>
-    <div class="frame-figma frame-figma-combined p-0">
-        <div class="p-3">
-        @Html.AntiForgeryToken()
-        <div class="table-container-figma">
-            <table class="table table-sm table-figma table-hover mb-0">
-                <thead><tr><th>Key</th><th>Giá trị</th><th>Nhóm</th><th></th></tr></thead>
-                <tbody>
-                @foreach (var c in Model)
-                {
-                    <tr>
-                        <td><code>@c.Key</code></td>
-                        <td style="max-width:320px;word-break:break-all;">@(c.Value ?? "")</td>
-                        <td>@c.GroupName</td>
-                        <td><button type="button" class="btn-figma btn-figma-outline btn-sm btn-edit-cfg" data-key="@c.Key" data-val="@(c.Value ?? "")">Sửa</button></td>
-                    </tr>
-                }
-                </tbody>
-            </table>
+    <div class="frame-figma mb-3">
+        <div class="frame-header">
+            <div class="d-flex align-items-center">
+                <div class="mr-3 d-flex align-items-center justify-content-center" style="width:32px;height:32px;background:var(--primary-light);color:var(--primary);border-radius:6px;">
+                    <i class="fas fa-sliders-h"></i>
+                </div>
+                <div>
+                    <h6 class="mb-0 font-weight-bold" style="color:var(--primary);">Cấu hình thông số</h6>
+                    <div class="text-muted small">Quản lý tham số hệ thống theo nhóm chức năng</div>
+                </div>
+            </div>
+            <button type="button" class="btn-figma btn-figma-primary btn-sm" id="btnCreateCfg">
+                <i class="fas fa-plus mr-1"></i>Tạo mới
+            </button>
         </div>
+    </div>
+
+    <div class="frame-figma frame-figma-combined">
+        <div class="p-3">
+            @Html.AntiForgeryToken()
+            @if (!configs.Any())
+            {
+                <div class="alert alert-light border mb-0">Chưa có cấu hình.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover cfg-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:42%;">Thông tin cấu hình</th>
+                                <th style="width: 220px;">Mã</th>
+                                <th style="width:38%;">Giá trị</th>
+                                <th style="width: 120px;">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var grp in groups)
+                            {
+                                <tr class="cfg-group-row">
+                                    <td><i class="fas fa-caret-down mr-1"></i>@grp</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                                foreach (var item in configs.Where(x => (string.IsNullOrWhiteSpace(x.GroupName) ? "Khác" : x.GroupName) == grp))
+                                {
+                                    var isToggle = item.Key.StartsWith("Is", StringComparison.OrdinalIgnoreCase);
+                                    var isOn = string.Equals(item.Value, "1", StringComparison.OrdinalIgnoreCase)
+                                               || string.Equals(item.Value, "true", StringComparison.OrdinalIgnoreCase)
+                                               || string.Equals(item.Value, "on", StringComparison.OrdinalIgnoreCase);
+                                    <tr>
+                                        <td>@item.Description</td>
+                                        <td><code>@item.Key</code></td>
+                                        <td>
+                                            @if (isToggle)
+                                            {
+                                                <div class="cfg-value">
+                                                <span class="switch-wrap">
+                                                    <label>
+                                                        <input type="checkbox"
+                                                               class="checkbox-slider slider-icon colored-blue cfg-toggle"
+                                                               data-key="@item.Key"
+                                                               @(isOn ? "checked" : null) />
+                                                        <span class="text"></span>
+                                                    </label>
+                                                </span>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <div class="cfg-value">@item.Value</div>
+                                            }
+                                        </td>
+                                        <td class="text-center">
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-primary action-btn btn-edit-cfg"
+                                                    data-key="@item.Key"
+                                                    data-group="@(item.GroupName ?? "")"
+                                                    data-desc="@(item.Description ?? "")"
+                                                    data-val="@(item.Value ?? "")">
+                                                <i class="fas fa-pencil-alt"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="cfgModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header" style="background:#0b6c8e;color:#fff;">
+                <h5 class="modal-title" id="cfgModalTitle">Chỉnh sửa thông tin cấu hình</h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <input type="text" id="cfgKey" class="form-control" placeholder="Mã cấu hình" />
+                </div>
+                <div class="form-group">
+                    <input type="text" id="cfgDesc" class="form-control" placeholder="Tên cấu hình" />
+                </div>
+                <div class="form-group">
+                    <input type="text" id="cfgGroup" class="form-control" placeholder="Tên module" />
+                </div>
+                <div class="form-group mb-0">
+                    <textarea id="cfgValue" class="form-control" rows="4" placeholder="Giá trị"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-figma btn-figma-primary" id="btnSaveCfg">Xong</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
 <script>
 $(function () {
-    $('.btn-edit-cfg').on('click', function () {
-        var key = $(this).data('key');
-        var val = $(this).data('val');
-        var nv = prompt('Giá trị mới cho ' + key + ':', val);
-        if (nv === null) return;
-        var token = $('input[name="__RequestVerificationToken"]').val();
+    function token() {
+        return $('input[name="__RequestVerificationToken"]').val();
+    }
+
+    function saveConfig(payload, onDone) {
+        payload.__RequestVerificationToken = token();
         $.ajax({
-            url: '@Url.Action("SaveConfig", "Config")',
+            url: '@Url.Action("SaveConfig", "Config", new { area = "admin" })',
             type: 'POST',
-            headers: { 'RequestVerificationToken': token },
-            contentType: 'application/json',
-            data: JSON.stringify({ key: key, value: nv }),
+            data: payload,
             success: function (r) {
-                if (r.success) { toastr.success(r.message || 'Đã lưu'); location.reload(); }
-                else toastr.error(r.message || 'Lỗi');
+                var ok = (r && (r.success === true || r.Success === true));
+                var msg = (r && (r.message || r.Message)) || '';
+                if (ok) {
+                    toastr.success(msg || 'Đã lưu');
+                    if (onDone) onDone();
+                    location.reload();
+                } else {
+                    toastr.error(msg || 'Lỗi');
+                }
             },
-            error: function () { toastr.error('Lỗi mạng'); }
+            error: function (xhr) {
+                var fallback = 'Lỗi mạng';
+                if (xhr && xhr.responseText) {
+                    fallback = xhr.responseText.length > 220 ? xhr.responseText.substring(0, 220) + '...' : xhr.responseText;
+                }
+                toastr.error(fallback);
+            }
         });
+    }
+
+    $('#btnCreateCfg').on('click', function () {
+        $('#cfgModalTitle').text('Tạo mới thông tin cấu hình');
+        $('#cfgKey').val('').prop('readonly', false);
+        $('#cfgDesc').val('');
+        $('#cfgGroup').val('');
+        $('#cfgValue').val('');
+        $('#cfgModal').modal('show');
+    });
+
+    $('.btn-edit-cfg').on('click', function () {
+        $('#cfgModalTitle').text('Chỉnh sửa thông tin cấu hình');
+        $('#cfgKey').val($(this).data('key')).prop('readonly', true);
+        $('#cfgDesc').val($(this).data('desc'));
+        $('#cfgGroup').val($(this).data('group'));
+        $('#cfgValue').val($(this).data('val'));
+        $('#cfgModal').modal('show');
+    });
+
+    $('#btnSaveCfg').on('click', function () {
+        var key = ($('#cfgKey').val() || '').toString().trim();
+        var desc = ($('#cfgDesc').val() || '').toString().trim();
+        var groupName = ($('#cfgGroup').val() || '').toString().trim();
+        var value = ($('#cfgValue').val() || '').toString();
+
+        if (!key) {
+            toastr.error('Nhập mã cấu hình');
+            return;
+        }
+
+        saveConfig({ key: key, value: value, groupName: groupName || null, description: desc || null });
+    });
+
+    $('.cfg-toggle').on('change', function () {
+        var key = $(this).data('key');
+        var value = this.checked ? '1' : '0';
+        saveConfig({ key: key, value: value });
     });
 });
 </script>

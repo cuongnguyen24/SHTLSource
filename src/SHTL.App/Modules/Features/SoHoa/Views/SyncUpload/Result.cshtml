@@ -1,0 +1,129 @@
+@model List<WebSyncUploadItemResult>
+@{
+    ViewData["Title"] = "Kết quả upload";
+    var successCount = Model.Count(x => x.Success);
+    var failCount = Model.Count(x => !x.Success);
+}
+@section Breadcrumb {
+    <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="Home" asp-action="Index">Tổng quan</a></li>
+    <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="SyncUpload" asp-action="Index">Upload đồng bộ</a></li>
+    <li class="breadcrumb-item active">Kết quả</li>
+}
+
+<div class="layout-expanded">
+    <div class="frame-figma mb-3">
+        <div class="frame-header">
+            <div class="d-flex align-items-center">
+                <div class="mr-3 d-flex align-items-center justify-content-center" style="width:32px;height:32px;background:var(--primary-light);color:var(--primary);border-radius:6px;">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div>
+                    <h6 class="mb-0 font-weight-bold" style="color:var(--primary);">Kết quả upload đồng bộ</h6>
+                    <div class="text-muted small">
+                        Thành công: <strong class="text-success">@successCount</strong> | 
+                        Lỗi: <strong class="text-danger">@failCount</strong>
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex flex-wrap" style="gap:8px;">
+                <a asp-area="sohoa" asp-controller="SyncUpload" asp-action="Index" class="btn-figma btn-figma-primary btn-sm">
+                    <i class="fas fa-upload mr-1"></i>Upload tiếp
+                </a>
+                <a asp-area="sohoa" asp-controller="Scan" asp-action="Index" class="btn-figma btn-figma-outline btn-sm">
+                    <i class="fas fa-list mr-1"></i>Xem danh sách
+                </a>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.Count == 0)
+    {
+        <div class="alert alert-light border">
+            <i class="fas fa-info-circle mr-2"></i>Không có kết quả.
+        </div>
+    }
+    else
+    {
+        <div class="frame-figma">
+            <div class="card-content-figma p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 40px;">STT</th>
+                                <th style="width: 80px;">Trạng thái</th>
+                                <th>File</th>
+                                <th>Đường dẫn tương đối</th>
+                                <th>Thông báo</th>
+                                <th style="width: 100px;">ID Tài liệu</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{
+                                int stt = 1;
+                                foreach (var item in Model)
+                                {
+                                    <tr class="@(item.Success ? "" : "table-danger")">
+                                        <td class="text-center">@stt</td>
+                                        <td>
+                                            @if (item.Success)
+                                            {
+                                                <span class="badge badge-success">
+                                                    <i class="fas fa-check mr-1"></i>Thành công
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge badge-danger">
+                                                    <i class="fas fa-times mr-1"></i>Lỗi
+                                                </span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <i class="fas fa-file-pdf text-danger mr-1"></i>
+                                            <small>@item.FileName</small>
+                                        </td>
+                                        <td><small class="text-muted">@(item.RelativePath ?? "—")</small></td>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(item.Message))
+                                            {
+                                                <small class="@(item.Success ? "text-success" : "text-danger")">@item.Message</small>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (item.DocumentId > 0)
+                                            {
+                                                <a asp-area="sohoa" asp-controller="Scan" asp-action="Detail" asp-route-id="@item.DocumentId" 
+                                                   class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-eye mr-1"></i>#@item.DocumentId
+                                                </a>
+                                            }
+                                        </td>
+                                    </tr>
+                                    stt++;
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        @if (successCount > 0)
+        {
+            <div class="alert alert-success mt-3">
+                <i class="fas fa-check-circle mr-2"></i>
+                <strong>Đã upload thành công @successCount file.</strong>
+                Bạn có thể xem danh sách tài liệu tại <a asp-area="sohoa" asp-controller="Scan" asp-action="Index" class="alert-link">Scan / Upload</a>.
+            </div>
+        }
+
+        @if (failCount > 0)
+        {
+            <div class="alert alert-danger mt-3">
+                <i class="fas fa-exclamation-triangle mr-2"></i>
+                <strong>Có @failCount file upload thất bại.</strong> Vui lòng kiểm tra lại file và thử lại.
+            </div>
+        }
+    }
+</div>

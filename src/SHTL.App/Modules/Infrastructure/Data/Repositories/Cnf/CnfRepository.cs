@@ -50,7 +50,10 @@ public class CnfRepository : BaseRepository, ICnfRepository
             MERGE dbo.cnf_configs WITH (HOLDLOCK) AS t
             USING (SELECT @Key AS cfg_key, @Value AS cfg_val, @GroupName AS gname, @Description AS descr) AS s
             ON (t.[key] = s.cfg_key)
-            WHEN MATCHED THEN UPDATE SET value = s.cfg_val
+            WHEN MATCHED THEN UPDATE SET
+                value = s.cfg_val,
+                group_name = COALESCE(s.gname, t.group_name),
+                [description] = COALESCE(s.descr, t.[description])
             WHEN NOT MATCHED THEN INSERT ([key], value, group_name, [description])
                 VALUES (s.cfg_key, s.cfg_val, s.gname, s.descr);",
             new { Key = key, Value = value, GroupName = groupName, Description = description });
