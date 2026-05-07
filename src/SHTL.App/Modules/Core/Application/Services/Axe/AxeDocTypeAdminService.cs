@@ -22,6 +22,8 @@ public interface IAxeDocTypeAdminService
     Task<DocTypeOcrFixPageDto?> GetOcrFixPageAsync(int id);
     Task<ApiResult> SaveOcrFixFieldAsync(int userId, int docTypeId, IFormCollection form);
     Task<string> PreviewOcrFixAsync(int docTypeId, IFormCollection form);
+    Task<IReadOnlyList<StgDocFieldSettingDto>> GetFieldSettingsAsync(int docTypeId);
+    Task<ApiResult> UpdateFieldWeightAsync(int settingId, int weight);
 }
 
 public sealed class DocTypeEditPageDto
@@ -143,68 +145,66 @@ public sealed class AxeDocTypeAdminService : IAxeDocTypeAdminService
 
     public async Task<ApiResult> SaveAsync(int userId, int id, IFormCollection form, bool isNew)
     {
-        var name = AxeFormHelper.GetString(form, "Name")?.Trim() ?? "";
-        if (string.IsNullOrEmpty(name))
-            return ApiResult.Fail("Tên loại tài liệu không được trống");
-
-        var exclude = isNew ? 0 : id;
-        if (await _stg.NameExistsAsync(name, exclude))
-            return ApiResult.Fail("Tên loại tài liệu đã tồn tại");
-
-        var weight = AxeFormHelper.GetInt(form, "Weight");
-        if (weight < 0)
-            return ApiResult.Fail("Thứ tự sắp xếp phải lớn hơn hoặc bằng 0");
-
-        var fieldQty = AxeFormHelper.GetInt(form, "FieldQuantity");
-        if (fieldQty < 0)
-            return ApiResult.Fail("Số trường nhập phải lớn hơn hoặc bằng 0");
-
-        var doc = new DocTypeFullDto
+        try
         {
-            Id = id,
-            Name = name,
-            Describe = AxeFormHelper.GetString(form, "Describe"),
-            Code = AxeFormHelper.GetString(form, "Code"),
-            ParentId = AxeFormHelper.GetInt(form, "Parent"),
-            Parents = "",
-            IsDefault = false,
-            IsOcrManualZoned = AxeFormHelper.GetBool(form, "IsOCRManualZoned"),
-            FieldQuantity = fieldQty,
-            SeparateTypeId = AxeFormHelper.GetInt(form, "IDSeparateType"),
-            Weight = weight,
-            ReviewStatus = 1
-        };
+            var name = AxeFormHelper.GetString(form, "Name")?.Trim() ?? "";
+            if (string.IsNullOrEmpty(name))
+                return ApiResult.Fail("Tên loại tài liệu không được trống");
 
-        var parent = await _stg.GetDocTypeAsync(doc.ParentId);
-        if (parent != null)
-        {
-            doc.Parents = string.IsNullOrEmpty(parent.Parents) ? parent.Id.ToString() : $"{parent.Parents},{parent.Id}";
+            var exclude = isNew ? 0 : id;
+            if (await _stg.NameExistsAsync(name, exclude))
+                return ApiResult.Fail("Tên loại tài liệu đã tồn tại");
+
+            var weight = AxeFormHelper.GetInt(form, "Weight");
+            if (weight < 0)
+                return ApiResult.Fail("Thứ tự sắp xếp phải lớn hơn hoặc bằng 0");
+
+            var doc = new DocTypeFullDto
+            {
+                Id = id,
+                Name = name,
+                Describe = AxeFormHelper.GetString(form, "Describe"),
+                Code = "", // Không dùng nữa
+                ParentId = 0, // Không dùng nữa
+                Parents = "",
+                IsDefault = false,
+                IsOcrManualZoned = false, // Không dùng nữa
+                FieldQuantity = 0, // Không dùng nữa
+                SeparateTypeId = 0, // Không dùng nữa
+                Weight = weight,
+                ReviewStatus = 1
+            };
+
+            int docTypeId;
+            if (isNew)
+            {
+                docTypeId = await _stg.InsertDocTypeAsync(doc, userId);
+                doc.Id = docTypeId;
+            }
+            else
+            {
+                var existing = await _stg.GetDocTypeAsync(id);
+                if (existing == null)
+                    return ApiResult.Fail("Loại tài liệu không tồn tại");
+                doc.Id = existing.Id;
+                await _stg.UpdateDocTypeAsync(doc, userId);
+                docTypeId = id;
+            }
+
+            var allFields = await _stg.GetAllFieldsAsync();
+            var cats = await _stg.GetCategoryTypesAsync();
+            var current = await _stg.GetFieldSettingsByTypeAsync(docTypeId);
+            await _stg.DeleteFieldSettingsByTypeAsync(docTypeId);
+            var built = DocTypeFieldSettingsBuilder.Build(allFields, cats, docTypeId, form, current, true);
+            await _stg.InsertFieldSettingsAsync(built);
+
+            return ApiResult.Ok(isNew ? "Tạo loại tài liệu thành công" : "Cập nhật loại tài liệu thành công");
         }
-
-        int docTypeId;
-        if (isNew)
+        catch (Exception ex)
         {
-            docTypeId = await _stg.InsertDocTypeAsync(doc, userId);
-            doc.Id = docTypeId;
+            // Log the error for debugging
+            return ApiResult.Fail($"Lỗi: {ex.Message}");
         }
-        else
-        {
-            var existing = await _stg.GetDocTypeAsync(id);
-            if (existing == null)
-                return ApiResult.Fail("Loại tài liệu không tồn tại");
-            doc.Id = existing.Id;
-            await _stg.UpdateDocTypeAsync(doc, userId);
-            docTypeId = id;
-        }
-
-        var allFields = await _stg.GetAllFieldsAsync();
-        var cats = await _stg.GetCategoryTypesAsync();
-        var current = await _stg.GetFieldSettingsByTypeAsync(docTypeId);
-        await _stg.DeleteFieldSettingsByTypeAsync(docTypeId);
-        var built = DocTypeFieldSettingsBuilder.Build(allFields, cats, docTypeId, form, current, true);
-        await _stg.InsertFieldSettingsAsync(built);
-
-        return ApiResult.Ok(isNew ? "Tạo loại tài liệu thành công" : "Cập nhật loại tài liệu thành công");
     }
 
     public async Task<ApiResult> CloneAsync(int userId, int id)
@@ -387,5 +387,23 @@ public sealed class AxeDocTypeAdminService : IAxeDocTypeAdminService
         var fixes = (await _stg.GetOcrFixesAsync()).Where(x => ids.Contains(x.Id)).OrderBy(x => ids.IndexOf(x.Id)).ToList();
         var types = (await _stg.GetOcrFixTypesAsync()).ToDictionary(x => x.Id, x => x.Code);
         return AxeOcrFixEngine.Apply(input, fixes, types);
+    }
+
+    public async Task<IReadOnlyList<StgDocFieldSettingDto>> GetFieldSettingsAsync(int docTypeId)
+    {
+        return await _stg.GetFieldSettingsByTypeAsync(docTypeId);
+    }
+
+    public async Task<ApiResult> UpdateFieldWeightAsync(int settingId, int weight)
+    {
+        try
+        {
+            await _stg.UpdateFieldSettingWeightByIdAsync(settingId, weight);
+            return ApiResult.Ok("Đã cập nhật thứ tự");
+        }
+        catch (Exception ex)
+        {
+            return ApiResult.Fail($"Lỗi: {ex.Message}");
+        }
     }
 }

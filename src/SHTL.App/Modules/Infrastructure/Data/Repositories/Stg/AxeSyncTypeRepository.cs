@@ -27,7 +27,7 @@ public class AxeSyncTypeRepository : BaseRepository, IAxeSyncTypeRepository
         var sql = @"
             SELECT s.id AS Id, s.doc_type_id AS DocTypeId,
                    ISNULL(t.name, N'') AS DocTypeName, s.name AS Name, s.[describe] AS Describe,
-                   s.format AS Format, s.weight AS Weight, s.is_default AS IsDefault
+                   s.format AS Format, s.scan_path_root AS ScanPathRoot, s.weight AS Weight, s.is_default AS IsDefault
             FROM dbo.stg_doc_type_sync_types s
             LEFT JOIN dbo.stg_doc_types t ON t.id = s.doc_type_id
             WHERE 1 = 1";
@@ -65,8 +65,8 @@ public class AxeSyncTypeRepository : BaseRepository, IAxeSyncTypeRepository
         var conn = await OpenConnectionAsync();
         const string sql = @"
             INSERT INTO dbo.stg_doc_type_sync_types
-            (doc_type_id, name, [describe], format, scan_path_root, weight, is_default, created, created_by)
-            VALUES (@DocTypeId, @Name, @Describe, @Format, @ScanPathRoot, @Weight, @IsDefault, SYSUTCDATETIME(), @UserId);
+            (doc_type_id, name, [describe], format, scan_path_root, weight, is_default, created, created_by, updated, updated_by)
+            VALUES (@DocTypeId, @Name, @Describe, @Format, @ScanPathRoot, @Weight, @IsDefault, SYSUTCDATETIME(), @UserId, SYSUTCDATETIME(), @UserId);
             SELECT CAST(SCOPE_IDENTITY() AS INT);";
         return await ExecuteScalarAsync<int>(conn, sql, new
         {
@@ -116,9 +116,11 @@ public class AxeSyncTypeRepository : BaseRepository, IAxeSyncTypeRepository
         var conn = await OpenConnectionAsync();
         return (await QueryAsync<DocTypeSyncSettingDto>(conn, @"
             SELECT id AS Id, id_type AS IdType, id_field AS IdField, id_pattern_type AS IdPatternType,
+                   id_field_group AS IdFieldGroup, i_type AS IType,
                    title AS Title, weight AS Weight, is_catalog AS IsCatalog, pattern_custom AS PatternCustom,
                    fix_value AS FixValue, min_value AS MinValue, max_value AS MaxValue,
-                   min_len AS MinLen, max_len AS MaxLen, is_required AS IsRequired
+                   min_len AS MinLen, max_len AS MaxLen, is_required AS IsRequired,
+                   is_read_only AS IsReadOnly, is_upper_case AS IsUpperCase, is_capitalize AS IsCapitalize
             FROM dbo.stg_doc_type_sync_settings WHERE id_type = @Id ORDER BY weight",
             new { Id = syncTypeId })).ToList();
     }
@@ -135,8 +137,12 @@ public class AxeSyncTypeRepository : BaseRepository, IAxeSyncTypeRepository
         var conn = await OpenConnectionAsync();
         const string sql = @"
             INSERT INTO dbo.stg_doc_type_sync_settings
-            (id_type, id_field, id_pattern_type, title, weight, is_catalog, pattern_custom, fix_value, min_value, max_value, min_len, max_len, is_required)
-            VALUES (@IdType, @IdField, @IdPatternType, @Title, @Weight, @IsCatalog, @PatternCustom, @FixValue, @MinValue, @MaxValue, @MinLen, @MaxLen, @IsRequired)";
+            (id_type, id_field, id_pattern_type, id_field_group, i_type, title, weight, is_catalog, 
+             pattern_custom, fix_value, min_value, max_value, min_len, max_len, is_required, 
+             is_read_only, is_upper_case, is_capitalize)
+            VALUES (@IdType, @IdField, @IdPatternType, @IdFieldGroup, @IType, @Title, @Weight, @IsCatalog, 
+                    @PatternCustom, @FixValue, @MinValue, @MaxValue, @MinLen, @MaxLen, @IsRequired, 
+                    @IsReadOnly, @IsUpperCase, @IsCapitalize)";
         foreach (var r in rows)
             await ExecuteAsync(conn, sql, r);
     }

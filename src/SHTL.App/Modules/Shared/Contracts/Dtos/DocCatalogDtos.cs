@@ -43,6 +43,7 @@ public class DocTypeSyncListItemDto
     public string Name { get; set; } = string.Empty;
     public string? Describe { get; set; }
     public string? Format { get; set; }
+    public string? ScanPathRoot { get; set; }
     public int Weight { get; set; }
     public bool IsDefault { get; set; }
 }

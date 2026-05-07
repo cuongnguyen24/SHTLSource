@@ -46,6 +46,8 @@ public class StgDocTypeSyncSetting
     public int IdType { get; set; }
     public int IdField { get; set; }
     public int IdPatternType { get; set; }
+    public int IdFieldGroup { get; set; }
+    public int IType { get; set; }
     public string? Title { get; set; }
     public int Weight { get; set; }
     public bool IsCatalog { get; set; }
@@ -56,6 +58,9 @@ public class StgDocTypeSyncSetting
     public int MinLen { get; set; }
     public int MaxLen { get; set; }
     public bool IsRequired { get; set; }
+    public bool IsReadOnly { get; set; }
+    public bool IsUpperCase { get; set; }
+    public bool IsCapitalize { get; set; }
 }
 
 /// <summary>dbo.stg_doc_fields — danh mục field toàn cục.</summary>

@@ -26,6 +26,7 @@ public interface IAxeDocTypeRepository
     Task ReplaceSeparatesAsync(int docTypeId, IReadOnlyList<DocTypeSeparateDto> rows, int userId);
 
     Task UpdateFieldSettingWeightsAsync(IReadOnlyList<StgDocFieldSettingDto> rows);
+    Task UpdateFieldSettingWeightByIdAsync(int settingId, int weight);
 
     Task<IReadOnlyList<StgDocSoHoaOcrFixDto>> GetOcrFixesAsync();
     Task<IReadOnlyList<StgDocSoHoaOcrFixTypeDto>> GetOcrFixTypesAsync();
@@ -92,10 +93,10 @@ public class AxeDocTypeRepository : BaseRepository, IAxeDocTypeRepository
         const string sql = @"
             INSERT INTO dbo.stg_doc_types
             (name, code, [describe], parent_id, parents, is_default, is_ocr_manual_zoned,
-             field_quantity, separate_type_id, weight, review_status, created, created_by)
+             field_quantity, separate_type_id, extractor_type_id, weight, review_status, created, created_by, updated, updated_by)
             VALUES
             (@Name, @Code, @Describe, @ParentId, @Parents, @IsDefault, @IsOcrManualZoned,
-             @FieldQuantity, @SeparateTypeId, @Weight, @ReviewStatus, SYSUTCDATETIME(), @UserId);
+             @FieldQuantity, @SeparateTypeId, 0, @Weight, @ReviewStatus, SYSUTCDATETIME(), @UserId, SYSUTCDATETIME(), @UserId);
             SELECT CAST(SCOPE_IDENTITY() AS INT);";
         return await ExecuteScalarAsync<int>(conn, sql, new
         {
@@ -266,6 +267,14 @@ public class AxeDocTypeRepository : BaseRepository, IAxeDocTypeRepository
                 "UPDATE dbo.stg_doc_field_settings SET weight = @W, is_search = @S WHERE id = @Id",
                 new { r.Id, W = r.Weight, S = r.IsSearch });
         }
+    }
+
+    public async Task UpdateFieldSettingWeightByIdAsync(int settingId, int weight)
+    {
+        var conn = await OpenConnectionAsync();
+        await ExecuteAsync(conn,
+            "UPDATE dbo.stg_doc_field_settings SET weight = @W WHERE id = @Id",
+            new { W = weight, Id = settingId });
     }
 
     public async Task<IReadOnlyList<StgDocSoHoaOcrFixDto>> GetOcrFixesAsync()

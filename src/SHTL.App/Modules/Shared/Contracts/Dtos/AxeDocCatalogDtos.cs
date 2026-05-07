@@ -21,7 +21,7 @@ public class StgDocFieldSettingDto
     public int IdCategoryType { get; set; }
     public int IdFieldGroup { get; set; }
     public int OcrType { get; set; }
-    public string? IType { get; set; }
+    public int IType { get; set; }
     public int IRow { get; set; }
     public int ICol { get; set; }
     public string? Title { get; set; }
@@ -120,6 +120,8 @@ public class DocTypeSyncSettingDto
     public int IdType { get; set; }
     public int IdField { get; set; }
     public int IdPatternType { get; set; }
+    public int IdFieldGroup { get; set; }
+    public int IType { get; set; }
     public string? Title { get; set; }
     public int Weight { get; set; }
     public bool IsCatalog { get; set; }
@@ -130,6 +132,9 @@ public class DocTypeSyncSettingDto
     public int MinLen { get; set; }
     public int MaxLen { get; set; }
     public bool IsRequired { get; set; }
+    public bool IsReadOnly { get; set; }
+    public bool IsUpperCase { get; set; }
+    public bool IsCapitalize { get; set; }
 }
 
 public class DocTypeSyncFullDto

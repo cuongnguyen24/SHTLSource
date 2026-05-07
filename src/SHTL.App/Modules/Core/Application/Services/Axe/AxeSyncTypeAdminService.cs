@@ -23,6 +23,7 @@ public sealed class SyncTypeEditPageDto
     public IReadOnlyList<DocTypeSyncSettingDto> Settings { get; init; } = Array.Empty<DocTypeSyncSettingDto>();
     public IReadOnlyList<CategoryTypeDto> CategoryTypes { get; init; } = Array.Empty<CategoryTypeDto>();
     public IReadOnlyList<PatternTypeDto> PatternTypes { get; init; } = Array.Empty<PatternTypeDto>();
+    public IReadOnlyList<StgDocFieldGroupDto> FieldGroups { get; init; } = Array.Empty<StgDocFieldGroupDto>();
 }
 
 public sealed class AxeSyncTypeAdminService : IAxeSyncTypeAdminService
@@ -61,6 +62,7 @@ public sealed class AxeSyncTypeAdminService : IAxeSyncTypeAdminService
         var settings = sync.Id > 0 ? await _sync.GetSettingsAsync(sync.Id) : Array.Empty<DocTypeSyncSettingDto>();
         var cats = await _doc.GetCategoryTypesAsync();
         var patterns = await _doc.GetPatternTypesAsync();
+        var groups = await _doc.GetFieldGroupsAsync();
         return new SyncTypeEditPageDto
         {
             Sync = sync,
@@ -68,7 +70,8 @@ public sealed class AxeSyncTypeAdminService : IAxeSyncTypeAdminService
             AllFields = fields,
             Settings = settings,
             CategoryTypes = cats,
-            PatternTypes = patterns
+            PatternTypes = patterns,
+            FieldGroups = groups
         };
     }
 
@@ -77,50 +80,55 @@ public sealed class AxeSyncTypeAdminService : IAxeSyncTypeAdminService
 
     public async Task<ApiResult> SaveAsync(int userId, int id, IFormCollection form, bool isNew)
     {
-        var name = AxeFormHelper.GetString(form, "Name")?.Trim() ?? "";
-        if (string.IsNullOrEmpty(name))
-            return ApiResult.Fail("Tên kiểu đồng bộ không được trống");
-        if (await _sync.NameExistsAsync(name, isNew ? 0 : id))
-            return ApiResult.Fail("Tên kiểu đồng bộ đã tồn tại");
-        var weight = AxeFormHelper.GetInt(form, "Weight");
-        if (weight < 0)
-            return ApiResult.Fail("Thứ tự sắp xếp phải lớn hơn hoặc bằng 0");
-
-        var row = new DocTypeSyncFullDto
+        try
         {
-            Id = id,
-            Name = name,
-            Describe = AxeFormHelper.GetString(form, "Describe"),
-            DocTypeId = AxeFormHelper.GetInt(form, "IDDoctype"),
-            Format = AxeFormHelper.GetString(form, "Format"),
-            ScanPathRoot = AxeFormHelper.GetString(form, "ScanPathRoot")?.Trim(),
-            Weight = weight,
-            IsDefault = AxeFormHelper.GetBool(form, "IsDefault")
-        };
+            var name = AxeFormHelper.GetString(form, "Name")?.Trim() ?? "";
+            if (string.IsNullOrEmpty(name))
+                return ApiResult.Fail("Tên kiểu đồng bộ không được trống");
+            if (await _sync.NameExistsAsync(name, isNew ? 0 : id))
+                return ApiResult.Fail("Tên kiểu đồng bộ đã tồn tại");
+            var weight = AxeFormHelper.GetInt(form, "Weight");
+            if (weight < 0)
+                return ApiResult.Fail("Thứ tự sắp xếp phải lớn hơn hoặc bằng 0");
 
-        int syncId;
-        if (isNew)
-        {
-            syncId = await _sync.InsertAsync(row, userId);
+            var row = new DocTypeSyncFullDto
+            {
+                Id = id,
+                Name = name,
+                Describe = AxeFormHelper.GetString(form, "Describe"),
+                DocTypeId = AxeFormHelper.GetInt(form, "IDDoctype"),
+                Format = AxeFormHelper.GetString(form, "Format"),
+                ScanPathRoot = AxeFormHelper.GetString(form, "ScanPathRoot")?.Trim(),
+                Weight = weight,
+                IsDefault = AxeFormHelper.GetBool(form, "IsDefault")
+            };
+
+            int syncId;
+            if (isNew)
+            {
+                syncId = await _sync.InsertAsync(row, userId);
+            }
+            else
+            {
+                var ex = await _sync.GetAsync(id);
+                if (ex == null)
+                    return ApiResult.Fail("Kiểu đồng bộ không tồn tại");
+                row.Id = ex.Id;
+                await _sync.UpdateAsync(row, userId);
+                syncId = id;
+            }
+
+            var current = await _sync.GetSettingsAsync(syncId);
+            await _sync.DeleteSettingsAsync(syncId);
+            var built = SyncTypeFieldSettingsBuilder.Build(syncId, form, current);
+            await _sync.InsertSettingsAsync(built);
+
+            return ApiResult.Ok(isNew ? "Tạo kiểu đồng bộ thành công" : "Cập nhật kiểu đồng bộ thành công");
         }
-        else
+        catch (Exception ex)
         {
-            var ex = await _sync.GetAsync(id);
-            if (ex == null)
-                return ApiResult.Fail("Kiểu đồng bộ không tồn tại");
-            row.Id = ex.Id;
-            await _sync.UpdateAsync(row, userId);
-            syncId = id;
+            return ApiResult.Fail($"Lỗi: {ex.Message}");
         }
-
-        var fields = await _doc.GetAllFieldsAsync();
-        var cats = await _doc.GetCategoryTypesAsync();
-        var current = await _sync.GetSettingsAsync(syncId);
-        await _sync.DeleteSettingsAsync(syncId);
-        var built = SyncTypeFieldSettingsBuilder.Build(fields, cats, syncId, form, current, true);
-        await _sync.InsertSettingsAsync(built);
-
-        return ApiResult.Ok(isNew ? "Tạo kiểu đồng bộ thành công" : "Cập nhật kiểu đồng bộ thành công");
     }
 
     public async Task<ApiResult> CloneAsync(int userId, int id)
@@ -144,6 +152,8 @@ public sealed class AxeSyncTypeAdminService : IAxeSyncTypeAdminService
             IdType = newId,
             IdField = s.IdField,
             IdPatternType = s.IdPatternType,
+            IdFieldGroup = s.IdFieldGroup,
+            IType = s.IType,
             Title = s.Title,
             Weight = s.Weight,
             IsCatalog = s.IsCatalog,
@@ -153,7 +163,10 @@ public sealed class AxeSyncTypeAdminService : IAxeSyncTypeAdminService
             MaxValue = s.MaxValue,
             MinLen = s.MinLen,
             MaxLen = s.MaxLen,
-            IsRequired = s.IsRequired
+            IsRequired = s.IsRequired,
+            IsReadOnly = s.IsReadOnly,
+            IsUpperCase = s.IsUpperCase,
+            IsCapitalize = s.IsCapitalize
         }).ToList();
         await _sync.InsertSettingsAsync(clones);
         return ApiResult.Ok("Sao chép cấu trúc đồng bộ thành công");

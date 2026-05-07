@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SHTL.Modules.Infrastructure.Persistence;
 
@@ -11,9 +12,11 @@ using SHTL.Modules.Infrastructure.Persistence;
 namespace SHTL.Modules.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260507152848_AddExtendedFieldsToStgDocFields")]
+    partial class AddExtendedFieldsToStgDocFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -2094,17 +2097,9 @@ namespace SHTL.Modules.Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("fix_value");
 
-                    b.Property<int>("IType")
-                        .HasColumnType("int")
-                        .HasColumnName("i_type");
-
                     b.Property<int>("IdField")
                         .HasColumnType("int")
                         .HasColumnName("id_field");
-
-                    b.Property<int>("IdFieldGroup")
-                        .HasColumnType("int")
-                        .HasColumnName("id_field_group");
 
                     b.Property<int>("IdPatternType")
                         .HasColumnType("int")
@@ -2114,25 +2109,13 @@ namespace SHTL.Modules.Infrastructure.Persistence.Migrations
                         .HasColumnType("int")
                         .HasColumnName("id_type");
 
-                    b.Property<bool>("IsCapitalize")
-                        .HasColumnType("bit")
-                        .HasColumnName("is_capitalize");
-
                     b.Property<bool>("IsCatalog")
                         .HasColumnType("bit")
                         .HasColumnName("is_catalog");
 
-                    b.Property<bool>("IsReadOnly")
-                        .HasColumnType("bit")
-                        .HasColumnName("is_read_only");
-
                     b.Property<bool>("IsRequired")
                         .HasColumnType("bit")
                         .HasColumnName("is_required");
-
-                    b.Property<bool>("IsUpperCase")
-                        .HasColumnType("bit")
-                        .HasColumnName("is_upper_case");
 
                     b.Property<int>("MaxLen")
                         .HasColumnType("int")

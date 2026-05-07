@@ -1,5 +1,23 @@
 @model DocTypeEditPageDto
 @* Ma trận trường STG — khớp key form F{id}, FN{id}, … (DocTypeFieldSettingsBuilder). *@
+
+@{
+    string GetInputTypeString(int inputTypeId)
+    {
+        return inputTypeId switch
+        {
+            1 => "text",
+            2 => "textarea",
+            3 => "number",
+            4 => "date",
+            5 => "select",
+            6 => "radio",
+            7 => "checkbox",
+            _ => "text"
+        };
+    }
+}
+
 <div class="table-container-figma mb-0" style="max-height:420px; overflow:auto;">
     <table class="table table-sm table-figma mb-0">
         <thead>
@@ -36,7 +54,7 @@
                 </td>
                 <td><small class="text-muted">@f.Name</small></td>
                 <td><input type="text" class="form-control form-control-sm" name="FN@(f.Id)" value="@(st?.Title ?? f.Title)" /></td>
-                <td><input type="text" class="form-control form-control-sm" name="FT@(f.Id)" value="@(st?.IType ?? "text")" /></td>
+                <td><input type="text" class="form-control form-control-sm" name="FT@(f.Id)" value="@(GetInputTypeString(st?.IType ?? 1))" /></td>
                 <td><input type="number" class="form-control form-control-sm" name="FR@(f.Id)" value="@(st?.IRow)" /></td>
                 <td><input type="number" class="form-control form-control-sm" name="FC@(f.Id)" value="@(st?.ICol)" /></td>
                 <td>

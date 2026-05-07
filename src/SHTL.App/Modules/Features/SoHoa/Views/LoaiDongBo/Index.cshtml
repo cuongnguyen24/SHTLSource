@@ -1,27 +1,26 @@
 @model IReadOnlyList<DocTypeSyncListItemDto>
-@using System.Text.Json
 @{
     ViewData["Title"] = "Loại đồng bộ";
     var search = ViewBag.Search as string ?? "";
-    var hotData = Model.Select(r => new Dictionary<string, object?>
-    {
-        ["id"] = r.Id,
-        ["docType"] = r.DocTypeName,
-        ["name"] = r.Name,
-        ["describe"] = r.Describe ?? "",
-        ["format"] = r.Format ?? "",
-        ["weight"] = r.Weight,
-        ["isDefault"] = r.IsDefault ? "Có" : "Không"
-    }).ToList();
-    var json = JsonSerializer.Serialize(hotData);
-    var editTpl = Url.Action("Edit", "LoaiDongBo", new { area = "sohoa", id = 987654321 });
 }
 @section Breadcrumb {
     <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="Home" asp-action="Index">Tổng quan</a></li>
     <li class="breadcrumb-item active">Loại đồng bộ</li>
 }
 @section Styles {
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable@14.1.0/dist/handsontable.full.min.css" />
+    <style>
+        .sync-table tbody tr:hover {
+            background-color: #f9f9f9;
+        }
+        .action-btn {
+            padding: 4px 8px;
+            margin: 0 2px;
+            font-size: 12px;
+        }
+        .action-btn i {
+            margin-right: 0;
+        }
+    </style>
 }
 
 <div class="layout-expanded">
@@ -48,38 +47,57 @@
             </form>
         </div>
         <div class="p-3">
-            <p id="sync-hot-loading" class="text-muted small mb-2"><i class="fas fa-spinner fa-spin mr-1"></i>Đang tải…</p>
-            <div id="sync-hot-empty" class="alert alert-light border d-none mb-0">Chưa có bản ghi.</div>
-            <div id="sync-hot" class="d-none"></div>
-            <p class="text-muted small mt-2 mb-0">Nhấp đúp để sửa.</p>
+            @if (Model.Count == 0)
+            {
+                <div class="alert alert-light border mb-0">Chưa có bản ghi.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover sync-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 40px;">STT</th>
+                                <th>Tên</th>
+                                <th>Mô tả</th>
+                                <th>Cấu trúc thư mục</th>
+                                <th style="width: 200px;">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{
+                                int stt = 1;
+                                foreach (var item in Model)
+                                {
+                                    <tr>
+                                        <td class="text-center">@stt</td>
+                                        <td><strong>@item.Name</strong></td>
+                                        <td><small class="text-muted">@(item.Describe ?? "—")</small></td>
+                                        <td><small class="text-muted">@(item.ScanPathRoot ?? "—")</small></td>
+                                        <td>
+                                            <a href="@Url.Action("Edit", "LoaiDongBo", new { area = "sohoa", id = item.Id })" 
+                                               class="btn btn-sm btn-outline-primary action-btn">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="@Url.Action("Clone", "LoaiDongBo", new { area = "sohoa", id = item.Id })" 
+                                               class="btn btn-sm btn-outline-info action-btn" onclick="return confirm('Bạn có chắc muốn sao chép?')">
+                                                <i class="fas fa-copy"></i>
+                                            </a>
+                                            <form method="post" action="@Url.Action("Delete", "LoaiDongBo", new { area = "sohoa", id = item.Id })" style="display:inline;">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-sm btn-outline-danger action-btn" onclick="return confirm('Bạn có chắc muốn xóa?')">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    stt++;
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
         </div>
     </div>
 </div>
-
-@section Scripts {
-    <script src="https://cdn.jsdelivr.net/npm/handsontable@14.1.0/dist/handsontable.full.min.js"></script>
-    <script src="~/js/shtl-handsontable.js" asp-append-version="true"></script>
-    <script>
-        (function () {
-            var editTpl = @Html.Raw(JsonSerializer.Serialize(editTpl));
-            var data = @Html.Raw(json);
-            var cols = [
-                { data: 'id', title: 'ID', type: 'numeric', readOnly: true },
-                { data: 'docType', title: 'Loại TL', readOnly: true },
-                { data: 'name', title: 'Tên', readOnly: true },
-                { data: 'describe', title: 'Mô tả', readOnly: true },
-                { data: 'format', title: 'Format', readOnly: true },
-                { data: 'weight', title: 'TT', readOnly: true },
-                { data: 'isDefault', title: 'Mặc định', readOnly: true }
-            ];
-            var hot = window.ShtlHot.initReadOnly('sync-hot', document.getElementById('sync-hot-loading'), document.getElementById('sync-hot-empty'), cols, data, { height: 420 });
-            if (hot) {
-                hot.addHook('afterOnCellDblClick', function (_e, coords) {
-                    if (!coords || coords.row < 0) return;
-                    var id = hot.getDataAtRowProp(coords.row, 'id');
-                    if (id) window.location.href = editTpl.replace('987654321', String(id));
-                });
-            }
-        })();
-    </script>
-}

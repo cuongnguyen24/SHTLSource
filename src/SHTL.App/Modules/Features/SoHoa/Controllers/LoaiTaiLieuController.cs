@@ -230,4 +230,64 @@ public class LoaiTaiLieuController : BaseController
         var text = await _axe.PreviewOcrFixAsync(idDoctype, Request.Form);
         return Json(new { success = true, result = text });
     }
+
+    [HttpPost("api/clone/{id:int}")]
+    [HttpPost("/doctype/api/clone/{id:int}")]
+    public async Task<IActionResult> ApiClone(int id)
+    {
+        var result = await _axe.CloneAsync(CurrentUser.Id, id);
+        return Json(result);
+    }
+
+    [HttpPost("api/delete/{id:int}")]
+    [HttpPost("/doctype/api/delete/{id:int}")]
+    public async Task<IActionResult> ApiDelete(int id)
+    {
+        var result = await _axe.DeleteAsync(id);
+        return Json(result);
+    }
+
+    [HttpGet("api/fields/{id:int}")]
+    [HttpGet("/doctype/api/fields/{id:int}")]
+    public async Task<IActionResult> ApiGetFields(int id)
+    {
+        var settings = await _axe.GetFieldSettingsAsync(id);
+        return Json(new { success = true, data = settings });
+    }
+
+    [HttpPost("api/update-weight")]
+    [HttpPost("/doctype/api/update-weight")]
+    public async Task<IActionResult> ApiUpdateWeight([FromBody] List<WeightUpdateItem> items)
+    {
+        if (items == null || items.Count == 0)
+            return Json(new { success = false, message = "Không có dữ liệu" });
+
+        try
+        {
+            // Get the doctype ID from the first item (or from query param)
+            var docTypeId = items.FirstOrDefault()?.DocTypeId ?? 0;
+            if (docTypeId == 0)
+                return Json(new { success = false, message = "Không tìm thấy loại tài liệu" });
+
+            // Update weights for each field
+            foreach (var item in items)
+            {
+                await _axe.UpdateFieldWeightAsync(item.SettingId, item.Weight);
+            }
+
+            return Json(new { success = true, message = "Đã cập nhật thứ tự" });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = $"Lỗi: {ex.Message}" });
+        }
+    }
+}
+
+public class WeightUpdateItem
+{
+    public int DocTypeId { get; set; }
+    public int SettingId { get; set; }
+    public int FieldId { get; set; }
+    public int Weight { get; set; }
 }

@@ -128,7 +128,7 @@ public class DocumentFormViewModelBuilder : IDocumentFormViewModelBuilder
             FieldId = setting.IdField,
             FieldName = field?.Name ?? "",
             Title = string.IsNullOrEmpty(setting.Title) ? (field?.Title ?? "") : setting.Title,
-            InputType = setting.IType ?? "text",
+            InputType = GetInputTypeString(setting.IType),
             Datatype = field?.Datatype ?? "",
             Row = setting.IRow,
             Col = setting.ICol,
@@ -206,5 +206,21 @@ public class DocumentFormViewModelBuilder : IDocumentFormViewModelBuilder
             names[uid] = u?.FullName ?? u?.UserName ?? $"User #{uid}";
         }
         return names;
+    }
+
+    /// <summary>Convert INT input type ID sang string.</summary>
+    private static string GetInputTypeString(int inputTypeId)
+    {
+        return inputTypeId switch
+        {
+            1 => "text",
+            2 => "textarea",
+            3 => "number",
+            4 => "date",
+            5 => "select",
+            6 => "radio",
+            7 => "checkbox",
+            _ => "text"
+        };
     }
 }

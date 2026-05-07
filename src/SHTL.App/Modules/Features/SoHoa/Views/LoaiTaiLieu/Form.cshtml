@@ -19,12 +19,6 @@
                 </div>
             </div>
             <div class="d-flex flex-wrap" style="gap:8px;">
-                @if (!isNew)
-                {
-                    <a asp-area="sohoa" asp-controller="LoaiTaiLieu" asp-action="Sortable" asp-route-id="@Model.DocType.Id" class="btn-figma btn-figma-outline btn-sm"><i class="fas fa-sort mr-1"></i>Sắp xếp trường</a>
-                    <a asp-area="sohoa" asp-controller="LoaiTaiLieu" asp-action="Separate" asp-route-id="@Model.DocType.Id" class="btn-figma btn-figma-outline btn-sm"><i class="fas fa-columns mr-1"></i>Phân tách trang</a>
-                    <a asp-area="sohoa" asp-controller="LoaiTaiLieu" asp-action="OcrFix" asp-route-id="@Model.DocType.Id" class="btn-figma btn-figma-outline btn-sm"><i class="fas fa-magic mr-1"></i>OCR hậu xử lý</a>
-                }
                 <a asp-area="sohoa" asp-controller="LoaiTaiLieu" asp-action="Index" class="btn-figma btn-figma-secondary btn-sm">Quay lại</a>
             </div>
         </div>
@@ -44,16 +38,10 @@
                             <input type="text" id="dt-name" name="Name" class="form-control" value="@Model.DocType.Name" required maxlength="255" />
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-6">
                         <div class="form-group-figma">
                             <label class="label-figma" for="dt-weight">Thứ tự (Weight)</label>
                             <input type="number" id="dt-weight" name="Weight" class="form-control" value="@Model.DocType.Weight" min="0" />
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="form-group-figma">
-                            <label class="label-figma" for="dt-fqty">Số trường nhập</label>
-                            <input type="number" id="dt-fqty" name="FieldQuantity" class="form-control" value="@Model.DocType.FieldQuantity" min="0" />
                         </div>
                     </div>
                 </div>
@@ -61,71 +49,20 @@
                     <label class="label-figma" for="dt-desc">Mô tả</label>
                     <textarea id="dt-desc" name="Describe" class="form-control" rows="3">@Model.DocType.Describe</textarea>
                 </div>
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="form-group-figma">
-                            <label class="label-figma" for="dt-code">Mã nhóm nội dung (Code)</label>
-                            <select id="dt-code" name="Code" class="form-control">
-                                <option value="">—</option>
-                                @foreach (var ct in Model.ContentTypes)
-                                {
-                                    var selCt = string.Equals(Model.DocType.Code, ct.Code, StringComparison.OrdinalIgnoreCase);
-                                    if (selCt)
-                                    {
-                                        <option value="@ct.Code" selected="selected">@ct.Name (@ct.Code)</option>
-                                    }
-                                    else
-                                    {
-                                        <option value="@ct.Code">@ct.Name (@ct.Code)</option>
-                                    }
-                                }
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group-figma">
-                            <label class="label-figma" for="dt-sep">Kiểu phân tách trang</label>
-                            <select id="dt-sep" name="IDSeparateType" class="form-control">
-                                <option value="0">—</option>
-                                @foreach (var sp in Model.SeparateTypes)
-                                {
-                                    if (Model.DocType.SeparateTypeId == sp.Id)
-                                    {
-                                        <option value="@sp.Id" selected="selected">@sp.Name</option>
-                                    }
-                                    else
-                                    {
-                                        <option value="@sp.Id">@sp.Name</option>
-                                    }
-                                }
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group-figma">
-                            <label class="label-figma" for="dt-parent">Parent (ID loại cha)</label>
-                            <input type="number" id="dt-parent" name="Parent" class="form-control" value="@Model.DocType.ParentId" min="0" />
-                        </div>
-                    </div>
-                </div>
-                <div class="custom-control custom-checkbox mt-2">
-                    <input type="checkbox" class="custom-control-input" id="ocrMz" name="IsOCRManualZoned" value="true" @(Model.DocType.IsOcrManualZoned ? "checked" : null) />
-                    <label class="custom-control-label" for="ocrMz">OCR vùng thủ công</label>
-                </div>
             </div>
         </div>
 
         <div class="card-figma mb-3">
-            <div class="card-header-figma"><h3 class="card-title-figma mb-0"><i class="fas fa-table mr-2" style="opacity:.85;"></i>Trường nhập liệu (STG)</h3></div>
+            <div class="card-header-figma"><h3 class="card-title-figma mb-0"><i class="fas fa-list mr-2" style="opacity:.85;"></i>Trường mặc định (Hiển thị)</h3></div>
             <div class="card-content-figma p-0">
-                <partial name="_DocTypeStgFields" model="Model" />
+                <partial name="_DocTypeDefaultFields" model="Model" />
             </div>
         </div>
 
         <div class="card-figma mb-3">
-            <div class="card-header-figma"><h3 class="card-title-figma mb-0"><i class="fas fa-list-ul mr-2" style="opacity:.85;"></i>Trường danh mục</h3></div>
+            <div class="card-header-figma"><h3 class="card-title-figma mb-0"><i class="fas fa-plus-circle mr-2" style="opacity:.85;"></i>Trường mở rộng (Field 1-25)</h3></div>
             <div class="card-content-figma p-0">
-                <partial name="_DocTypeCatalogFields" model="Model" />
+                <partial name="_DocTypeExtendedFields" model="Model" />
             </div>
         </div>
 
