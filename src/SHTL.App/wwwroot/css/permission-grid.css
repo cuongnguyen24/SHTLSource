@@ -1,0 +1,99 @@
+.permission-grid-container {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+}
+.permission-grid-header {
+    display: flex;
+    align-items: center;
+    background: #f1f5f9;
+    padding: 10px 16px;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 11px;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: #64748b;
+    letter-spacing: 0.05em;
+}
+.selected-subjects-grid {
+    max-height: 400px;
+    overflow-y: auto;
+}
+.subject-row {
+    display: flex;
+    align-items: center;
+    padding: 8px 16px;
+    border-bottom: 1px solid #f1f5f9;
+    background: #fff;
+    transition: background 0.2s ease;
+}
+.subject-row:hover {
+    background: #f8fafc;
+}
+.subject-row:last-child {
+    border-bottom: none;
+}
+.col-subject {
+    flex: 1;
+    min-width: 200px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.col-perm {
+    width: 80px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.col-action {
+    width: 40px;
+    display: flex;
+    justify-content: flex-end;
+}
+.form-check-grid {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.form-check-grid input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    margin: 0;
+}
+.row-perm-checkbox:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+.btn-remove-subject {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 6px;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.btn-remove-subject:hover {
+    color: #ef4444;
+    background: #fee2e2;
+    border-radius: 4px;
+}
+/* Custom Checkbox Style for Professional Look */
+.custom-control-label::before {
+    border: 1px solid #cbd5e1;
+    box-shadow: none !important;
+}
+.custom-control-input:checked ~ .custom-control-label::before {
+    background-color: #0284c7;
+    border-color: #0284c7;
+}

@@ -1,0 +1,478 @@
+/**
+ * TaiNanLaoDong Module CSS (v2.2 Figma)
+ * Consolidated styles from all TNLD views
+ * Dependencies: figma-components.css (base Figma design system)
+ */
+
+/* ==========================================
+ * FORM LABELS
+ * ========================================== */
+.demo-label-small {
+    font-weight: 600;
+    font-size: 12px;
+    color: #475569;
+    margin-bottom: 6px;
+    display: block;
+}
+
+/* ==========================================
+ * KPI CARDS (Primary)
+ * ========================================== */
+.kpi-card-figma {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: all 0.3s;
+    border-left: 4px solid var(--accent-color);
+}
+.kpi-card-figma:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    transform: translateY(-2px);
+}
+
+/* KPI Card Variants */
+.kpi-card-figma.primary { --accent-color: #2563eb; }
+.kpi-card-figma.warning { --accent-color: #f59e0b; }
+.kpi-card-figma.danger { --accent-color: #ef4444; }
+.kpi-card-figma.success { --accent-color: #10b981; }
+.kpi-card-figma.info { --accent-color: #06b6d4; }
+
+/* KPI Icon Container */
+.kpi-icon-figma {
+    width: 56px;
+    height: 56px;
+    border-radius: 10px;
+    background: var(--icon-bg);
+    color: var(--icon-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+}
+.kpi-card-figma.primary .kpi-icon-figma { --icon-bg: #dbeafe; --icon-color: #2563eb; }
+.kpi-card-figma.warning .kpi-icon-figma { --icon-bg: #fef3c7; --icon-color: #f59e0b; }
+.kpi-card-figma.danger .kpi-icon-figma { --icon-bg: #fee2e2; --icon-color: #ef4444; }
+.kpi-card-figma.success .kpi-icon-figma { --icon-bg: #d1fae5; --icon-color: #10b981; }
+.kpi-card-figma.info .kpi-icon-figma { --icon-bg: #cffafe; --icon-color: #06b6d4; }
+
+/* KPI Content */
+.kpi-content-figma h3 {
+    font-size: 32px;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+    line-height: 1;
+}
+.kpi-content-figma p {
+    font-size: 13px;
+    color: #64748b;
+    margin: 4px 0 0 0;
+    font-weight: 500;
+}
+
+/* ==========================================
+ * KPI CARDS (Secondary / Compact)
+ * ========================================== */
+.kpi-card-secondary {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid var(--accent-color, #2563eb);
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+.kpi-card-secondary:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.kpi-label {
+    font-weight: 600;
+    font-size: 13px;
+    color: #475569;
+}
+.kpi-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+/* ==========================================
+ * SUMMARY CARDS (Report Generator)
+ * ========================================== */
+.summary-card-figma {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid var(--accent-color, #2563eb);
+    border-radius: 8px;
+    padding: 16px 20px;
+    text-align: center;
+    transition: all 0.2s;
+}
+.summary-card-figma:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.summary-card-figma.primary { --accent-color: #2563eb; }
+.summary-card-figma.warning { --accent-color: #f59e0b; }
+.summary-card-figma.danger { --accent-color: #ef4444; }
+.summary-card-figma.success { --accent-color: #10b981; }
+
+.summary-label-figma {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    display: block;
+}
+.summary-value-figma {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1e293b;
+}
+.summary-value-figma.danger { color: #ef4444; }
+.summary-value-figma.warning { color: #f59e0b; }
+.summary-value-figma.success { color: #10b981; }
+
+/* ==========================================
+ * CHART CONTAINERS
+ * ========================================== */
+.chart-container-figma {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    transition: all 0.3s;
+}
+.chart-container-figma:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+
+.chart-title-figma {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: #1e293b;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #f1f5f9;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+/* ==========================================
+ * EDITABLE FIELD INDICATOR
+ * ========================================== */
+.field-editable {
+    position: relative;
+}
+.field-editable::before {
+    content: '';
+    position: absolute;
+    left: -16px;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: #fbbf24;
+    border-radius: 2px;
+}
+
+/* ==========================================
+ * CUSTOM ALERTS
+ * ========================================== */
+.alert-warning-figma {
+    background: #fef3c7;
+    border-left: 4px solid #f59e0b;
+    border-radius: 8px;
+    padding: 14px 18px;
+}
+.alert-info-figma {
+    background: #dbeafe;
+    border-left: 4px solid #2563eb;
+    border-radius: 8px;
+    padding: 14px 18px;
+}
+.alert-danger-figma {
+    background: #fee2e2;
+    border-left: 4px solid #ef4444;
+    border-radius: 8px;
+    padding: 14px 18px;
+}
+.alert-success-figma {
+    background: #d1fae5;
+    border-left: 4px solid #10b981;
+    border-radius: 8px;
+    padding: 14px 18px;
+}
+
+/* ==========================================
+ * TIMELINE (Chi tiết view)
+ * ========================================== */
+.timeline {
+    position: relative;
+    padding: 0;
+    margin: 0;
+}
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #e2e8f0;
+}
+.timeline-item {
+    position: relative;
+    padding-left: 32px;
+    margin-bottom: 20px;
+}
+.timeline-marker {
+    position: absolute;
+    left: 0;
+    top: 4px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #2563eb;
+    border: 3px solid #fff;
+    box-shadow: 0 0 0 2px #e2e8f0;
+}
+.timeline-content {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px 16px;
+}
+
+/* ==========================================
+ * META BAR (Details page header)
+ * ========================================== */
+.meta-bar-figma {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px 20px;
+    margin-bottom: 16px;
+}
+.meta-item-figma {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-right: 20px;
+    font-size: 13px;
+}
+.meta-label-figma {
+    color: #64748b;
+    font-weight: 500;
+}
+.meta-value-figma {
+    color: #1e293b;
+    font-weight: 600;
+}
+
+/* ==========================================
+ * INFO ROW (Details view sections)
+ * ========================================== */
+.info-row {
+    display: flex;
+    padding: 12px 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+.info-row:last-child {
+    border-bottom: none;
+}
+.info-label {
+    width: 200px;
+    flex-shrink: 0;
+    font-weight: 600;
+    font-size: 13px;
+    color: #475569;
+}
+.info-value {
+    flex: 1;
+    font-size: 13px;
+    color: #1e293b;
+}
+.info-value.empty {
+    color: #94a3b8;
+    font-style: italic;
+}
+
+/* ==========================================
+ * EMPTY STATE (Module-specific)
+ * ========================================== */
+.empty-state-tnld {
+    text-align: center;
+    padding: 48px 24px;
+    color: #94a3b8;
+}
+.empty-state-tnld i {
+    font-size: 48px;
+    color: #cbd5e1;
+    margin-bottom: 16px;
+    display: block;
+}
+.empty-state-tnld p {
+    font-size: 14px;
+    margin: 0;
+}
+
+/* ==========================================
+ * FILE UPLOAD AREA (Form view)
+ * ========================================== */
+.file-upload-area {
+    border: 2px dashed #cbd5e1;
+    border-radius: 8px;
+    padding: 24px;
+    text-align: center;
+    background: #f8fafc;
+    transition: all 0.3s;
+    cursor: pointer;
+}
+.file-upload-area:hover {
+    border-color: #2563eb;
+    background: #f1f5f9;
+}
+.file-upload-area.drag-over {
+    border-color: #2563eb;
+    background: #dbeafe;
+}
+.file-upload-icon {
+    font-size: 32px;
+    color: #94a3b8;
+    margin-bottom: 12px;
+}
+.file-upload-text {
+    font-size: 14px;
+    color: #475569;
+    font-weight: 500;
+}
+.file-upload-hint {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-top: 8px;
+}
+
+/* File Item in List */
+.file-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    margin-bottom: 8px;
+}
+.file-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f1f5f9;
+    border-radius: 6px;
+    color: #64748b;
+    font-size: 18px;
+}
+.file-info {
+    flex: 1;
+}
+.file-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0;
+}
+.file-size {
+    font-size: 11px;
+    color: #94a3b8;
+    margin: 2px 0 0 0;
+}
+
+/* ==========================================
+ * NGUOI BI NAN TABLE (Dynamic table in forms)
+ * ========================================== */
+.nguoi-bi-nan-empty {
+    text-align: center;
+    padding: 32px 16px;
+    color: #94a3b8;
+    font-size: 13px;
+}
+
+/* ==========================================
+ * SIDEBAR NAV (Chi tiết page)
+ * ========================================== */
+.sidebar-nav-figma {
+    position: sticky;
+    top: 20px;
+}
+.sidebar-nav-figma .nav-link {
+    font-size: 13px;
+    color: #64748b;
+    padding: 10px 16px;
+    border-left: 3px solid transparent;
+    transition: all 0.2s;
+}
+.sidebar-nav-figma .nav-link:hover {
+    color: #2563eb;
+    background: #f8fafc;
+}
+.sidebar-nav-figma .nav-link.active {
+    color: #2563eb;
+    font-weight: 600;
+    border-left-color: #2563eb;
+    background: #f1f5f9;
+}
+
+/* ==========================================
+ * RESPONSIVE UTILITIES
+ * ========================================== */
+@media (max-width: 768px) {
+    .kpi-card-figma {
+        padding: 16px;
+        gap: 12px;
+    }
+    .kpi-icon-figma {
+        width: 48px;
+        height: 48px;
+        font-size: 20px;
+    }
+    .kpi-content-figma h3 {
+        font-size: 24px;
+    }
+    .info-row {
+        flex-direction: column;
+        gap: 4px;
+    }
+    .info-label {
+        width: 100%;
+    }
+    .timeline-item {
+        padding-left: 24px;
+    }
+}
+
+/* ==========================================
+ * PRINT STYLES
+ * ========================================== */
+@media print {
+    .kpi-card-figma,
+    .summary-card-figma,
+    .chart-container-figma {
+        box-shadow: none !important;
+        page-break-inside: avoid;
+    }
+    .btn-figma,
+    .sidebar-nav-figma {
+        display: none !important;
+    }
+}

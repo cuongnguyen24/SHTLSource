@@ -1,0 +1,116 @@
+@model PaginatedResult<DocumentDto>
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Nhập liệu (Extract)";
+    var stepStr = Context.Request.Query["step"].FirstOrDefault() ?? "Extract";
+    var hotData = Model.Items.Select(d => new Dictionary<string, object?>
+    {
+        ["id"] = d.Id,
+        ["name"] = d.Name,
+        ["docType"] = d.DocTypeName ?? "",
+        ["step"] = d.CurrentStep.ToString(),
+        ["fileName"] = d.FileName ?? "",
+        ["extracted"] = d.IsExtracted ? "Rồi" : "",
+        ["created"] = d.Created.ToString("yyyy-MM-dd HH:mm")
+    }).ToList();
+    var json = JsonSerializer.Serialize(hotData);
+    var formTpl = Url.Action("Form", "Extract", new { area = "sohoa", id = 987654321L });
+}
+@section Breadcrumb {
+    <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="Home" asp-action="Index">Tổng quan</a></li>
+    <li class="breadcrumb-item active">Nhập liệu</li>
+}
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable@14.1.0/dist/handsontable.full.min.css" />
+}
+
+<div class="layout-expanded">
+    <div class="frame-figma mb-3">
+        <div class="frame-header">
+            <div class="d-flex align-items-center">
+                <div class="mr-3 d-flex align-items-center justify-content-center" style="width:32px;height:32px;background:var(--primary-light);color:var(--primary);border-radius:6px;"><i class="fas fa-keyboard"></i></div>
+                <div>
+                    <h6 class="mb-0 font-weight-bold" style="color:var(--primary);">Hàng chờ nhập liệu</h6>
+                    <div class="text-muted small">Lọc theo bước workflow; mở form để nhập trường động và ô OCR.</div>
+                </div>
+            </div>
+            <div class="d-flex flex-wrap" style="gap:8px;">
+                <a asp-area="sohoa" asp-controller="Extract" asp-action="Take" class="btn-figma btn-figma-primary btn-sm"><i class="fas fa-bolt mr-1"></i>Nhận nhanh 1 bản</a>
+                <button type="button" class="btn-figma btn-figma-outline btn-sm" id="btnOpenForm" disabled><i class="fas fa-edit mr-1"></i>Mở form</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="frame-figma frame-figma-combined">
+        <div class="frame-filter">
+            <form method="get" class="d-flex align-items-end flex-wrap" style="gap:10px;">
+                <div class="search-input-figma" style="min-width:200px;">
+                    <label class="small text-muted mb-1 d-block">Từ khóa</label>
+                    <input type="text" name="q" value="@Context.Request.Query["q"]" placeholder="Tên, số…" />
+                    <i class="fas fa-search search-icon"></i>
+                </div>
+                <div>
+                    <label class="small text-muted mb-1 d-block">Bước</label>
+                    <select name="step" class="form-control form-control-sm" style="min-width:160px;">
+                        @foreach (var opt in new[] { "Extract", "Zone", "Ocr", "Scan" })
+                        {
+                            if (stepStr.Equals(opt, StringComparison.OrdinalIgnoreCase))
+                            { <option value="@opt" selected="selected">@opt</option> }
+                            else
+                            { <option value="@opt">@opt</option> }
+                        }
+                    </select>
+                </div>
+                <input type="hidden" name="size" value="@Model.PageSize" />
+                <button type="submit" class="btn-figma btn-figma-primary">Lọc</button>
+            </form>
+        </div>
+        <div class="p-3">
+            <p id="ex-hot-loading" class="text-muted small mb-2"><i class="fas fa-spinner fa-spin mr-1"></i>Đang tải…</p>
+            <div id="ex-hot-empty" class="alert alert-light border d-none mb-0">Không có bản ghi.</div>
+            <div id="ex-hot" class="d-none"></div>
+            <partial name="_Pager" model="Model" />
+            <p class="text-muted small mt-2 mb-0">Chọn dòng rồi <strong>Mở form</strong> hoặc double-click.</p>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/handsontable@14.1.0/dist/handsontable.full.min.js"></script>
+    <script src="~/js/shtl-handsontable.js" asp-append-version="true"></script>
+    <script>
+        (function () {
+            var formTpl = @Html.Raw(JsonSerializer.Serialize(formTpl));
+            var selId = null;
+            var cols = [
+                { data: 'id', title: 'ID', type: 'numeric', readOnly: true },
+                { data: 'name', title: 'Tên', readOnly: true },
+                { data: 'docType', title: 'Loại TL', readOnly: true },
+                { data: 'step', title: 'Bước', readOnly: true },
+                { data: 'fileName', title: 'File', readOnly: true },
+                { data: 'extracted', title: 'Đã extract', readOnly: true },
+                { data: 'created', title: 'Tạo', readOnly: true }
+            ];
+            var data = @Html.Raw(json);
+            var hot = window.ShtlHot.initReadOnly('ex-hot', document.getElementById('ex-hot-loading'), document.getElementById('ex-hot-empty'), cols, data, { height: 440 });
+            function syncBtn() {
+                document.getElementById('btnOpenForm').disabled = !(selId && selId > 0);
+            }
+            if (hot) {
+                hot.addHook('afterSelectionEnd', function (r1) {
+                    if (r1 < 0) return;
+                    selId = hot.getDataAtRowProp(r1, 'id');
+                    syncBtn();
+                });
+                hot.addHook('afterOnCellDblClick', function (_e, coords) {
+                    if (!coords || coords.row < 0) return;
+                    var id = hot.getDataAtRowProp(coords.row, 'id');
+                    if (id) window.location.href = formTpl.replace('987654321', String(id));
+                });
+            }
+            document.getElementById('btnOpenForm').onclick = function () {
+                if (selId) window.location.href = formTpl.replace('987654321', String(selId));
+            };
+        })();
+    </script>
+}

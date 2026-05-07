@@ -1,0 +1,316 @@
+@model IReadOnlyList<DocTypeIndexRowDto>
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Loại tài liệu";
+    var search = ViewBag.Search as string ?? "";
+}
+@section Breadcrumb {
+    <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="Home" asp-action="Index">Tổng quan</a></li>
+    <li class="breadcrumb-item active">Loại tài liệu</li>
+}
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.css" />
+    <style>
+        .doctype-table tbody tr {
+            cursor: move;
+        }
+        .doctype-table tbody tr.dragging {
+            opacity: 0.5;
+            background-color: #f0f0f0;
+        }
+        .doctype-table tbody tr:hover {
+            background-color: #f9f9f9;
+        }
+        .action-btn {
+            padding: 4px 8px;
+            margin: 0 2px;
+            font-size: 12px;
+        }
+        .action-btn i {
+            margin-right: 0;
+        }
+        .drag-handle {
+            cursor: grab;
+            color: #999;
+        }
+        .drag-handle:active {
+            cursor: grabbing;
+        }
+    </style>
+}
+
+<div class="layout-expanded">
+    <div class="frame-figma mb-3">
+        <div class="frame-header">
+            <div class="d-flex align-items-center">
+                <div class="mr-3 d-flex align-items-center justify-content-center" style="width:32px;height:32px;background:var(--primary-light);color:var(--primary);border-radius:6px;"><i class="fas fa-tags"></i></div>
+                <div>
+                    <h6 class="mb-0 font-weight-bold" style="color:var(--primary);">Loại tài liệu</h6>
+                    <div class="text-muted small">Cấu hình danh mục &amp; ma trận trường nhập liệu</div>
+                </div>
+            </div>
+            <a asp-area="sohoa" asp-controller="LoaiTaiLieu" asp-action="Create" class="btn-figma btn-figma-primary btn-sm"><i class="fas fa-plus mr-1"></i>Tạo mới</a>
+        </div>
+    </div>
+    <div class="frame-figma frame-figma-combined">
+        <div class="frame-filter">
+            <form method="get" class="d-flex align-items-center flex-wrap" style="gap:8px;">
+                <div class="search-input-figma" style="min-width:260px;">
+                    <input type="text" name="q" value="@search" placeholder="Tìm theo tên, mô tả…" />
+                    <i class="fas fa-search search-icon"></i>
+                </div>
+                <button type="submit" class="btn-figma btn-figma-primary">Tìm kiếm</button>
+            </form>
+        </div>
+        <div class="p-3">
+            @if (Model.Count == 0)
+            {
+                <div class="alert alert-light border mb-0">Chưa có loại tài liệu.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover doctype-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 40px;">STT</th>
+                                <th style="width: 40px;"><input type="checkbox" id="selectAll" /></th>
+                                <th>Tên</th>
+                                <th>Mô tả</th>
+                                <th style="width: 280px;">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="doctypeTableBody">
+                            @{
+                                int stt = 1;
+                                foreach (var item in Model)
+                                {
+                                    <tr data-id="@item.Id" data-weight="@(stt * 10)">
+                                        <td class="text-center">
+                                            <span class="stt-number">@stt</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <input type="checkbox" class="row-checkbox" value="@item.Id" />
+                                        </td>
+                                        <td>
+                                            <strong>@item.Name</strong>
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">@(item.Describe ?? "—")</small>
+                                        </td>
+                                        <td>
+                                            <a href="@Url.Action("Edit", "LoaiTaiLieu", new { area = "sohoa", id = item.Id })" 
+                                               class="btn btn-sm btn-outline-primary action-btn">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary action-btn sort-btn" 
+                                                    data-id="@item.Id">
+                                                <i class="fas fa-arrows-alt-v"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-info action-btn clone-btn" 
+                                                    data-id="@item.Id">
+                                                <i class="fas fa-copy"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-danger action-btn delete-btn" 
+                                                    data-id="@item.Id">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    stt++;
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Modal sắp xếp thứ tự -->
+<div class="modal fade" id="sortModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Sắp xếp thứ tự trường</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="sortableList" style="max-height: 400px; overflow-y: auto;">
+                    <!-- Sẽ được populate bằng JavaScript -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-primary" id="saveSortBtn">Lưu thứ tự</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Select all checkbox
+            const selectAllCheckbox = document.getElementById('selectAll');
+            if (selectAllCheckbox) {
+                selectAllCheckbox.addEventListener('change', function() {
+                    const checkboxes = document.querySelectorAll('.row-checkbox');
+                    checkboxes.forEach(cb => cb.checked = this.checked);
+                });
+            }
+
+            // Sort button
+            document.querySelectorAll('.sort-btn').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const docTypeId = this.getAttribute('data-id');
+                    openSortModal(docTypeId);
+                });
+            });
+
+            // Clone button
+            document.querySelectorAll('.clone-btn').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const docTypeId = this.getAttribute('data-id');
+                    if (confirm('Bạn có chắc muốn sao chép loại tài liệu này?')) {
+                        cloneDocType(docTypeId);
+                    }
+                });
+            });
+
+            // Delete button
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const docTypeId = this.getAttribute('data-id');
+                    if (confirm('Bạn có chắc muốn xóa loại tài liệu này?')) {
+                        deleteDocType(docTypeId);
+                    }
+                });
+            });
+        });
+
+        function openSortModal(docTypeId) {
+            // Load field settings
+            fetch(`/sohoa/loai-tai-lieu/api/fields/${docTypeId}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        const sortableList = document.getElementById('sortableList');
+                        sortableList.innerHTML = '';
+
+                        // Render một danh sách duy nhất theo weight để kéo thả chéo nhóm.
+                        const allFields = [...data.data]
+                            .sort((a, b) => (a.weight ?? 0) - (b.weight ?? 0));
+
+                        allFields.forEach(f => {
+                            sortableList.innerHTML += `
+                                <div class="sortable-item p-2 mb-2 border rounded" draggable="true" data-setting-id="${f.id}" data-field-id="${f.idField}" data-weight="${f.weight}">
+                                    <i class="fas fa-grip-vertical mr-2"></i>
+                                    <strong>${f.title}</strong>
+                                </div>
+                            `;
+                        });
+
+                        // Initialize Sortable.js
+                        Sortable.create(sortableList, {
+                            animation: 150,
+                            ghostClass: 'sortable-ghost',
+                            dragClass: 'sortable-drag'
+                        });
+
+                        // Store docTypeId for save
+                        document.getElementById('saveSortBtn').setAttribute('data-doctype-id', docTypeId);
+                        $('#sortModal').modal('show');
+                    }
+                })
+                .catch(err => {
+                    alert('Lỗi: ' + err.message);
+                });
+        }
+
+        function cloneDocType(docTypeId) {
+            fetch(`/sohoa/loai-tai-lieu/api/clone/${docTypeId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message || 'Đã sao chép thành công');
+                    location.reload();
+                } else {
+                    alert('Lỗi: ' + (data.message || 'Không sao chép được'));
+                }
+            })
+            .catch(err => {
+                alert('Lỗi: ' + err.message);
+            });
+        }
+
+        function deleteDocType(docTypeId) {
+            fetch(`/sohoa/loai-tai-lieu/api/delete/${docTypeId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message || 'Đã xóa thành công');
+                    location.reload();
+                } else {
+                    alert('Lỗi: ' + (data.message || 'Không xóa được'));
+                }
+            })
+            .catch(err => {
+                alert('Lỗi: ' + err.message);
+            });
+        }
+
+        // Save sort order
+        document.getElementById('saveSortBtn').addEventListener('click', function() {
+            const docTypeId = this.getAttribute('data-doctype-id');
+            const items = [];
+            document.querySelectorAll('.sortable-item').forEach((item, index) => {
+                items.push({
+                    docTypeId: parseInt(docTypeId),
+                    settingId: parseInt(item.getAttribute('data-setting-id')),
+                    fieldId: parseInt(item.getAttribute('data-field-id')),
+                    weight: (index + 1) * 10
+                });
+            });
+
+            fetch(`/sohoa/loai-tai-lieu/api/update-weight`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(items)
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message || 'Đã lưu thứ tự');
+                    $('#sortModal').modal('hide');
+                    location.reload();
+                } else {
+                    alert('Lỗi: ' + (data.message || 'Không lưu được'));
+                }
+            })
+            .catch(err => {
+                alert('Lỗi: ' + err.message);
+            });
+        });
+    </script>
+}
+

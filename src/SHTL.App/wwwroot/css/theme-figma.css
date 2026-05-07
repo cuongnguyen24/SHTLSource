@@ -1,0 +1,1613 @@
+/* 
+   ============================================================================
+   COMPREHENSIVE FIGMA DESIGN SYSTEM - Enhanced from CSDLKCNv1
+   ============================================================================
+   Bao gồm TẤT CẢ: hover, focus, active, disabled, transitions, animations,
+   custom scrollbars, table interactions, form validation states, tooltips...
+   ============================================================================
+*/
+
+/* ========== 1. DESIGN TOKENS (CSS VARIABLES) ========== */
+:root {
+    /* Primary Colors */
+    --primary: #1B4F8A;
+    --primary-foreground: #FFFFFF;
+    --primary-light: #EBF3FB;
+    --primary-hover: #153d6f;
+    
+    /* Secondary & Accent */
+    --accent: #0D7A55;
+    --accent-foreground: #FFFFFF;
+    --secondary: #F3F3F5;
+    --secondary-foreground: #1A202C;
+    
+    /* Backgrounds */
+    --background: #FFFFFF;
+    --bg-main: #F0F4F8;
+    --card-bg: #FFFFFF;
+    --foreground: #1A202C;
+    --muted: #F7FAFC;
+    --muted-foreground: #718096;
+    
+    /* Borders & Inputs */
+    --border-color: #E2E8F0;
+    --border: #E2E8F0;
+    --input-background: #FFFFFF;
+    --input-border: #CBD5E0;
+    --input: #FFFFFF;
+    
+    /* Text Colors */
+    --text-main: #1A202C;
+    --text-muted: #718096;
+    
+    /* Status Colors */
+    --destructive: #E53E3E;
+    --destructive-foreground: #FFFFFF;
+    --success: #38A169;
+    --warning: #D69E2E;
+    --info: #3182CE;
+    
+    /* Focus Ring */
+    --ring: rgba(27, 79, 138, 0.5);
+    --ring-destructive: rgba(229, 62, 62, 0.2);
+    --ring-offset: 0px;
+    
+    /* Layout Dimensions */
+    --sidebar-width: 256px;
+    --header-height: 56px;
+    
+    /* Border Radius */
+    --radius-sm: 0.375rem;  /* 6px */
+    --radius-md: 0.5rem;    /* 8px */
+    --radius-lg: 0.75rem;   /* 12px */
+    --radius-xl: 0.875rem;  /* 14px */
+    
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    
+    /* Transitions */
+    --transition-all: all 0.2s ease;
+    --transition-colors: color 0.2s, background-color 0.2s, border-color 0.2s;
+    --transition-transform: transform 0.2s ease;
+    
+    /* Z-Index Scale */
+    --z-dropdown: 1000;
+    --z-modal: 1050;
+    --z-tooltip: 1060;
+    --z-notification: 1070;
+}
+
+/* ========== 2. BASE STYLES & RESETS ========== */
+* {
+    box-sizing: border-box;
+}
+
+*:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--ring);
+}
+
+body {
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    font-family: 'Be Vietnam Pro', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom Selection Color */
+::selection {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+}
+
+/* ========== 3. CUSTOM SCROLLBAR ========== */
+/* Webkit browsers (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--muted);
+    border-radius: var(--radius-md);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: var(--radius-md);
+    transition: background-color 0.2s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+}
+
+::-webkit-scrollbar-thumb:active {
+    background: var(--primary);
+}
+
+/* Firefox */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) var(--muted);
+}
+
+/* ========== 4. LAYOUT STRUCTURE ========== */
+.layout-wrapper {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: stretch !important;
+    height: 100vh !important;
+    width: 100vw !important;
+    overflow: hidden !important;
+}
+
+.sidebar-figma {
+    flex: 0 0 var(--sidebar-width) !important;
+    width: var(--sidebar-width) !important;
+    max-width: var(--sidebar-width) !important;
+    background-color: var(--card-bg) !important;
+    border-right: 1px solid var(--border-color) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100vh !important;
+    transition: width 0.25s ease !important;
+    z-index: 1002 !important;
+    flex-shrink: 0 !important;
+    overflow: hidden !important;
+}
+
+/* Sidebar collapsed rules removed and moved to the end of file for priority */
+
+
+/* Popover for collapsed menu items */
+.sidebar-submenu-popover {
+    position: fixed;
+    left: 68px;
+    min-width: 200px;
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 2000;
+    padding: 4px;
+    display: none;
+}
+
+.sidebar-submenu-popover.show {
+    display: block;
+}
+
+.sidebar-submenu-popover .submenu-item {
+    padding: 8px 12px;
+    font-size: 13px;
+    color: var(--text-main);
+    text-decoration: none;
+    display: block;
+    border-radius: 6px;
+    transition: all 0.15s ease;
+}
+
+.sidebar-submenu-popover .submenu-item:hover {
+    background-color: var(--primary-light);
+    color: var(--primary);
+}
+
+.sidebar-submenu-popover .submenu-item.active {
+    background-color: var(--primary-light);
+    color: var(--primary);
+    font-weight: 600;
+}
+
+/* Combined sidebar utility hiding rules */
+
+
+/* Submenu rules removed (part of collapsed rules move) */
+
+
+/* Active state border - removed to avoid double border with Default.cshtml ::before style */
+.sidebar-figma .nav-link-figma.active {
+    border-left: none !important;
+}
+
+/* Ensure all nav-links have consistent border space - removed */
+.sidebar-figma .nav-link-figma {
+    border-left: none !important;
+}
+
+/* Consistent spacing for all nav-items (expanded only) */
+.sidebar-figma .nav-item {
+    margin-bottom: 1px;
+}
+
+/* Tighter rules move */
+
+
+/* Submenu items should not have left border */
+.sidebar-figma .collapse .nav-link-figma {
+    border-left: none !important;
+}
+
+/* Adjust header padding and alignment when collapsed */
+.sidebar-collapsed .sidebar-figma > div:first-child {
+    padding: 0 !important;
+    justify-content: center !important;
+    width: 100% !important;
+}
+
+.main-content {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    background-color: var(--bg-main) !important;
+}
+
+.content-body {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 1.5rem !important;
+}
+
+/* ========== 5. CARD COMPONENT ========== */
+.card-figma {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    transition: var(--transition-all);
+}
+
+.card-figma:hover {
+    box-shadow: var(--shadow-md);
+    border-color: var(--primary-light);
+}
+
+.card-header-figma {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--background);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap; /* Tự động xuống hàng trên mobile */
+}
+
+.card-header-left-figma {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.card-header-right-figma {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.card-title-figma {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+}
+
+.card-subtitle-figma {
+    font-size: 12.5px;
+    color: var(--text-muted);
+    margin: 2px 0 0 28px; /* Align with text after icon */
+    font-weight: 400;
+    display: block;
+}
+
+.card-description-figma {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+.card-content-figma {
+    padding: 1.5rem;
+}
+
+.card-footer-figma {
+    padding: 1.5rem;
+    border-top: 1px solid var(--border-color);
+    background-color: var(--muted);
+}
+
+/* ========== 6. BUTTON COMPONENT ========== */
+.btn-figma {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    height: 36px;
+    padding: 0 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
+    border-radius: var(--radius-md);
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: var(--transition-all);
+    outline: none;
+    user-select: none;
+    text-decoration: none;
+}
+
+a.btn-figma:hover,
+a.btn-figma:focus {
+    text-decoration: none;
+}
+
+.btn-figma:focus-visible {
+    box-shadow: 0 0 0 3px var(--ring);
+    border-color: var(--primary);
+}
+
+/* Primary Button */
+.btn-figma-primary {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+    border-color: var(--primary);
+}
+
+.btn-figma-primary:hover:not(:disabled) {
+    background-color: var(--primary-hover);
+    border-color: var(--primary-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-figma-primary:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Outline Button */
+.btn-figma-outline {
+    background-color: transparent;
+    color: var(--text-main);
+    border-color: var(--border-color);
+}
+
+.btn-figma-outline:hover:not(:disabled) {
+    background-color: var(--muted);
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+/* Destructive Button */
+.btn-figma-destructive {
+    background-color: var(--destructive);
+    color: var(--destructive-foreground);
+    border-color: var(--destructive);
+}
+
+.btn-figma-destructive:hover:not(:disabled) {
+    background-color: #c53030;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-figma-destructive:focus-visible {
+    box-shadow: 0 0 0 3px var(--ring-destructive);
+}
+
+/* Ghost Button */
+.btn-figma-ghost {
+    background-color: transparent;
+    border-color: transparent;
+    color: var(--text-main);
+}
+
+.btn-figma-ghost:hover:not(:disabled) {
+    background-color: var(--muted);
+}
+
+/* Disabled State */
+.btn-figma:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* Icon Button */
+.btn-icon-figma {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-md);
+    background-color: var(--muted);
+    color: var(--text-main);
+    cursor: pointer;
+    transition: var(--transition-all);
+    outline: none;
+}
+
+.btn-icon-figma:hover:not(:disabled) {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-icon-figma:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.btn-icon-figma:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Button Group */
+.btn-group-figma {
+    display: inline-flex;
+    gap: 0.25rem;
+}
+
+/* ========== 7. FORM ELEMENTS ========== */
+.form-group-figma {
+    margin-bottom: 1rem;
+}
+
+.label-figma {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-main);
+    margin-bottom: 0.5rem;
+}
+
+/* Input */
+.input-figma {
+    width: 100%;
+    height: 38px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--text-main);
+    background-color: var(--input-background);
+    border: 1px solid var(--input-border);
+    border-radius: var(--radius-md);
+    transition: var(--transition-colors);
+    outline: none;
+}
+
+.input-figma::placeholder {
+    color: var(--muted-foreground);
+}
+
+.input-figma:hover:not(:disabled):not([readonly]) {
+    border-color: var(--primary);
+}
+
+.input-figma:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--ring);
+}
+
+.input-figma:disabled,
+.input-figma[readonly] {
+    background-color: var(--muted);
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* Validation States */
+.input-figma[aria-invalid="true"],
+.input-figma.is-invalid {
+    border-color: var(--destructive);
+}
+
+.input-figma[aria-invalid="true"]:focus,
+.input-figma.is-invalid:focus {
+    box-shadow: 0 0 0 3px var(--ring-destructive);
+    border-color: var(--destructive);
+}
+
+.input-figma.is-valid {
+    border-color: var(--success);
+}
+
+/* Select */
+.select-figma {
+    width: 100%;
+    height: 38px;
+    padding: 0.5rem 2rem 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    color: var(--text-main);
+    background-color: var(--input-background);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23718096' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 12px;
+    border: 1px solid var(--input-border);
+    border-radius: var(--radius-md);
+    transition: var(--transition-colors);
+    outline: none;
+    appearance: none;
+    cursor: pointer;
+}
+
+.select-figma:hover:not(:disabled) {
+    border-color: var(--primary);
+}
+
+.select-figma:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--ring);
+}
+
+.select-figma:disabled {
+    background-color: var(--muted);
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* Textarea */
+.textarea-figma {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--text-main);
+    background-color: var(--input-background);
+    border: 1px solid var(--input-border);
+    border-radius: var(--radius-md);
+    transition: var(--transition-colors);
+    outline: none;
+    resize: vertical;
+    min-height: 80px;
+}
+
+.textarea-figma::placeholder {
+    color: var(--muted-foreground);
+}
+
+.textarea-figma:hover:not(:disabled):not([readonly]) {
+    border-color: var(--primary);
+}
+
+.textarea-figma:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--ring);
+}
+
+.textarea-figma:disabled,
+.textarea-figma[readonly] {
+    background-color: var(--muted);
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* Checkbox & Radio */
+.checkbox-figma,
+.radio-figma {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--input-border);
+    border-radius: var(--radius-sm);
+    background-color: var(--input-background);
+    cursor: pointer;
+    transition: var(--transition-all);
+    outline: none;
+    appearance: none;
+    position: relative;
+}
+
+.radio-figma {
+    border-radius: 50%;
+}
+
+.checkbox-figma:checked,
+.radio-figma:checked {
+    background-color: var(--primary);
+    border-color: var(--primary);
+}
+
+.checkbox-figma:checked::after {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 1px;
+    width: 4px;
+    height: 8px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.radio-figma:checked::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    background-color: white;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.checkbox-figma:focus,
+.radio-figma:focus {
+    box-shadow: 0 0 0 3px var(--ring);
+}
+
+.checkbox-figma:disabled,
+.radio-figma:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ========== 8. TABLE COMPONENT ========== */
+.table-container-figma {
+    width: 100%;
+    overflow-x: auto;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+}
+
+.table-figma {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+    background-color: var(--card-bg);
+}
+
+.table-figma thead {
+    background-color: var(--muted);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.table-figma thead th {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-main);
+    border-bottom: 2px solid var(--border-color);
+    background-color: #F8F9FA !important; /* Hơi đậm hơn --muted một chút để giống Figma */
+    white-space: nowrap;
+    user-select: none;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+/* Sortable Column Hover */
+.table-figma thead th.sortable {
+    cursor: pointer;
+    transition: var(--transition-colors);
+}
+
+.table-figma thead th.sortable:hover {
+    background-color: var(--primary-light);
+    color: var(--primary);
+}
+
+.table-figma tbody tr {
+    border-bottom: 1px solid var(--border-color);
+    transition: var(--transition-colors);
+}
+
+.table-figma tbody tr:hover {
+    background-color: rgba(27, 79, 138, 0.03);
+}
+
+.table-figma tbody tr:active {
+    background-color: rgba(27, 79, 138, 0.08);
+}
+
+.table-figma tbody td {
+    padding: 0.75rem 1rem;
+    color: var(--text-main);
+}
+
+.table-figma tbody tr:last-child {
+    border-bottom: none;
+}
+
+/* Selected Row */
+.table-figma tbody tr.selected {
+    background-color: var(--primary-light);
+}
+
+/* Empty State */
+.table-figma tbody tr.empty-row td {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-muted);
+}
+
+/* ========== 9. BADGE COMPONENT ========== */
+.badge-figma {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1;
+    border-radius: var(--radius-md);
+    white-space: nowrap;
+    transition: var(--transition-all);
+}
+
+.badge-figma-primary {
+    background-color: var(--primary-light);
+    color: var(--primary);
+}
+
+.badge-figma-success {
+    background-color: #C6F6D5;
+    color: var(--success);
+}
+
+.badge-figma-warning {
+    background-color: #FEFCBF;
+    color: #975A16;
+}
+
+.badge-figma-danger {
+    background-color: #FED7D7;
+    color: var(--destructive);
+}
+
+.badge-figma-info {
+    background-color: #BEE3F8;
+    color: var(--info);
+}
+
+/* ========== 10. ALERT COMPONENT ========== */
+.alert-figma {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
+    border-radius: var(--radius-md);
+    border: 1px solid transparent;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.alert-figma-info {
+    background-color: #BEE3F8;
+    border-color: var(--info);
+    color: #1A365D;
+}
+
+.alert-figma-success {
+    background-color: #C6F6D5;
+    border-color: var(--success);
+    color: #22543D;
+}
+
+.alert-figma-warning {
+    background-color: #FEFCBF;
+    border-color: var(--warning);
+    color: #744210;
+}
+
+.alert-figma-danger {
+    background-color: #FED7D7;
+    border-color: var(--destructive);
+    color: #742A2A;
+}
+
+/* ========== 11. PAGINATION COMPONENT & DATATABLES OVERRIDES ========== */
+/* ========== 11. PAGINATION COMPONENT & DATATABLES OVERRIDES ========== */
+
+/* Header controls (Length & Filter) */
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter {
+    padding: 0.75rem 1.25rem !important;
+    margin-bottom: 0;
+    display: flex;
+    align-items: center;
+}
+
+.dataTables_wrapper .dataTables_length {
+    float: right;
+    order: 2;
+}
+
+.dataTables_wrapper .dataTables_filter {
+    float: left;
+    order: 1;
+}
+
+.dataTables_wrapper .table-controls-figma {
+    display: flex;
+    justify-content: space-between;
+    flex-direction: row-reverse; /* Đảo ngược để f (left) và l (right) */
+    align-items: center;
+}
+
+/* Clearfix for floats */
+.dataTables_wrapper::after {
+    content: "";
+    clear: both;
+    display: table;
+}
+
+/* Custom styles for search input in DataTables */
+.dataTables_wrapper .dataTables_filter input {
+    margin-left: 0.5rem;
+    padding: 0.4rem 0.75rem;
+    border: 1px solid var(--input-border);
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    width: 250px;
+}
+
+/* Custom styles for length menu in DataTables */
+.dataTables_wrapper .dataTables_length select {
+    margin: 0 0.5rem;
+    padding: 0.3rem 2rem 0.3rem 0.75rem;
+    border: 1px solid var(--input-border);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+}
+
+/* Footer Container (Common for DataTables and Partial View) */
+.pagination-figma-container,
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_paginate {
+    display: flex !important;
+    align-items: center;
+    background-color: transparent !important; /* Flat design */
+    border-top: none !important;
+    padding: 0.75rem 1.25rem !important;
+    margin: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box;
+}
+
+/* DataTables Footer Layout - New Strategy */
+.dataTables_wrapper .pagination-figma-container {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    background-color: transparent !important;
+    border-top: none !important;
+    padding: 0.6rem 1.25rem !important;
+    width: 100% !important;
+}
+
+.dataTables_wrapper .pagination-left {
+    display: flex;
+    align-items: center;
+}
+
+.dataTables_wrapper .pagination-right {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+}
+
+/* Info Text Styling */
+.pagination-info-figma,
+.dataTables_wrapper .dataTables_info {
+    font-size: 13px !important;
+    color: #64748B !important;
+    font-weight: 500 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    background: transparent !important;
+}
+
+.dataTables_wrapper .dataTables_length {
+    margin: 0 !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    order: 2; /* Đưa dropdown vào giữa Previous (1) và Numbers (3) */
+}
+
+.dataTables_wrapper .dataTables_length select {
+    border: 1px solid #E2E8F0 !important;
+    border-radius: 8px !important;
+    height: 32px !important;
+    padding: 0 8px !important;
+    margin: 0 8px !important;
+    outline: none !important;
+    color: #1E293B !important;
+    background-color: #FFFFFF !important;
+    font-size: 13.5px !important;
+    line-height: normal !important;
+    vertical-align: middle !important;
+}
+
+/* Partial View Footer Layout */
+.pagination-figma-container {
+    justify-content: space-between;
+    border-bottom-left-radius: var(--radius-md);
+    border-bottom-right-radius: var(--radius-md);
+    margin-top: -1px !important; /* Overlap with table border if any */
+}
+
+/* Info Text Styling */
+.pagination-info-figma,
+.dataTables_wrapper .dataTables_info {
+    font-size: 13.5px;
+    color: var(--text-muted);
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* ULTIMATE PAGINATION FIGMA STYLE - FLEX ORDER VERSION */
+.dataTables_wrapper .row:last-child {
+    border-top: none !important;
+}
+
+/* Modal Close Button - Simple & Hit-safe */
+.modal-header-figma .close {
+    pointer-events: auto !important;
+    z-index: 9999 !important;
+    padding: 0.5rem !important;
+    margin: 0 !important;
+    opacity: 0.8 !important;
+    background: transparent !important;
+    border: none !important;
+    font-size: 1.5rem !important;
+}
+
+.modal-header-figma .close:hover {
+    opacity: 1 !important;
+}
+
+/* Kill all border lines and shadows in footer area */
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_paginate,
+.dataTables_wrapper .row:last-child,
+.pagination-figma-container,
+.dataTables_wrapper .dataTables_scrollFoot {
+    border: none !important;
+    border-top: none !important;
+    box-shadow: none !important;
+    padding-top: 5px !important;
+}
+
+.dataTables_wrapper .dataTables_info {
+    padding-top: 12px !important;
+    font-size: 14px !important;
+    color: #475569 !important;
+}
+
+.dataTables_wrapper .dataTables_paginate ul.pagination li.page-item:not(.active):hover a {
+    background-color: #E2E8F0 !important;
+    color: #1B4F8A !important;
+}
+
+/* Fix "2 border" issue by neutralizing DataTables default class */
+.paginate_button {
+    border: none !important;
+    padding: 0 !important;
+    background: none !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+}
+
+/* Specific for Previous/Next icons/text */
+.dataTables_wrapper .dataTables_paginate ul.pagination li.previous a {
+    margin-right: 6px !important;
+    background-color: transparent !important;
+}
+
+.dataTables_wrapper .dataTables_paginate ul.pagination li.next a {
+    margin-left: 6px !important;
+    background-color: transparent !important;
+}
+
+/* Align total records count */
+.pagination-left {
+    display: flex !important;
+    align-items: center !important;
+    font-size: 13.5px !important;
+    color: #475569 !important;
+    padding-top: 2px !important;
+}
+
+/* Remove "Extra Frame" from DataTables span wrapper - ONLY the span */
+.dataTables_wrapper .dataTables_paginate span {
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 4px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    order: 3; /* Page numbers */
+}
+/* Ensure buttons inside span STILL have their borders */
+.dataTables_wrapper .dataTables_paginate span .paginate_button {
+    border: 1px solid #E2E8F0 !important;
+}
+
+/* Re-apply border to actual number buttons inside span */
+.dataTables_wrapper .dataTables_paginate span .paginate_button {
+    border: 1px solid #E2E8F0 !important; /* Re-apply to individual buttons */
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.previous {
+    order: 1; /* Before Dropdown */
+}
+
+.dataTables_wrapper .dataTables_length {
+    order: 2 !important; /* Dropdown after Previous, before numbers */
+    margin: 0 8px !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.next {
+    order: 4; /* After numbers */
+}
+
+.pagination-figma {
+    display: flex !important;
+    align-items: center;
+    gap: 4px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    list-style: none !important;
+}
+
+/* Base styles for pagination containers (li) - Remove borders to fix "extra frame" */
+.pagination-figma li {
+    display: inline-flex !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    background: transparent !important;
+}
+
+/* Base styles for all clickable pagination elements (New Class for Razor) */
+.pagination-figma-item,
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-width: 32px;
+    height: 32px;
+    padding: 0 10px !important;
+    border-radius: 8px !important;
+    border: 1px solid #E2E8F0 !important;
+    color: #475569 !important;
+    text-decoration: none !important;
+    font-size: 13.5px !important;
+    transition: all 0.2s ease;
+    background-color: #FFFFFF !important;
+    font-weight: 500 !important;
+    cursor: pointer;
+    margin: 0 !important;
+    box-shadow: none !important;
+    outline: none !important;
+    vertical-align: middle !important;
+}
+
+/* Active State */
+.pagination-figma-item.active,
+.dataTables_wrapper .dataTables_paginate .paginate_button.current {
+    background-color: #1B4F8A !important;
+    border-color: #1B4F8A !important;
+    color: #FFFFFF !important;
+    z-index: 1;
+}
+
+/* Disabled State */
+.pagination-figma-item.disabled,
+.dataTables_wrapper .dataTables_paginate .paginate_button.disabled {
+    color: #CBD5E0 !important;
+    cursor: not-allowed;
+    background-color: #F8FAFC !important;
+    border-color: #E2E8F0 !important;
+}
+
+/* Page Size Selector Styling */
+.pageSize-selector-figma,
+.dataTables_wrapper .dataTables_length select {
+    border: 1px solid #E2E8F0 !important;
+    border-radius: 8px !important;
+    height: 32px !important;
+    padding: 0 8px !important;
+    font-size: 13.5px !important;
+    color: #1E293B !important;
+    background-color: #FFFFFF !important;
+    margin: 0 !important;
+    cursor: pointer;
+    min-width: 60px;
+    display: inline-block !important;
+    vertical-align: middle !important;
+    line-height: 1.2 !important;
+}
+
+/* Fix for DataTables paginate_button being a container sometimes */
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+    border-color: #CBD5E0 !important;
+    background-color: #F8FAFC !important;
+}
+
+/* Specific styling for Previous/Next buttons */
+.dataTables_wrapper .dataTables_paginate .paginate_button.previous,
+.dataTables_wrapper .dataTables_paginate .paginate_button.next,
+.pagination-figma li:first-child a,
+.pagination-figma li:last-child a {
+    color: #64748B !important;
+    background-color: #FFFFFF !important;
+}
+
+/* Hover state */
+.pagination-figma li a:hover:not(.disabled),
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover:not(.disabled):not(.current) {
+    border-color: #CBD5E0 !important;
+    color: #1B4F8A !important;
+}
+
+/* Active/Current state - Sharp and prominent */
+.pagination-figma li.active a,
+.dataTables_wrapper .dataTables_paginate .paginate_button.current {
+    background-color: #1B4F8A !important;
+    border-color: #1B4F8A !important;
+    color: #FFFFFF !important;
+    font-weight: 600 !important;
+    box-shadow: 0 4px 6px -1px rgba(27, 79, 138, 0.1), 0 2px 4px -1px rgba(27, 79, 138, 0.06) !important;
+}
+
+/* Disabled state */
+.pagination-figma li a.disabled,
+.dataTables_wrapper .dataTables_paginate .paginate_button.disabled {
+    color: #CBD5E0 !important;
+    background-color: #F8FAFC !important;
+    cursor: not-allowed !important;
+    opacity: 0.7;
+    border-color: #E2E8F0 !important;
+}
+
+.pagination-ellipsis span {
+    border: none !important;
+    background: transparent !important;
+    color: #94A3B8;
+    min-width: auto;
+    padding: 0 4px !important;
+}
+
+/* Table container rounding */
+.table-responsive {
+    border-top-left-radius: var(--radius-md);
+    border-top-right-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    border-bottom: none;
+}
+
+/* ========== 12. MODAL ENHANCEMENTS ========== */
+.modal-content {
+    animation: modalFadeIn 0.2s ease;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.modal.fade .modal-dialog {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Figma Modal Components */
+.modal-content-figma {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-xl);
+    animation: modalFadeIn 0.2s ease;
+}
+
+.pagination-figma-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    margin-top: 1rem;
+    background: transparent;
+    border-top: none !important; /* NUKE THE LINE */
+}
+
+.modal-header-figma {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem;
+    background-color: var(--muted);
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* Modal Fixes - Essential for interactivity */
+.modal {
+    z-index: 1050 !important;
+    pointer-events: none !important; /* Crucial: Let clicks pass through to dialog */
+}
+
+.modal-dialog {
+    z-index: 1051 !important;
+    pointer-events: auto !important; /* Crucial: Catch clicks in dialog */
+    position: relative;
+    outline: none !important;
+}
+
+.modal-content-figma {
+    pointer-events: auto !important;
+    background: #FFFFFF;
+    border: none !important;
+}
+
+.modal-backdrop {
+    z-index: 1040 !important;
+    background-color: rgba(0, 0, 0, 0.6) !important;
+}
+
+.modal.show {
+    display: block !important;
+}
+
+.modal-content-figma {
+    background: #FFFFFF;
+    border: none !important;
+    border-radius: 12px !important;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+}
+
+.modal-header-figma .modal-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-main);
+    margin: 0;
+}
+
+.modal-header-figma .close {
+    padding: 0;
+    background-color: transparent;
+    border: none;
+    font-size: 1.5rem;
+    font-weight: 400;
+    line-height: 1;
+    color: var(--text-muted);
+    opacity: 1;
+    cursor: pointer;
+    transition: var(--transition-colors);
+}
+
+.modal-header-figma .close:hover {
+    color: var(--destructive);
+    opacity: 1;
+}
+
+.modal-body {
+    padding: 1.5rem;
+    color: var(--text-main);
+}
+
+.modal-footer-figma {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    background-color: var(--muted);
+    border-top: 1px solid var(--border-color);
+}
+
+/* Figma Modal Backdrop */
+.modal-backdrop.show {
+    opacity: 0.6;
+    background-color: rgba(0, 0, 0, 0.6);
+}
+
+/* Modal Refinements - Clean Bootstrap 4 integration */
+.modal-content-figma {
+    border: none !important;
+    border-radius: var(--radius-lg) !important;
+    box-shadow: var(--shadow-xl) !important;
+}
+
+.modal-header-figma {
+    border-bottom: 1px solid var(--border-color) !important;
+    padding: 1.25rem 1.5rem !important;
+}
+
+.modal-footer-figma {
+    border-top: 1px solid var(--border-color) !important;
+    padding: 1rem 1.5rem !important;
+}
+
+/* ========== 12. TOOLTIP ========== */
+.tooltip-figma {
+    position: absolute;
+    z-index: var(--z-tooltip);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+    color: var(--primary-foreground);
+    background-color: var(--text-main);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.tooltip-figma.show {
+    opacity: 1;
+}
+
+/* ========== 13. LOADING SPINNER ========== */
+.spinner-figma {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(0, 0, 0, 0.1);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ========== 14. PROGRESS BAR ========== */
+.progress-figma {
+    width: 100%;
+    height: 8px;
+    background-color: var(--muted);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.progress-bar-figma {
+    height: 100%;
+    background-color: var(--primary);
+    border-radius: var(--radius-lg);
+    transition: width 0.3s ease;
+}
+
+/* ========== 15. BREADCRUMB ========== */
+.breadcrumb-item a {
+    transition: color 0.2s;
+}
+
+.breadcrumb-item a:hover {
+    color: var(--primary) !important;
+    text-decoration: none;
+}
+
+/* ========== 16. UTILITIES ========== */
+.text-primary-figma { color: var(--primary) !important; }
+.text-muted-figma { color: var(--text-muted) !important; }
+.bg-muted-figma { background-color: var(--muted) !important; }
+.bg-primary-figma { background-color: var(--primary) !important; }
+.border-figma { border: 1px solid var(--border-color) !important; }
+.rounded-figma { border-radius: var(--radius-md) !important; }
+.shadow-figma { box-shadow: var(--shadow-sm) !important; }
+
+/* ========== 17. RESPONSIVE DESIGN ========== */
+
+/* Mobile Sidebar - Fixed overlay on small screens */
+@media (max-width: 768px) {
+    .sidebar-figma {
+        position: fixed !important;
+        left: 0;
+        top: 0;
+        transform: translateX(-100%);
+        z-index: 1050 !important;
+        width: var(--sidebar-width) !important;
+        /* Không chiếm chỗ trong hàng flex khi drawer fixed (main full width) */
+        flex: none !important;
+        max-width: none !important;
+    }
+    
+    .sidebar-figma.active,
+    .sidebar-figma.show {
+        transform: translateX(0);
+        box-shadow: var(--shadow-xl);
+    }
+    
+    /* Mobile backdrop when sidebar is open */
+    body.sidebar-open::after {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 1049;
+    }
+    
+    .main-content {
+        margin-left: 0 !important;
+    }
+    
+    .content-body {
+        padding: 1rem !important;
+    }
+    
+    /* Force show all text on mobile (no collapsed state) */
+    body.sidebar-collapsed .sidebar-figma .sidebar-text,
+    body.sidebar-collapsed .sidebar-figma .nav-item-text {
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+}
+
+/* ========== 18. PRINT STYLES ========== */
+@media print {
+    .sidebar-figma,
+    .btn-figma,
+    .btn-icon-figma {
+        display: none !important;
+    }
+    
+    .main-content {
+        margin-left: 0 !important;
+    }
+    
+    .card-figma {
+        border: 1px solid #000;
+        box-shadow: none;
+    }
+}
+
+/* Extra Style for Industrial Zones Add Button */
+#btnAddIndustrialZone, 
+#btnAddDepartment {
+    background-color: var(--primary) !important;
+    color: var(--primary-foreground) !important;
+    border-color: var(--primary) !important;
+}
+
+/* 
+   ============================================================================
+   SIDEBAR COLLAPSED STATE (Desktop) - HIGH PRIORITY (End of file)
+   ============================================================================
+*/
+
+/* Static Sidebar State overrides */
+.sidebar-collapsed .sidebar-figma {
+    flex: 0 0 64px !important;
+    width: 64px !important;
+    max-width: 64px !important;
+}
+
+.sidebar-collapsed .sidebar-figma .sidebar-text {
+    display: none !important;
+}
+
+.sidebar-collapsed .sidebar-figma .sidebar-logo-collapsed {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 64px !important;
+}
+
+/* Strict Layout Resets across the entire nav hierarchy */
+.sidebar-collapsed .sidebar-figma .flex-grow-1,
+.sidebar-collapsed .sidebar-figma .nav,
+.sidebar-collapsed .sidebar-figma .nav-item,
+.sidebar-collapsed .sidebar-figma .nav-item .nav-link,
+.sidebar-collapsed .sidebar-figma .nav-link-figma {
+    padding: 0 !important;
+    margin: 0 !important;
+    border-left: none !important;
+}
+
+/* Centering the link container */
+.sidebar-collapsed .sidebar-figma .nav-link-figma {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 64px !important;
+    height: 52px !important;
+    position: relative !important;
+}
+
+/* Fix for multi-level items: making the wrapper div transparent to flex layout */
+.sidebar-collapsed .sidebar-figma .nav-link-figma div {
+    display: contents !important;
+}
+
+/* STEP 1: HIDE ALL ICONS AND TEXT BY DEFAULT */
+.sidebar-collapsed .sidebar-figma .nav-link-figma i,
+.sidebar-collapsed .sidebar-figma .nav-item-text,
+.sidebar-collapsed .sidebar-figma .fa-chevron-right,
+.sidebar-collapsed .sidebar-figma .fa-chevron-left,
+.sidebar-collapsed .sidebar-figma .fa-chevron-down,
+.sidebar-collapsed .sidebar-figma .fa-angle-right,
+.sidebar-collapsed .sidebar-figma .fa-angle-left,
+.sidebar-collapsed .sidebar-figma .fa-angle-down {
+    display: none !important;
+    visibility: hidden !important;
+}
+
+/* STEP 2: RE-SHOW ONLY THE MAIN FUNCTIONAL ICON */
+
+/* SCENARIO A: Multi-level menus (The icon is inside a <div> along with the label) */
+.sidebar-collapsed .sidebar-figma .nav-link-figma div i:first-of-type {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    font-size: 20px !important;
+    width: 20px !important;
+    height: 20px !important;
+    margin: 0 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+/* SCENARIO B: Standalone items (The icon is a DIRECT child of the <a>, not in a div) */
+.sidebar-collapsed .sidebar-figma .nav-link-figma > i:first-child:not(.fa-chevron-right):not(.fa-angle-right) {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    font-size: 20px !important;
+    width: 20px !important;
+    height: 20px !important;
+    margin: 0 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+/* Force hide all spans and other children */
+.sidebar-collapsed .sidebar-figma .nav-link-figma span,
+.sidebar-collapsed .sidebar-figma .nav-link-figma div span {
+    display: none !important;
+}
+
+/* Interaction States for Collapsed View */
+.sidebar-collapsed .sidebar-figma .nav-link-figma:hover {
+    background-color: var(--primary-light) !important;
+    color: var(--primary) !important;
+}
+
+.sidebar-collapsed .sidebar-figma .nav-link-figma.active {
+    background-color: var(--primary-light) !important;
+    color: var(--primary) !important;
+}
+
+/* Ensure submenus stay collapsed */
+.sidebar-collapsed .sidebar-figma .collapse {
+    display: none !important;
+}
+

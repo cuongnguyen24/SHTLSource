@@ -1,0 +1,10 @@
+/* Bootstrap 5-style gap / spacing shims on Bootstrap 4.6 (AXDD Figma markup) */
+.gap-1 { gap: 0.25rem !important; }
+.gap-2 { gap: 0.5rem !important; }
+.gap-3 { gap: 1rem !important; }
+.me-1 { margin-right: 0.25rem !important; }
+.me-2 { margin-right: 0.5rem !important; }
+.ms-1 { margin-left: 0.25rem !important; }
+.ms-2 { margin-left: 0.5rem !important; }
+.ps-2 { padding-left: 0.5rem !important; }
+.pe-2 { padding-right: 0.5rem !important; }

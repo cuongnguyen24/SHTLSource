@@ -1,0 +1,61 @@
+@model DashboardIndexVm
+@{
+    ViewData["Title"] = "Trang chủ";
+}
+@section Breadcrumb {
+    <li class="breadcrumb-item active">Tổng quan</li>
+}
+
+<div class="layout-expanded">
+    <div class="frame-figma mb-3">
+        <div class="frame-header">
+            <div class="d-flex align-items-center">
+                <div class="mr-3 d-flex align-items-center justify-content-center" style="width:32px;height:32px;background:var(--primary-light);color:var(--primary);border-radius:6px;">
+                    <i class="fas fa-th-large"></i>
+                </div>
+                <div>
+                    <h6 class="mb-0 font-weight-bold" style="color:var(--primary);font-size:15px;">@Model.Links.ProductTitle</h6>
+                    <div class="text-muted" style="font-size:11px;">Chọn khu vực làm việc. Liên kết mở đúng URL đã cấu hình trong Shell (appsettings).</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4 col-sm-6 mb-3">
+            <a class="card card-body shadow-sm h-100 text-decoration-none frame-figma" href="@Model.Links.AdminUrl">
+                <i class="fas fa-cog text-primary mb-2"></i>
+                <div class="font-weight-bold text-dark">Quản trị</div>
+                <small class="text-muted">Người dùng, phòng ban, cấu hình…</small>
+            </a>
+        </div>
+        <div class="col-md-4 col-sm-6 mb-3">
+            <a class="card card-body shadow-sm h-100 text-decoration-none frame-figma" href="@Model.Links.SoHoaUrl">
+                <i class="fas fa-digital-tachograph text-primary mb-2"></i>
+                <div class="font-weight-bold text-dark">Số hóa</div>
+                <small class="text-muted">Scan, nhập liệu, kiểm tra, export…</small>
+            </a>
+        </div>
+        <div class="col-md-4 col-sm-6 mb-3">
+            <a class="card card-body shadow-sm h-100 text-decoration-none frame-figma" href="@Model.Links.UploaderUrl">
+                <i class="fas fa-cloud-upload-alt text-primary mb-2"></i>
+                <div class="font-weight-bold text-dark">Uploader</div>
+                <small class="text-muted">Tải lên tập trung</small>
+            </a>
+        </div>
+        <div class="col-md-4 col-sm-6 mb-3">
+            <a class="card card-body shadow-sm h-100 text-decoration-none frame-figma" href="@Model.Links.ProfileUrl">
+                <i class="fas fa-user-circle text-primary mb-2"></i>
+                <div class="font-weight-bold text-dark">Hồ sơ</div>
+                <small class="text-muted">Thông tin tài khoản</small>
+            </a>
+        </div>
+        <div class="col-md-4 col-sm-6 mb-3">
+            <a class="card card-body shadow-sm h-100 text-decoration-none frame-figma" asp-area="dashboard" asp-controller="Home" asp-action="Privacy">
+                <i class="fas fa-shield-alt text-primary mb-2"></i>
+                <div class="font-weight-bold text-dark">Quyền riêng tư</div>
+                <small class="text-muted">Chính sách (demo)</small>
+            </a>
+        </div>
+    </div>
+</div>

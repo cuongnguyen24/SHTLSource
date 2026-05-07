@@ -1,9 +1,3 @@
 <Project>
-  <!-- Một file gốc: Web.Dashboard/config/connectionstrings.json → copy vào mọi output/publish -->
-  <ItemGroup Condition="Exists('$(MSBuildThisFileDirectory)Web.Dashboard\config\connectionstrings.json')">
-    <Content Include="$(MSBuildThisFileDirectory)Web.Dashboard\config\connectionstrings.json"
-             Link="config\connectionstrings.json"
-             CopyToOutputDirectory="PreserveNewest"
-             CopyToPublishDirectory="PreserveNewest" />
-  </ItemGroup>
+  <!-- Monolith: connection strings live in SHTL.App/appsettings.json only. -->
 </Project>

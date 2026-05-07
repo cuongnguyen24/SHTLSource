@@ -1,0 +1,27 @@
+@{
+    ViewData["Title"] = "Tổng quan quản trị";
+}
+@section Breadcrumb {
+    <li class="breadcrumb-item active">Quản trị</li>
+}
+<div class="layout-expanded">
+    <div class="frame-figma mb-3">
+        <div class="frame-header">
+            <div class="d-flex align-items-center">
+                <div class="mr-3 d-flex align-items-center justify-content-center" style="width:32px;height:32px;background:var(--primary-light);color:var(--primary);border-radius:6px;"><i class="fas fa-cog"></i></div>
+                <div>
+                    <h6 class="mb-0 font-weight-bold" style="color:var(--primary);font-size:15px;">Bảng điều khiển Admin</h6>
+                    <div class="text-muted" style="font-size:11px;">Chọn module bên trái hoặc lối tắt bên dưới.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-4 mb-3"><a class="card card-body shadow-sm h-100 text-decoration-none frame-figma" asp-controller="User" asp-action="Index"><i class="fas fa-users text-primary mb-2"></i><div class="font-weight-bold text-dark">Người dùng</div></a></div>
+        <div class="col-md-4 mb-3"><a class="card card-body shadow-sm h-100 text-decoration-none frame-figma" asp-controller="Dept" asp-action="Index"><i class="fas fa-sitemap text-primary mb-2"></i><div class="font-weight-bold text-dark">Phòng ban</div></a></div>
+        <div class="col-md-4 mb-3"><a class="card card-body shadow-sm h-100 text-decoration-none frame-figma" asp-controller="Role" asp-action="Index"><i class="fas fa-user-shield text-primary mb-2"></i><div class="font-weight-bold text-dark">Vai trò</div></a></div>
+        <div class="col-md-4 mb-3"><a class="card card-body shadow-sm h-100 text-decoration-none frame-figma" asp-controller="Config" asp-action="Index"><i class="fas fa-sliders-h text-primary mb-2"></i><div class="font-weight-bold text-dark">Cấu hình</div></a></div>
+        <div class="col-md-4 mb-3"><a class="card card-body shadow-sm h-100 text-decoration-none frame-figma" asp-controller="ExportType" asp-action="Index"><i class="fas fa-file-export text-primary mb-2"></i><div class="font-weight-bold text-dark">Loại xuất</div></a></div>
+        <div class="col-md-4 mb-3"><a class="card card-body shadow-sm h-100 text-decoration-none frame-figma" asp-controller="Log" asp-action="Access"><i class="fas fa-history text-primary mb-2"></i><div class="font-weight-bold text-dark">Nhật ký</div></a></div>
+    </div>
+</div>

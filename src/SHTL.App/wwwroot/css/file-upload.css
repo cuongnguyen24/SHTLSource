@@ -1,0 +1,68 @@
+/*
+ * FILE UPLOAD COMPONENT — Reusable Drop Zone & File Queue
+ * Consistent with FileManager Upload Modal design
+ * Supports 2 modes: Drop Zone (default) and Simple (button only)
+ */
+
+/* ── Drop Zone mode ─────────────────────────────────────────── */
+.drop-zone {
+    border: 2px dashed #e2e8f0;
+    border-radius: 12px;
+    padding: 48px;
+    text-align: center;
+    transition: all 0.2s;
+    background: #f8fafc;
+    cursor: pointer;
+}
+
+.drop-zone.drag-over {
+    border-color: #4299e1;
+    background: #ebf8ff;
+}
+
+.drop-zone-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.drop-zone-content p {
+    color: #718096;
+    margin: 8px 0;
+}
+
+/* ── Simple mode (button only) ──────────────────────────────── */
+.file-upload-simple {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* File Queue (selected files list) */
+.file-queue-header {
+    font-size: .875rem;
+    color: #555;
+    font-weight: 500;
+}
+
+.file-queue-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+}
+
+.file-queue-item .file-name {
+    max-width: 380px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: .9rem;
+}
+
+.file-queue-item .file-size {
+    white-space: nowrap;
+    font-size: .8rem;
+    color: #a0aec0;
+}

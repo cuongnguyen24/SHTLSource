@@ -1,0 +1,24 @@
+@model SyncTypeEditPageDto
+@foreach (var item in Model.AllFields.Where(x => x.IsActive))
+{
+    var st = Model.Settings.FirstOrDefault(x => x.IdField == item.Id && !x.IsCatalog);
+    <div class="border-bottom py-2">
+        <div class="d-flex align-items-center mb-2">
+            <div class="custom-control custom-checkbox mr-3">
+                <input type="checkbox" class="custom-control-input" id="sf_@item.Id" name="F@(item.Id)" value="true" @(st != null ? "checked" : null) />
+                <label class="custom-control-label" for="sf_@item.Id"><strong>@item.Name</strong></label>
+            </div>
+        </div>
+        <div class="form-row small">
+            <div class="col-md-4"><label class="mb-0 text-muted">Tiêu đề</label><input class="form-control form-control-sm" name="FN@(item.Id)" value="@(st?.Title ?? item.Title)" /></div>
+            <div class="col-md-2"><label class="mb-0 text-muted">Pattern</label><select class="form-control form-control-sm" name="FPT@(item.Id)"><option value="0">—</option>@foreach (var p in Model.PatternTypes) { if (st?.IdPatternType == p.Id) { <option value="@p.Id" selected="selected">@p.Name</option> } else { <option value="@p.Id">@p.Name</option> } }</select></div>
+            <div class="col-md-2"><label class="mb-0 text-muted">Fix</label><input class="form-control form-control-sm" name="FFixV@(item.Id)" value="@st?.FixValue" /></div>
+            <div class="col-md-2"><label class="mb-0 text-muted">MinL</label><input type="number" class="form-control form-control-sm" name="FMinL@(item.Id)" value="@st?.MinLen" /></div>
+            <div class="col-md-2"><label class="mb-0 text-muted">MaxL</label><input type="number" class="form-control form-control-sm" name="FMaxL@(item.Id)" value="@st?.MaxLen" /></div>
+        </div>
+        <div class="form-row small mt-1">
+            <div class="col-md-3"><label class="mb-0 text-muted">Min/Max val</label><div class="d-flex" style="gap:4px;"><input class="form-control form-control-sm" name="FMinV@(item.Id)" value="@st?.MinValue" /><input class="form-control form-control-sm" name="FMaxV@(item.Id)" value="@st?.MaxValue" /></div></div>
+            <div class="col-md-9"><label class="mb-0 text-muted">Pattern custom</label><input class="form-control form-control-sm" name="FPC@(item.Id)" value="@st?.PatternCustom" /></div>
+        </div>
+    </div>
+}

@@ -1,0 +1,47 @@
+@model IEnumerable<ExportType>
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Loại xuất dữ liệu";
+    var search = ViewBag.Search as string ?? "";
+    var rows = Model.Select(e => new Dictionary<string, object?> {
+        ["id"] = e.Id, ["name"] = e.Name, ["code"] = e.Code, ["active"] = e.IsActive ? "Có" : "Không"
+    }).ToList();
+    var json = JsonSerializer.Serialize(rows);
+}
+@section Styles { <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable@14.1.0/dist/handsontable.full.min.css" /> }
+<div class="layout-expanded">
+    <div class="frame-figma mb-3">
+        <div class="frame-header">
+            <h6 class="mb-0 font-weight-bold" style="color:var(--primary);">Loại xuất dữ liệu</h6>
+            <a asp-action="Create" class="btn-figma btn-figma-primary btn-sm"><i class="fas fa-plus mr-1"></i>Tạo mới</a>
+        </div>
+    </div>
+    <div class="frame-figma p-3">
+        <form method="get" class="mb-3 d-flex" style="gap:8px;">
+            <input type="text" name="search" value="@search" class="form-control input-figma" style="max-width:280px;" placeholder="Tìm..." />
+            <button type="submit" class="btn-figma btn-figma-primary">Tìm</button>
+        </form>
+        <p id="ld" class="text-muted small"><i class="fas fa-spinner fa-spin mr-1"></i>Đang tải...</p>
+        <div id="em" class="alert alert-light border d-none">Không có bản ghi.</div>
+        <div id="ht" class="d-none"></div>
+    </div>
+</div>
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/handsontable@14.1.0/dist/handsontable.full.min.js"></script>
+    <script src="~/js/shtl-handsontable.js" asp-append-version="true"></script>
+    <script>
+        (function () {
+            var data = @Html.Raw(json);
+            var cols = [
+                { data: 'id', title: 'ID', type: 'numeric', readOnly: true },
+                { data: 'name', title: 'Tên', readOnly: true },
+                { data: 'code', title: 'Mã', readOnly: true },
+                { data: 'active', title: 'Kích hoạt', readOnly: true }
+            ];
+            var hot = window.ShtlHot.initReadOnly('ht', document.getElementById('ld'), document.getElementById('em'), cols, data, { height: 380 });
+            if (hot) hot.addHook('afterOnCellDblClick', function (_e, c) {
+                if (c && c.row >= 0) location.href = '@Url.Action("Edit", "ExportType")?id=' + hot.getDataAtRowProp(c.row, 'id');
+            });
+        })();
+    </script>
+}

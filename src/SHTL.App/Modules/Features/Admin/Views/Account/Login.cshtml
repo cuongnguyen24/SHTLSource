@@ -1,0 +1,23 @@
+@model LoginRequest
+@{ ViewData["Title"] = "Đăng nhập Admin"; Layout = "_LoginLayout"; }
+<div class="login-box">
+    <div class="login-logo mb-3"><b>SHTL</b> Admin</div>
+    <div class="card shadow">
+        <div class="card-body login-card-body">
+            <p class="login-box-msg">Đăng nhập khu vực quản trị</p>
+            <form asp-action="Login" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="returnUrl" value="@ViewBag.ReturnUrl" />
+                <div asp-validation-summary="All" class="text-danger small"></div>
+                <div class="form-group">
+                    <input asp-for="UserName" class="form-control" placeholder="Tài khoản" />
+                </div>
+                <div class="form-group">
+                    <input asp-for="Password" type="password" class="form-control" placeholder="Mật khẩu" />
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Đăng nhập</button>
+            </form>
+        </div>
+    </div>
+</div>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

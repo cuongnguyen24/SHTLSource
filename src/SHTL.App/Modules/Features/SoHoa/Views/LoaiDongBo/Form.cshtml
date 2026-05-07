@@ -1,0 +1,96 @@
+@model SyncTypeEditPageDto
+@{
+    var isNew = Model.Sync.Id <= 0;
+    ViewData["Title"] = isNew ? "Tạo kiểu đồng bộ" : "Sửa kiểu đồng bộ";
+}
+@section Breadcrumb {
+    <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="LoaiDongBo" asp-action="Index">Loại đồng bộ</a></li>
+    <li class="breadcrumb-item active">@(isNew ? "Tạo mới" : "Sửa")</li>
+}
+
+<div class="layout-expanded">
+    <div class="frame-figma mb-3">
+        <div class="frame-header">
+            <div class="d-flex align-items-center">
+                <div class="mr-3 d-flex align-items-center justify-content-center" style="width:40px;height:40px;background:var(--primary-light);color:var(--primary);border-radius:8px;"><i class="fas fa-sync-alt"></i></div>
+                <div>
+                    <h6 class="mb-0 font-weight-bold" style="color:var(--primary);font-size:15px;">@ViewData["Title"]</h6>
+                    <div class="text-muted small">Cấu hình kiểu đồng bộ và ma trận trường.</div>
+                </div>
+            </div>
+            <div class="d-flex flex-wrap" style="gap:8px;">
+                <a asp-area="sohoa" asp-controller="LoaiDongBo" asp-action="Index" class="btn-figma btn-figma-secondary btn-sm">Quay lại</a>
+            </div>
+        </div>
+    </div>
+
+    <form asp-area="sohoa" asp-controller="LoaiDongBo" asp-action="@(isNew ? "CreateSubmit" : "EditSubmit")" asp-route-id="@(isNew ? null : Model.Sync.Id)" method="post" class="border-0 bg-transparent p-0">
+        @Html.AntiForgeryToken()
+        <div class="card-figma mb-3">
+            <div class="card-header-figma">
+                <h3 class="card-title-figma mb-0"><i class="fas fa-info-circle mr-2" style="opacity:.85;"></i>Thông tin chung</h3>
+            </div>
+            <div class="card-content-figma">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group-figma">
+                            <label class="label-figma" for="sync-name">Tên <span class="text-danger">*</span></label>
+                            <input type="text" id="sync-name" name="Name" class="form-control" value="@Model.Sync.Name" required maxlength="255" />
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group-figma">
+                            <label class="label-figma" for="sync-doctype">Loại tài liệu mặc định <span class="text-danger">*</span></label>
+                            <select id="sync-doctype" name="IDDoctype" class="form-control" required>
+                                <option value="0">-- Chọn loại tài liệu --</option>
+                                @foreach (var dt in Model.DocTypes)
+                                {
+                                    var isSelected = dt.Id == Model.Sync.DocTypeId;
+                                    <option value="@dt.Id" selected="@isSelected">@dt.Name</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group-figma">
+                    <label class="label-figma" for="sync-desc">Mô tả</label>
+                    <textarea id="sync-desc" name="Describe" class="form-control" rows="3">@Model.Sync.Describe</textarea>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group-figma">
+                            <label class="label-figma" for="sync-path">Cấu trúc thư mục đồng bộ <span class="text-danger">*</span></label>
+                            <input type="text" id="sync-path" name="ScanPathRoot" class="form-control" value="@Model.Sync.ScanPathRoot" placeholder="Ví dụ: CSDL_SOHOA_{Mã số}/{Thể số}/{Hộp số}" required />
+                            <small class="form-text text-muted">Ví dụ: CSDL_SOHOA_{Mã số}/{Thể số}/{Hộp số}</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group-figma">
+                            <label class="label-figma" for="sync-weight">Thứ tự ưu tiên (Weight)</label>
+                            <input type="number" id="sync-weight" name="Weight" class="form-control" value="@Model.Sync.Weight" min="0" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-figma mb-3">
+            <div class="card-header-figma"><h3 class="card-title-figma mb-0"><i class="fas fa-list mr-2" style="opacity:.85;"></i>Trường mặc định (Hiển thị)</h3></div>
+            <div class="card-content-figma p-0">
+                <partial name="_SyncDefaultFields" model="Model" />
+            </div>
+        </div>
+
+        <div class="card-figma mb-3">
+            <div class="card-header-figma"><h3 class="card-title-figma mb-0"><i class="fas fa-plus-circle mr-2" style="opacity:.85;"></i>Trường mở rộng (Field 1-25)</h3></div>
+            <div class="card-content-figma p-0">
+                <partial name="_SyncExtendedFields" model="Model" />
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end flex-wrap" style="gap:8px;">
+            <a asp-area="sohoa" asp-controller="LoaiDongBo" asp-action="Index" class="btn-figma btn-figma-secondary">Hủy</a>
+            <button type="submit" class="btn-figma btn-figma-primary"><i class="fas fa-save mr-1"></i>Lưu</button>
+        </div>
+    </form>
+</div>

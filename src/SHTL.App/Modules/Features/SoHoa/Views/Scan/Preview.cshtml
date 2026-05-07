@@ -1,0 +1,31 @@
+@model DocumentDto
+@{
+    ViewData["Title"] = "Xem PDF — " + Model.Name;
+    var pdfUrl = Url.Content("~/scan/pdf/" + Model.Id);
+    var downloadUrl = Url.Content("~/scan/download/" + Model.Id);
+}
+@section Breadcrumb {
+    <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="Scan" asp-action="Index">Scan</a></li>
+    <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="Scan" asp-action="Detail" asp-route-id="@Model.Id">Chi tiết</a></li>
+    <li class="breadcrumb-item active">PDF</li>
+}
+
+<div class="layout-expanded d-flex flex-column" style="min-height: calc(100vh - 120px);">
+    <div class="frame-figma mb-2 flex-shrink-0">
+        <div class="frame-header py-2">
+            <div class="d-flex align-items-center flex-wrap" style="gap:8px;">
+                <strong class="text-truncate" style="max-width:40vw;">@Model.Name</strong>
+                <span class="text-muted small">#@Model.Id</span>
+            </div>
+            <div class="d-flex flex-wrap" style="gap:8px;">
+                <a href="@pdfUrl" class="btn-figma btn-figma-outline btn-sm" target="_blank" rel="noopener"><i class="fas fa-external-link-alt mr-1"></i>Mở tab mới</a>
+                <a href="@downloadUrl" class="btn-figma btn-figma-outline btn-sm"><i class="fas fa-download mr-1"></i>Tải xuống</a>
+                <a asp-area="sohoa" asp-controller="Scan" asp-action="Detail" asp-route-id="@Model.Id" class="btn-figma btn-figma-secondary btn-sm">Chi tiết</a>
+            </div>
+        </div>
+    </div>
+    @* iframe: nguồn PDF do ScanController.Pdf stream (Range-friendly cho trình xem nội bộ). *@
+    <div class="flex-grow-1 border rounded overflow-hidden bg-white shadow-sm" style="min-height:480px;">
+        <iframe src="@pdfUrl" title="PDF" class="w-100 h-100 border-0" style="min-height: calc(100vh - 220px);"></iframe>
+    </div>
+</div>
