@@ -48,13 +48,18 @@ public class ScanController : BaseController
     [HttpGet]
     public async Task<IActionResult> Index()
     {
+        int? docTypeId = null;
+        if (int.TryParse(Request.Query["docTypeId"], out var parsedDocTypeId) && parsedDocTypeId > 0)
+            docTypeId = parsedDocTypeId;
+
         var req = new DocumentFilterRequest
         {
             PageIndex = GetPageRequest().PageIndex,
             PageSize = GetPageRequest().PageSize,
             Search = Request.Query["q"],
             StartDate = ParseDate(Request.Query["from"]),
-            EndDate = ParseDate(Request.Query["to"])
+            EndDate = ParseDate(Request.Query["to"]),
+            DocTypeId = docTypeId
         };
         var result = await _docService.GetListAsync(req, CurrentUser);
         ViewBag.Request = req;

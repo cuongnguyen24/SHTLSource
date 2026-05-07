@@ -186,7 +186,9 @@ public sealed class DocumentSyncUploadService : IDocumentSyncUploadService
                     OcrStatus = OcrStatus.NotRequested,
                     Version = 1,
                     Created = DateTime.UtcNow,
-                    CreatedBy = userId
+                    CreatedBy = userId,
+                    Updated = DateTime.UtcNow,
+                    UpdatedBy = userId
                 };
 
                 SyncPathFormatParser.ApplyFolderSegmentsToFields(doc, relForMeta, maxDepth: 15);
