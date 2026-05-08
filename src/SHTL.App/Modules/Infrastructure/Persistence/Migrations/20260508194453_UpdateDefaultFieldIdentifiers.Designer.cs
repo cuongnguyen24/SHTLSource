@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SHTL.Modules.Infrastructure.Persistence;
 
@@ -11,9 +12,11 @@ using SHTL.Modules.Infrastructure.Persistence;
 namespace SHTL.Modules.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260508194453_UpdateDefaultFieldIdentifiers")]
+    partial class UpdateDefaultFieldIdentifiers
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -766,10 +769,6 @@ namespace SHTL.Modules.Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("author");
 
-                    b.Property<string>("BoxNo")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("box_no");
-
                     b.Property<DateTime?>("Checked1At")
                         .HasColumnType("datetime2")
                         .HasColumnName("checked1at");
@@ -1098,10 +1097,6 @@ namespace SHTL.Modules.Infrastructure.Persistence.Migrations
                         .HasColumnType("int")
                         .HasColumnName("issued_year");
 
-                    b.Property<string>("LevelNo")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("level_no");
-
                     b.Property<DateTime?>("LockedAt")
                         .HasColumnType("datetime2")
                         .HasColumnName("locked_at");
@@ -1187,21 +1182,9 @@ namespace SHTL.Modules.Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("path_pdf_searchable");
 
-                    b.Property<string>("Poster")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("poster");
-
-                    b.Property<string>("Receiver")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("receiver");
-
                     b.Property<string>("RecordNo")
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("record_no");
-
-                    b.Property<string>("RecordTitle")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("record_title");
 
                     b.Property<int>("RecordTypeId")
                         .HasColumnType("int")
@@ -1211,17 +1194,9 @@ namespace SHTL.Modules.Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("search_meta");
 
-                    b.Property<string>("ShelfNo")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("shelf_no");
-
                     b.Property<string>("Signer")
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("signer");
-
-                    b.Property<string>("SlotNo")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("slot_no");
 
                     b.Property<string>("SortMeta")
                         .HasColumnType("nvarchar(max)")
@@ -1230,10 +1205,6 @@ namespace SHTL.Modules.Infrastructure.Persistence.Migrations
                     b.Property<byte>("Status")
                         .HasColumnType("tinyint")
                         .HasColumnName("status");
-
-                    b.Property<string>("Subject")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("subject");
 
                     b.Property<string>("Summary")
                         .HasColumnType("nvarchar(max)")

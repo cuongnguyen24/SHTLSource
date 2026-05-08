@@ -13,8 +13,49 @@
     var showPdfViewer = SearchablePdfDisplay.LooksLikePdf(doc.Extension, doc.FileName, doc.FilePath);
     var spLabel = doc.SearchablePdfStatusText;
 
-    string? Fv(FieldSettingViewModel f) =>
-        Model.FieldValues.TryGetValue(f.FieldName, out var x) ? x : f.FixValue;
+    string? Fv(FieldSettingViewModel f)
+    {
+        if (!string.IsNullOrWhiteSpace(f.FieldName) && Model.FieldValues.TryGetValue(f.FieldName, out var x))
+            return x;
+
+        // Fallback by FieldId for legacy settings where FieldName is missing/misaligned.
+        string[] keys = f.FieldId switch
+        {
+            1 => new[] { "dc_title", "name" },
+            2 => new[] { "dc_symbol", "symbol_no", "symbolno" },
+            3 => new[] { "issuer", "dc_issued_by", "issued_by", "issuedby" },
+            4 => new[] { "receiver", "dc_receiver" },
+            5 => new[] { "subject", "describe" },
+            6 => new[] { "levelno", "dc_box", "level_no" },
+            7 => new[] { "boxno", "dc_num1", "box_no", "hop_so" },
+            8 => new[] { "recordno", "dc_record", "record_no", "ho_so_so" },
+            9 => new[] { "recordtitle", "fc_title", "record_title" },
+            10 => new[] { "poster", "author" },
+            11 => new[] { "signer" },
+            12 => new[] { "slotno", "slot_no" },
+            13 => new[] { "shelfno", "shelf_no" },
+            14 => new[] { "noted", "dc_noted" },
+            15 => new[] { "fc_dec1", "field23" },
+            16 => new[] { "fc_date1", "field22" },
+            17 => new[] { "std_text", "field15" },
+            18 => new[] { "std_num", "field16" },
+            19 => new[] { "std_dec", "field23" },
+            20 => new[] { "std_date", "field21" },
+            >= 101 and <= 125 => new[] { $"field{f.FieldId - 100}" },
+            _ => Array.Empty<string>()
+        };
+        foreach (var key in keys)
+        {
+            if (Model.FieldValues.TryGetValue(key, out var mapped) && !string.IsNullOrWhiteSpace(mapped))
+                return mapped;
+        }
+
+        // Preserve title behavior from physical file_name.
+        if (f.FieldId == 1)
+            return !string.IsNullOrWhiteSpace(doc.FileName) ? doc.FileName : doc.Name;
+
+        return f.FixValue;
+    }
 
     var orderedFields = Model.FieldSettings.OrderBy(f => f.Weight).ToList();
     var cells = Model.Cells.OrderBy(c => c.Page).ThenBy(c => c.Y).ThenBy(c => c.X).ToList();
@@ -352,6 +393,14 @@
                 return window.ShtlAjax.getRequestVerificationToken();
             }
 
+            function toastErrorLong(msg) {
+                if (typeof toastr !== 'undefined') {
+                    toastr.error(msg, '', { timeOut: 90000, closeButton: true, tapToDismiss: true, newestOnTop: true });
+                } else {
+                    alert(msg);
+                }
+            }
+
             document.getElementById('btnExtractSubmit').onclick = function () {
                 var stg = {};
                 document.querySelectorAll('[data-stg-field]').forEach(function (el) {
@@ -378,18 +427,44 @@
                         'RequestVerificationToken': token()
                     },
                     body: JSON.stringify(body)
-                }).then(function (r) { return r.json(); }).then(function (j) {
+                }).then(function (r) {
+                    return r.text().then(function (text) {
+                        return { ok: r.ok, status: r.status, text: text };
+                    });
+                }).then(function (res) {
                     hint.classList.add('d-none');
+                    var j = null;
+                    try {
+                        j = res.text ? JSON.parse(res.text) : null;
+                    } catch (e) {
+                        j = null;
+                    }
+                    if (!res.ok) {
+                        var msg = (j && j.message) ? j.message : ('HTTP ' + res.status);
+                        if (!j && res.text) {
+                            var t = res.text.replace(/<[^>]+>/g, ' ').trim();
+                            if (t.length > 220) t = t.substring(0, 220) + '…';
+                            if (t) msg += ' — ' + t;
+                        }
+                        if (res.status === 400 && !j) msg = 'Phiên hết hạn hoặc lỗi bảo mật (antiforgery). Tải lại trang rồi thử lưu.';
+                        toastErrorLong(msg);
+                        return;
+                    }
+                    if (!j) {
+                        toastErrorLong('Phản hồi không hợp lệ từ server.');
+                        return;
+                    }
                     if (j.success) {
                         if (typeof toastr !== 'undefined') toastr.success(j.message || 'Đã lưu');
                         window.location.href = @Html.Raw(JsonSerializer.Serialize(indexUrl));
                     } else {
-                        if (typeof toastr !== 'undefined') toastr.error(j.message || 'Lỗi');
-                        else alert(j.message || 'Lỗi');
+                        toastErrorLong(j.message || 'Lỗi');
                     }
-                }).catch(function () {
+                }).catch(function (err) {
                     hint.classList.add('d-none');
-                    if (typeof toastr !== 'undefined') toastr.error('Lỗi mạng');
+                    var msg = 'Lỗi mạng hoặc trình duyệt chặn yêu cầu.';
+                    if (err && err.message) msg += ' ' + err.message;
+                    toastErrorLong(msg);
                 });
             };
         })();

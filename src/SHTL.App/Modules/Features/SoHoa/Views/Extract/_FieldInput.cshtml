@@ -5,6 +5,8 @@
     var safe = f.FieldName.Replace(".", "_").Replace("[", "").Replace("]", "");
     var id = "ext_" + safe;
     var name = f.FieldName;
+    var isTitleField = f.FieldId == 1 || string.Equals(name, "dc_title", StringComparison.OrdinalIgnoreCase);
+    var isReadOnlyField = f.IsReadOnly || isTitleField;
     var it = (f.InputType ?? "text").ToLowerInvariant();
     var isNum = it == "number" || (f.Datatype?.Contains("number", StringComparison.OrdinalIgnoreCase) ?? false);
     var isDate = it == "date" || (f.Datatype?.Contains("date", StringComparison.OrdinalIgnoreCase) ?? false) || (f.Datatype?.Contains("time", StringComparison.OrdinalIgnoreCase) ?? false);
@@ -13,7 +15,7 @@
     <label class="small text-muted mb-1 d-block" for="@id">
         @f.Title @if (f.IsRequired) { <span class="text-danger">*</span> }
     </label>
-    @if (f.IsReadOnly)
+    @if (isReadOnlyField)
     {
         <input type="text" class="form-control bg-light" id="@id" value="@val" readonly data-stg-field="@name" />
     }

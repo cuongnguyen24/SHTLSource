@@ -14,8 +14,47 @@
     var spLabel = doc.SearchablePdfStatusText;
     var sameRecordDocs = Model.SameRecordDocuments ?? Array.Empty<DocumentDto>();
 
-    string? Fv(FieldSettingViewModel f) =>
-        Model.FieldValues.TryGetValue(f.FieldName, out var x) ? x : f.FixValue;
+    string? Fv(FieldSettingViewModel f)
+    {
+        if (!string.IsNullOrWhiteSpace(f.FieldName) && Model.FieldValues.TryGetValue(f.FieldName, out var x))
+            return x;
+
+        string[] keys = f.FieldId switch
+        {
+            1 => new[] { "dc_title", "name" },
+            2 => new[] { "dc_symbol", "symbol_no", "symbolno" },
+            3 => new[] { "issuer", "dc_issued_by", "issued_by", "issuedby" },
+            4 => new[] { "receiver", "dc_receiver" },
+            5 => new[] { "subject", "describe" },
+            6 => new[] { "levelno", "dc_box", "level_no" },
+            7 => new[] { "boxno", "dc_num1", "box_no", "hop_so" },
+            8 => new[] { "recordno", "dc_record", "record_no", "ho_so_so" },
+            9 => new[] { "recordtitle", "fc_title", "record_title" },
+            10 => new[] { "poster", "author" },
+            11 => new[] { "signer" },
+            12 => new[] { "slotno", "slot_no" },
+            13 => new[] { "shelfno", "shelf_no" },
+            14 => new[] { "noted", "dc_noted" },
+            15 => new[] { "fc_dec1", "field23" },
+            16 => new[] { "fc_date1", "field22" },
+            17 => new[] { "std_text", "field15" },
+            18 => new[] { "std_num", "field16" },
+            19 => new[] { "std_dec", "field23" },
+            20 => new[] { "std_date", "field21" },
+            >= 101 and <= 125 => new[] { $"field{f.FieldId - 100}" },
+            _ => Array.Empty<string>()
+        };
+        foreach (var key in keys)
+        {
+            if (Model.FieldValues.TryGetValue(key, out var mapped) && !string.IsNullOrWhiteSpace(mapped))
+                return mapped;
+        }
+
+        if (f.FieldId == 1)
+            return !string.IsNullOrWhiteSpace(doc.FileName) ? doc.FileName : doc.Name;
+
+        return f.FixValue;
+    }
 
     var orderedFields = Model.FieldSettings.OrderBy(f => f.Weight).ToList();
     var cells = Model.Cells.OrderBy(c => c.Page).ThenBy(c => c.Y).ThenBy(c => c.X).ToList();

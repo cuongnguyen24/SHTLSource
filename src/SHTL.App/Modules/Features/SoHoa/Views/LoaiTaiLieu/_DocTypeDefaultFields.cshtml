@@ -16,6 +16,32 @@
             _ => "text"
         };
     }
+    string GetDbStorageColumn(int fieldId, string fieldName)
+    {
+        return fieldId switch
+        {
+            1 => "file_name",
+            2 => "symbol_no",
+            3 => "issued_by",
+            4 => "receiver",
+            5 => "subject",
+            6 => "level_no",
+            7 => "box_no",
+            8 => "record_no",
+            9 => "record_title",
+            10 => "poster",
+            11 => "signer",
+            12 => "slot_no",
+            13 => "shelf_no",
+            14 => "noted",
+            _ => fieldName
+        };
+    }
+    var groupOptions = Model.FieldGroups
+        .Where(g => g.Name == "Thông tin hồ sơ" || g.Name == "Thông tin tài liệu")
+        .OrderBy(g => g.Name == "Thông tin hồ sơ" ? 1 : 2)
+        .ToList();
+    var infoDocumentGroupId = groupOptions.FirstOrDefault(g => g.Name == "Thông tin tài liệu")?.Id ?? 0;
 }
 
 <div class="default-fields-container">
@@ -24,26 +50,20 @@
             // Danh sách trường mặc định chuẩn
             var defaultFields = new List<(int id, string name, string title)>
             {
-                (1, "dc_title", "Tên"),
-                (2, "dc_symbol", "Số ký hiệu"),
-                (3, "dc_receiver", "Nơi nhận"),
-                (4, "dc_box", "Hộp"),
-                (5, "dc_num1", "Số nguyên mẫu"),
-                (6, "dc_date1", "Ngày tháng mẫu"),
-                (7, "dc_custom1", "Tùy chỉnh"),
-                (8, "dc_select1", "Chọn"),
-                (9, "fc_title", "Tiêu đề hồ sơ"),
-                (10, "fc_end", "Thời gian kết thúc"),
-                (11, "fc_lang", "Ngôn ngữ"),
-                (12, "fc_start", "Thời gian bắt đầu"),
-                (13, "fc_pages", "Số lượng tờ"),
-                (14, "fc_store", "Thời hạn lưu trữ"),
-                (15, "fc_dec1", "Số thập phân"),
-                (16, "fc_date1", "Ngày mở rộng"),
-                (17, "std_text", "Trường text chuẩn"),
-                (18, "std_num", "Số nguyên chuẩn"),
-                (19, "std_dec", "Số thập phân chuẩn"),
-                (20, "std_date", "Ngày chuẩn")
+                (1, "title", "Tên"),
+                (2, "symbolno", "Số ký hiệu"),
+                (3, "issuer", "Cơ quan ban hành"),
+                (4, "receiver", "Nơi nhận"),
+                (5, "subject", "Về việc"),
+                (6, "levelno", "Tầng số"),
+                (7, "boxno", "Hộp số"),
+                (8, "recordno", "Hồ sơ số"),
+                (9, "recordtitle", "Tiêu đề hồ sơ"),
+                (10, "poster", "Người lập"),
+                (11, "signer", "Người ký"),
+                (12, "slotno", "Khoang số"),
+                (13, "shelfno", "Giá / kệ số"),
+                (14, "noted", "Ghi chú")
             };
 
             var midPoint = (defaultFields.Count + 1) / 2;
@@ -58,7 +78,7 @@
                     <thead>
                         <tr>
                             <th style="width: 48px;">Dùng</th>
-                            <th>Tên trường</th>
+                            <th>Tên trường hiển thị / Lưu DB</th>
                             <th style="width: 60px;">Cấu hình</th>
                         </tr>
                     </thead>
@@ -68,32 +88,72 @@
                             foreach (var field in leftFields)
                             {
                                 var st = Model.Settings.FirstOrDefault(s => s.IdField == field.id && !s.IsCatalog);
-                                var isEnabled = st != null;
+                                var isNameField = field.id == 1;
+                                var isEnabled = isNameField || st != null;
                                 var weight = st?.Weight ?? (stt * 10);
                                 var inputType = GetInputTypeString(st?.IType ?? 1);
-                                var fieldGroup = st?.IdFieldGroup ?? 0;
+                                var fieldGroup = st?.IdFieldGroup ?? (isNameField ? infoDocumentGroupId : 0);
                                 var fieldTitle = st?.Title ?? field.title;
+                                var description = st?.PatternCustom ?? "";
+                                var defaultValue = st?.FixValue ?? "";
+                                var patternId = st?.IdPatternType ?? 0;
+                                var minValue = st?.MinValue ?? "";
+                                var maxValue = st?.MaxValue ?? "";
+                                var minLen = st?.MinLen ?? 0;
+                                var maxLen = st?.MaxLen ?? 0;
+                                var requiredValue = st?.IsRequired == true ? "true" : "false";
+                                var readOnlyValue = st?.IsReadOnly == true ? "true" : "false";
+                                var upperCaseValue = st?.IsUpperCase == true ? "true" : "false";
+                                var capitalizeValue = st?.IsCapitalize == true ? "true" : "false";
+                                var dbColumn = GetDbStorageColumn(field.id, field.name);
 
                                 <tr class="default-field-row" data-field-id="@field.id" data-weight="@weight">
                                     <td>
                                         <div class="custom-control custom-checkbox">
                                             <input type="checkbox" class="custom-control-input field-enabled" 
                                                    id="df_@(field.id)" name="DF@(field.id)" value="true" 
-                                                   @(isEnabled ? "checked" : null) />
+                                                   @(isEnabled ? "checked" : null) @(isNameField ? "disabled" : null) />
                                             <label class="custom-control-label" for="df_@(field.id)"></label>
+                                            <input type="hidden" name="DF_Enabled_@(field.id)" value="@(isEnabled ? "true" : "false")" class="field-enabled-hidden" />
+                                            @if (isNameField)
+                                            {
+                                                <input type="hidden" name="DF@(field.id)" value="true" />
+                                            }
                                         </div>
                                     </td>
                                     <td>
-                                        <input type="text" class="form-control form-control-sm field-title" 
-                                               name="DF_Title_@(field.id)" value="@fieldTitle" 
-                                               placeholder="@field.title" />
+                                        <div class="d-flex align-items-center" style="gap:8px;">
+                                            <input type="text" class="form-control form-control-sm field-title"
+                                                   name="DF_Title_@(field.id)" value="@fieldTitle"
+                                                   placeholder="@field.title" @(isNameField ? "readonly" : null) />
+                                            <input type="text" class="form-control form-control-sm bg-light text-muted"
+                                                   value="@dbColumn" readonly title="Cột lưu dữ liệu trong bảng documents" />
+                                        </div>
                                         <input type="hidden" name="DF_Weight_@(field.id)" value="@weight" class="field-weight" />
+                                        <input type="hidden" name="DF_InputType_@(field.id)" value="@inputType" />
+                                        <input type="hidden" name="DF_GroupDetail_@(field.id)" value="@fieldGroup" />
+                                        <input type="hidden" name="DF_Description_@(field.id)" value="@description" />
+                                        <input type="hidden" name="DF_DefaultValue_@(field.id)" value="@defaultValue" />
+                                        <input type="hidden" name="DF_Pattern_@(field.id)" value="@patternId" />
+                                        <input type="hidden" name="DF_MinValue_@(field.id)" value="@minValue" />
+                                        <input type="hidden" name="DF_MaxValue_@(field.id)" value="@maxValue" />
+                                        <input type="hidden" name="DF_MinLen_@(field.id)" value="@minLen" />
+                                        <input type="hidden" name="DF_MaxLen_@(field.id)" value="@maxLen" />
+                                        <input type="hidden" name="DF_Required_@(field.id)" value="@requiredValue" />
+                                        <input type="hidden" name="DF_ReadOnly_@(field.id)" value="@readOnlyValue" />
+                                        <input type="hidden" name="DF_UpperCase_@(field.id)" value="@upperCaseValue" />
+                                        <input type="hidden" name="DF_Capitalize_@(field.id)" value="@capitalizeValue" />
+                                        @if (isNameField)
+                                        {
+                                            <input type="hidden" name="DF_ReadOnly_@(field.id)" value="true" />
+                                            <input type="hidden" name="DF_Required_@(field.id)" value="true" />
+                                        }
                                     </td>
                                     <td class="text-center">
                                         <button type="button" class="btn btn-sm btn-outline-secondary field-config-btn" 
                                                 data-field-id="@field.id" data-field-name="@field.title" 
                                                 data-input-type="@inputType" data-field-group="@fieldGroup"
-                                                title="Cấu hình chi tiết">
+                                                title="Cấu hình chi tiết" @(isNameField ? "disabled" : null)>
                                             <i class="fas fa-cog"></i>
                                         </button>
                                     </td>
@@ -113,7 +173,7 @@
                     <thead>
                         <tr>
                             <th style="width: 48px;">Dùng</th>
-                            <th>Tên trường</th>
+                            <th>Tên trường hiển thị / Lưu DB</th>
                             <th style="width: 60px;">Cấu hình</th>
                         </tr>
                     </thead>
@@ -122,32 +182,72 @@
                             foreach (var field in rightFields)
                             {
                                 var st = Model.Settings.FirstOrDefault(s => s.IdField == field.id && !s.IsCatalog);
-                                var isEnabled = st != null;
+                                var isNameField = field.id == 1;
+                                var isEnabled = isNameField || st != null;
                                 var weight = st?.Weight ?? (stt * 10);
                                 var inputType = GetInputTypeString(st?.IType ?? 1);
-                                var fieldGroup = st?.IdFieldGroup ?? 0;
+                                var fieldGroup = st?.IdFieldGroup ?? (isNameField ? infoDocumentGroupId : 0);
                                 var fieldTitle = st?.Title ?? field.title;
+                                var description = st?.PatternCustom ?? "";
+                                var defaultValue = st?.FixValue ?? "";
+                                var patternId = st?.IdPatternType ?? 0;
+                                var minValue = st?.MinValue ?? "";
+                                var maxValue = st?.MaxValue ?? "";
+                                var minLen = st?.MinLen ?? 0;
+                                var maxLen = st?.MaxLen ?? 0;
+                                var requiredValue = st?.IsRequired == true ? "true" : "false";
+                                var readOnlyValue = st?.IsReadOnly == true ? "true" : "false";
+                                var upperCaseValue = st?.IsUpperCase == true ? "true" : "false";
+                                var capitalizeValue = st?.IsCapitalize == true ? "true" : "false";
+                                var dbColumn = GetDbStorageColumn(field.id, field.name);
 
                                 <tr class="default-field-row" data-field-id="@field.id" data-weight="@weight">
                                     <td>
                                         <div class="custom-control custom-checkbox">
                                             <input type="checkbox" class="custom-control-input field-enabled" 
                                                    id="df_@(field.id)" name="DF@(field.id)" value="true" 
-                                                   @(isEnabled ? "checked" : null) />
+                                                   @(isEnabled ? "checked" : null) @(isNameField ? "disabled" : null) />
                                             <label class="custom-control-label" for="df_@(field.id)"></label>
+                                            <input type="hidden" name="DF_Enabled_@(field.id)" value="@(isEnabled ? "true" : "false")" class="field-enabled-hidden" />
+                                            @if (isNameField)
+                                            {
+                                                <input type="hidden" name="DF@(field.id)" value="true" />
+                                            }
                                         </div>
                                     </td>
                                     <td>
-                                        <input type="text" class="form-control form-control-sm field-title" 
-                                               name="DF_Title_@(field.id)" value="@fieldTitle" 
-                                               placeholder="@field.title" />
+                                        <div class="d-flex align-items-center" style="gap:8px;">
+                                            <input type="text" class="form-control form-control-sm field-title"
+                                                   name="DF_Title_@(field.id)" value="@fieldTitle"
+                                                   placeholder="@field.title" @(isNameField ? "readonly" : null) />
+                                            <input type="text" class="form-control form-control-sm bg-light text-muted"
+                                                   value="@dbColumn" readonly title="Cột lưu dữ liệu trong bảng documents" />
+                                        </div>
                                         <input type="hidden" name="DF_Weight_@(field.id)" value="@weight" class="field-weight" />
+                                        <input type="hidden" name="DF_InputType_@(field.id)" value="@inputType" />
+                                        <input type="hidden" name="DF_GroupDetail_@(field.id)" value="@fieldGroup" />
+                                        <input type="hidden" name="DF_Description_@(field.id)" value="@description" />
+                                        <input type="hidden" name="DF_DefaultValue_@(field.id)" value="@defaultValue" />
+                                        <input type="hidden" name="DF_Pattern_@(field.id)" value="@patternId" />
+                                        <input type="hidden" name="DF_MinValue_@(field.id)" value="@minValue" />
+                                        <input type="hidden" name="DF_MaxValue_@(field.id)" value="@maxValue" />
+                                        <input type="hidden" name="DF_MinLen_@(field.id)" value="@minLen" />
+                                        <input type="hidden" name="DF_MaxLen_@(field.id)" value="@maxLen" />
+                                        <input type="hidden" name="DF_Required_@(field.id)" value="@requiredValue" />
+                                        <input type="hidden" name="DF_ReadOnly_@(field.id)" value="@readOnlyValue" />
+                                        <input type="hidden" name="DF_UpperCase_@(field.id)" value="@upperCaseValue" />
+                                        <input type="hidden" name="DF_Capitalize_@(field.id)" value="@capitalizeValue" />
+                                        @if (isNameField)
+                                        {
+                                            <input type="hidden" name="DF_ReadOnly_@(field.id)" value="true" />
+                                            <input type="hidden" name="DF_Required_@(field.id)" value="true" />
+                                        }
                                     </td>
                                     <td class="text-center">
                                         <button type="button" class="btn btn-sm btn-outline-secondary field-config-btn" 
                                                 data-field-id="@field.id" data-field-name="@field.title" 
                                                 data-input-type="@inputType" data-field-group="@fieldGroup"
-                                                title="Cấu hình chi tiết">
+                                                title="Cấu hình chi tiết" @(isNameField ? "disabled" : null)>
                                             <i class="fas fa-cog"></i>
                                         </button>
                                     </td>
@@ -193,8 +293,7 @@
                         <div class="form-group">
                             <label>Nhóm trường</label>
                             <select class="form-control" id="modalFieldGroup">
-                                <option value="0">—</option>
-                                @foreach (var g in Model.FieldGroups)
+                                @foreach (var g in groupOptions)
                                 {
                                     <option value="@g.Id">@g.Name</option>
                                 }
@@ -314,10 +413,13 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.field-enabled').forEach(checkbox => {
         checkbox.addEventListener('change', function() {
             const row = this.closest('tr');
+            const enabledHidden = row ? row.querySelector('.field-enabled-hidden') : null;
             if (this.checked) {
                 row.classList.remove('disabled');
+                if (enabledHidden) enabledHidden.value = 'true';
             } else {
                 row.classList.add('disabled');
+                if (enabledHidden) enabledHidden.value = 'false';
             }
         });
     });
@@ -329,7 +431,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const fieldId = this.getAttribute('data-field-id');
             const fieldName = this.getAttribute('data-field-name');
             const inputType = this.getAttribute('data-input-type') || 'text';
-            const fieldGroup = this.getAttribute('data-field-group') || '0';
+            const fieldGroup = this.getAttribute('data-field-group') || '';
             
             // Set modal data
             document.getElementById('modalFieldId').value = fieldId;
@@ -340,16 +442,17 @@ document.addEventListener('DOMContentLoaded', function() {
             // Load existing values from hidden inputs if any
             const prefix = 'DF_';
             document.getElementById('modalDescription').value = document.querySelector(`[name="${prefix}Description_${fieldId}"]`)?.value || '';
+            document.getElementById('modalFieldGroup').value = document.querySelector(`[name="${prefix}GroupDetail_${fieldId}"]`)?.value || fieldGroup;
             document.getElementById('modalDefaultValue').value = document.querySelector(`[name="${prefix}DefaultValue_${fieldId}"]`)?.value || '';
             document.getElementById('modalPattern').value = document.querySelector(`[name="${prefix}Pattern_${fieldId}"]`)?.value || '0';
             document.getElementById('modalMinValue').value = document.querySelector(`[name="${prefix}MinValue_${fieldId}"]`)?.value || '';
             document.getElementById('modalMaxValue').value = document.querySelector(`[name="${prefix}MaxValue_${fieldId}"]`)?.value || '';
             document.getElementById('modalMinLen').value = document.querySelector(`[name="${prefix}MinLen_${fieldId}"]`)?.value || '';
             document.getElementById('modalMaxLen').value = document.querySelector(`[name="${prefix}MaxLen_${fieldId}"]`)?.value || '';
-            document.getElementById('modalRequired').checked = document.querySelector(`[name="${prefix}Required_${fieldId}"]`)?.checked || false;
-            document.getElementById('modalReadOnly').checked = document.querySelector(`[name="${prefix}ReadOnly_${fieldId}"]`)?.checked || false;
-            document.getElementById('modalUpperCase').checked = document.querySelector(`[name="${prefix}UpperCase_${fieldId}"]`)?.checked || false;
-            document.getElementById('modalCapitalize').checked = document.querySelector(`[name="${prefix}Capitalize_${fieldId}"]`)?.checked || false;
+            document.getElementById('modalRequired').checked = (document.querySelector(`[name="${prefix}Required_${fieldId}"]`)?.value || '').toLowerCase() === 'true';
+            document.getElementById('modalReadOnly').checked = (document.querySelector(`[name="${prefix}ReadOnly_${fieldId}"]`)?.value || '').toLowerCase() === 'true';
+            document.getElementById('modalUpperCase').checked = (document.querySelector(`[name="${prefix}UpperCase_${fieldId}"]`)?.value || '').toLowerCase() === 'true';
+            document.getElementById('modalCapitalize').checked = (document.querySelector(`[name="${prefix}Capitalize_${fieldId}"]`)?.value || '').toLowerCase() === 'true';
             
             $('#fieldConfigModal').modal('show');
         });
@@ -359,9 +462,12 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('saveFieldConfig').addEventListener('click', function() {
         const fieldId = document.getElementById('modalFieldId').value;
         const prefix = 'DF_';
+        const row = document.querySelector(`.default-field-row[data-field-id="${fieldId}"]`);
+        const configBtn = document.querySelector(`.field-config-btn[data-field-id="${fieldId}"]`);
         
-        // Create or update hidden inputs
-        const form = document.querySelector('form');
+        // Form chứa field (form đầu tiên trong DOM là logout ở header — không dùng querySelector('form'))
+        const form = row?.closest('form') ?? document.querySelector('#page-content-scroll form[method="post"]');
+        if (!form) return;
         const fields = {
             [`${prefix}InputType_${fieldId}`]: document.getElementById('modalInputType').value,
             [`${prefix}GroupDetail_${fieldId}`]: document.getElementById('modalFieldGroup').value,
@@ -384,6 +490,20 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             input.value = fields[name];
         });
+
+        if (configBtn) {
+            configBtn.setAttribute('data-input-type', document.getElementById('modalInputType').value);
+            configBtn.setAttribute('data-field-group', document.getElementById('modalFieldGroup').value);
+        }
+
+        // Khi lưu cấu hình thì field được xem là đang sử dụng.
+        if (row) {
+            const enabled = row.querySelector('.field-enabled');
+            if (enabled && !enabled.disabled) enabled.checked = true;
+            const enabledHidden = row.querySelector('.field-enabled-hidden');
+            if (enabledHidden) enabledHidden.value = 'true';
+            row.classList.remove('disabled');
+        }
         
         // Handle checkboxes
         const checkboxes = {
@@ -395,17 +515,13 @@ document.addEventListener('DOMContentLoaded', function() {
         
         Object.keys(checkboxes).forEach(name => {
             let input = form.querySelector(`[name="${name}"]`);
-            if (checkboxes[name]) {
-                if (!input) {
-                    input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = name;
-                    input.value = 'true';
-                    form.appendChild(input);
-                }
-            } else {
-                if (input) input.remove();
+            if (!input) {
+                input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = name;
+                form.appendChild(input);
             }
+            input.value = checkboxes[name] ? 'true' : 'false';
         });
         
         $('#fieldConfigModal').modal('hide');

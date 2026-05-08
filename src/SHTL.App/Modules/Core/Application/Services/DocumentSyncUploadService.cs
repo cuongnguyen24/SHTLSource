@@ -8,6 +8,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using SHTL.Modules.Shared.Contracts;
 using SHTL.Modules.Shared.Contracts.Dtos;
+using System.Globalization;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace SHTL.Modules.Core.Application.Services;
 
@@ -247,15 +250,14 @@ public sealed class DocumentSyncUploadService : IDocumentSyncUploadService
                     UpdatedBy = userId
                 };
 
-                SyncPathFormatParser.ApplyFolderSegmentsToFields(doc, relForMeta, maxDepth: 15);
-
+                var orderedPathPlaceholders = GetOrderedPathPlaceholderEntries(matchedSync.Format, pathValues);
                 foreach (var st in settings)
                 {
                     if (st.IsCatalog)
                         continue;
-                    if (!allFields.TryGetValue(st.IdField, out var sf))
+                    if (!TryResolveDocFieldForSyncSetting(st, allFields, out var sf))
                         continue;
-                    var raw = GetPathValue(pathValues, st.Title);
+                    var raw = ResolvePathMetadataValue(pathValues, st, sf, orderedPathPlaceholders);
                     StgFieldToDocumentMapper.ApplyValue(doc, sf.Name, raw);
                 }
 
@@ -468,13 +470,32 @@ public sealed class DocumentSyncUploadService : IDocumentSyncUploadService
         for (var i = 0; i < formatSegments.Count && i < pathSegments.Count; i++)
         {
             var segment = formatSegments[i];
-            if (!IsPlaceholder(segment))
+            var matches = Regex.Matches(segment, @"\{([^{}]+)\}");
+            if (matches.Count == 0)
                 continue;
+            
+            // Typical case: whole segment is one placeholder, e.g. "{Đợt số}"
+            if (matches.Count == 1 && segment.Trim().Equals(matches[0].Value, StringComparison.Ordinal))
+            {
+                var key = matches[0].Groups[1].Value.Trim();
+                if (key.Length > 0)
+                    data[key] = pathSegments[i];
+                continue;
+            }
 
-            var key = segment[1..^1].Trim();
-            if (key.Length == 0)
-                continue;
-            data[key] = pathSegments[i];
+            // Legacy/mistyped format case: mixed tokens in one segment, e.g. "{Hồ sơ số}{File_name}".
+            foreach (Match m in matches)
+            {
+                var key = m.Groups[1].Value.Trim();
+                if (key.Length == 0) continue;
+                if (key.Equals("File_name", StringComparison.OrdinalIgnoreCase))
+                {
+                    data[key] = pathSegments[^1];
+                    continue;
+                }
+                if (!data.ContainsKey(key))
+                    data[key] = pathSegments[i];
+            }
         }
 
         return data;
@@ -524,14 +545,179 @@ public sealed class DocumentSyncUploadService : IDocumentSyncUploadService
             .ToList();
     }
 
-    private static string? GetPathValue(Dictionary<string, string?> pathValues, string? settingTitle)
+    /// <summary>
+    /// Thứ tự placeholder trong Format (bỏ File_name) để map Field 1..N khi tiêu đề cấu hình vẫn là "Field N".
+    /// </summary>
+    private static IReadOnlyList<(string Key, string? Value)> GetOrderedPathPlaceholderEntries(
+        string? format,
+        IReadOnlyDictionary<string, string?> pathValues)
+    {
+        var list = new List<(string Key, string?)>();
+        foreach (var segment in SplitPathSegments((format ?? "").Replace('\\', '/')))
+        {
+            foreach (Match m in Regex.Matches(segment, @"\{([^{}]+)\}"))
+            {
+                var key = m.Groups[1].Value.Trim();
+                if (key.Length == 0)
+                    continue;
+                if (key.Equals("File_name", StringComparison.OrdinalIgnoreCase))
+                    continue;
+                pathValues.TryGetValue(key, out var val);
+                list.Add((key, val));
+            }
+        }
+
+        return list;
+    }
+
+    /// <summary>
+    /// Ghép giá trị từ path với cấu hình đồng bộ: Title khớp placeholder, gợi ý theo name chuẩn (levelno/boxno/recordno),
+    /// sau đó map theo vị trí Field 1..25 nếu title vẫn là mặc định "Field N".
+    /// </summary>
+    private static string? ResolvePathMetadataValue(
+        IReadOnlyDictionary<string, string?> pathValues,
+        DocTypeSyncSettingDto st,
+        StgDocFieldDto sf,
+        IReadOnlyList<(string Key, string? Value)> orderedPlaceholders)
+    {
+        foreach (var title in new[] { st.Title, sf.Title })
+        {
+            var v = GetPathValue(pathValues, title);
+            if (!string.IsNullOrWhiteSpace(v))
+                return v;
+        }
+
+        // stg_doc_fields tên chuẩn sau migration — Format AXE thường dùng "Đợt số" thay vì "Tầng số"
+        switch (sf.Name.ToLowerInvariant())
+        {
+            case "levelno":
+            {
+                var v = GetPathValue(pathValues, "Đợt số") ?? GetPathValue(pathValues, "Tầng số");
+                if (!string.IsNullOrWhiteSpace(v))
+                    return v;
+                break;
+            }
+            case "boxno":
+            {
+                var v = GetPathValue(pathValues, "Hộp số");
+                if (!string.IsNullOrWhiteSpace(v))
+                    return v;
+                break;
+            }
+            case "recordno":
+            {
+                var v = GetPathValue(pathValues, "Hồ sơ số");
+                if (!string.IsNullOrWhiteSpace(v))
+                    return v;
+                break;
+            }
+        }
+
+        // Trường mở rộng (id 101–125 → field1–field25): nếu chưa match theo title, lấy theo thứ tự placeholder
+        // trong Format (bỏ File_name) — tránh trường hợp DB chưa seed stg_doc_fields 101+ hoặc title lệch.
+        if (sf.Id is >= 101 and <= 125)
+        {
+            var idx = ParseFieldNIndexFromName(sf.Name);
+            if (idx >= 0 && idx < orderedPlaceholders.Count)
+            {
+                var val = orderedPlaceholders[idx].Value;
+                if (!string.IsNullOrWhiteSpace(val))
+                    return val;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// <c>stg_doc_type_sync_settings.id_field</c> cho Field 1–25 là 101–125. Nhiều DB chỉ seed <c>stg_doc_fields</c> 1–14,
+    /// không có 101+ → lookup thất bại và metadata path không bao giờ được gán. Tổng hợp dòng catalog tối thiểu khi thiếu.
+    /// </summary>
+    private static bool TryResolveDocFieldForSyncSetting(
+        DocTypeSyncSettingDto st,
+        IReadOnlyDictionary<int, StgDocFieldDto> allFields,
+        out StgDocFieldDto sf)
+    {
+        if (allFields.TryGetValue(st.IdField, out var found))
+        {
+            sf = found;
+            return true;
+        }
+
+        if (st.IdField is >= 101 and <= 125)
+        {
+            var n = st.IdField - 100;
+            sf = new StgDocFieldDto
+            {
+                Id = st.IdField,
+                Name = $"field{n}",
+                Title = st.Title ?? $"Field {n}",
+                IsRequired = false,
+                IsActive = true,
+                IsRecord = false,
+                Datatype = string.Empty,
+                CClass = null
+            };
+            return true;
+        }
+
+        sf = null!;
+        return false;
+    }
+
+    private static int ParseFieldNIndexFromName(string name)
+    {
+        var m = Regex.Match(name, @"^field(\d+)$", RegexOptions.IgnoreCase);
+        return m.Success && int.TryParse(m.Groups[1].Value, out var n) ? n - 1 : -1;
+    }
+
+    private static string? GetPathValue(IReadOnlyDictionary<string, string?> pathValues, string? settingTitle)
     {
         if (string.IsNullOrWhiteSpace(settingTitle))
             return null;
-        if (pathValues.TryGetValue(settingTitle, out var v) && !string.IsNullOrWhiteSpace(v))
+
+        var keyRaw = settingTitle.Trim();
+        if (pathValues.TryGetValue(keyRaw, out var v) && !string.IsNullOrWhiteSpace(v))
             return v;
-        var key = pathValues.Keys.FirstOrDefault(k => k.Equals(settingTitle.Trim(), StringComparison.OrdinalIgnoreCase));
-        return key != null ? pathValues[key] : null;
+
+        // Accept setting title saved as "{Tên placeholder}"
+        var keyNoBrace = keyRaw.Trim('{', '}').Trim();
+        if (pathValues.TryGetValue(keyNoBrace, out var vb) && !string.IsNullOrWhiteSpace(vb))
+            return vb;
+
+        // Loose compare: ignore case/space/diacritics so "Hộp Số" == "hop so"
+        var normalizedTarget = NormalizeKey(keyNoBrace);
+        var loose = pathValues.FirstOrDefault(kv => NormalizeKey(kv.Key) == normalizedTarget);
+        if (!string.IsNullOrWhiteSpace(loose.Value))
+            return loose.Value;
+
+        // Backward fallback by exact (case-insensitive) compare
+        var key = pathValues.Keys.FirstOrDefault(k => k.Equals(keyRaw, StringComparison.OrdinalIgnoreCase));
+        if (key != null && !string.IsNullOrWhiteSpace(pathValues[key]))
+            return pathValues[key];
+        key = pathValues.Keys.FirstOrDefault(k => k.Equals(keyNoBrace, StringComparison.OrdinalIgnoreCase));
+        if (key != null && !string.IsNullOrWhiteSpace(pathValues[key]))
+            return pathValues[key];
+
+        return null;
+    }
+
+    private static string NormalizeKey(string? input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+            return string.Empty;
+        var s = input.Trim().ToLowerInvariant();
+        var sb = new StringBuilder(s.Length);
+        foreach (var ch in s.Normalize(NormalizationForm.FormD))
+        {
+            var uc = CharUnicodeInfo.GetUnicodeCategory(ch);
+            if (uc == UnicodeCategory.NonSpacingMark)
+                continue;
+            if (char.IsWhiteSpace(ch) || ch == '_' || ch == '-')
+                continue;
+            sb.Append(ch);
+        }
+        return sb.ToString().Normalize(NormalizationForm.FormC);
     }
 
     private string? ResolveStoredFullPath(string? storedPath)

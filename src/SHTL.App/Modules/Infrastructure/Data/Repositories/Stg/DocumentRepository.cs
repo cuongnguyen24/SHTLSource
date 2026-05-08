@@ -56,6 +56,14 @@ public class DocumentRepository : BaseRepository, IDocumentRepository
         ["SymbolNo"] = "symbol_no",
         ["RecordNo"] = "record_no",
         ["IssuedBy"] = "issued_by",
+        ["Receiver"] = "receiver",
+        ["Subject"] = "subject",
+        ["LevelNo"] = "level_no",
+        ["BoxNo"] = "box_no",
+        ["RecordTitle"] = "record_title",
+        ["Poster"] = "poster",
+        ["SlotNo"] = "slot_no",
+        ["ShelfNo"] = "shelf_no",
         ["IssuedYear"] = "issued_year",
         ["Author"] = "author",
         ["Field1"] = "field1",
@@ -91,6 +99,7 @@ public class DocumentRepository : BaseRepository, IDocumentRepository
             INSERT INTO dbo.stg_documents
                 (doc_type_id, record_type_id, content_type_id, sync_type_id,
                  folder_id, dept_id, name, [describe], symbol_no, record_no, issued_by,
+                 receiver, subject, level_no, box_no, record_title, poster, slot_no, shelf_no,
                  issued, issued_year, author, signer, noted, summary, search_meta,
                  file_name, file_path, path_original, path_converted, path_pdf_searchable, thumb_path, extension, file_size, page_count,
                  file_hash, is_color_scan, min_dpi, max_dpi, version_pdf, workstation_name,
@@ -116,6 +125,7 @@ public class DocumentRepository : BaseRepository, IDocumentRepository
             VALUES
                 (@DocTypeId, @RecordTypeId, @ContentTypeId, @SyncTypeId,
                  @FolderId, @DeptId, @Name, @Describe, @SymbolNo, @RecordNo, @IssuedBy,
+                 @Receiver, @Subject, @LevelNo, @BoxNo, @RecordTitle, @Poster, @SlotNo, @ShelfNo,
                  @Issued, ISNULL(@IssuedYear, 0), @Author, @Signer, @Noted, @Summary, @SearchMeta,
                  @FileName, @FilePath, @PathOriginal, @PathConverted, @PathPdfSearchable, @ThumbPath, @Extension, @FileSize, @PageCount,
                  @FileHash, @IsColorScan, @MinDpi, @MaxDpi, @VersionPdf, @WorkstationName,
@@ -146,7 +156,10 @@ public class DocumentRepository : BaseRepository, IDocumentRepository
         var sql = @"
             UPDATE dbo.stg_documents SET
                 name = @Name, [describe] = @Describe, symbol_no = @SymbolNo,
-                record_no = @RecordNo, issued_by = @IssuedBy, issued = @Issued,
+                record_no = @RecordNo, issued_by = @IssuedBy,
+                receiver = @Receiver, subject = @Subject, level_no = @LevelNo, box_no = @BoxNo,
+                record_title = @RecordTitle, poster = @Poster, slot_no = @SlotNo, shelf_no = @ShelfNo,
+                issued = @Issued,
                 issued_year = @IssuedYear, author = @Author, signer = @Signer,
                 noted = @Noted, summary = @Summary, search_meta = @SearchMeta,
                 field1 = @Field1, field2 = @Field2, field3 = @Field3, field4 = @Field4,
@@ -155,8 +168,8 @@ public class DocumentRepository : BaseRepository, IDocumentRepository
                 field13 = @Field13, field14 = @Field14, field15 = @Field15,
                 field16 = @Field16, field17 = @Field17, field18 = @Field18,
                 field19 = @Field19, field20 = @Field20,
-                checked1_return_reason = @Checked1ReturnReason,
-                checked2_return_reason = @Checked2ReturnReason,
+                checked1return_reason = @Checked1ReturnReason,
+                checked2return_reason = @Checked2ReturnReason,
                 updated = @Updated, updated_by = @UpdatedBy
             WHERE id = @Id";
         return await ExecuteAsync(conn, sql, doc);

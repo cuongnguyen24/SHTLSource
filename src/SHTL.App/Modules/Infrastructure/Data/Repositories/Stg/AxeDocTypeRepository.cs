@@ -221,7 +221,13 @@ public class AxeDocTypeRepository : BaseRepository, IAxeDocTypeRepository
         var conn = await OpenConnectionAsync();
         var rows = await QueryAsync<StgDocFieldGroupDto>(conn,
             @"SELECT id AS Id, name AS Name, group_name AS GroupName, weight AS Weight, id_parent AS IdParent
-              FROM dbo.stg_doc_field_groups ORDER BY weight, name");
+              FROM dbo.stg_doc_field_groups
+              WHERE name IN (N'Thông tin hồ sơ', N'Thông tin tài liệu')
+              ORDER BY CASE
+                  WHEN name = N'Thông tin hồ sơ' THEN 1
+                  WHEN name = N'Thông tin tài liệu' THEN 2
+                  ELSE 99
+              END, weight, name");
         return rows.ToList();
     }
 

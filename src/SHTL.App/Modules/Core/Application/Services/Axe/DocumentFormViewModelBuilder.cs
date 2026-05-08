@@ -106,6 +106,8 @@ public class DocumentFormViewModelBuilder : IDocumentFormViewModelBuilder
         if (doc != null)
         {
             fieldValues = StgFieldToDocumentMapper.ExtractValues(doc);
+            // Always display document title from physical file_name in Extract/Check forms.
+            fieldValues["dc_title"] = string.IsNullOrWhiteSpace(doc.FileName) ? doc.Name : doc.FileName;
         }
 
         var docDto = doc != null ? MapToDocumentDto(doc) : null;
@@ -150,7 +152,7 @@ public class DocumentFormViewModelBuilder : IDocumentFormViewModelBuilder
             MaxValue = setting.MaxValue,
             PatternCustom = setting.PatternCustom,
             PatternTypeId = setting.IdPatternType,
-            IsReadOnly = setting.IsReadOnly,
+            IsReadOnly = setting.IsReadOnly || string.Equals(field?.Name, "dc_title", StringComparison.OrdinalIgnoreCase),
             IsUpperCase = setting.IsUpperCase,
             IsCapitalize = setting.IsCapitalize,
             IsMulti = setting.IsMulti,

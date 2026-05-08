@@ -61,6 +61,14 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<Document>().ToTable("stg_documents");
         modelBuilder.Entity<Document>().Property(e => e.Describe).HasColumnName("describe");
+        modelBuilder.Entity<Document>().Property(e => e.Receiver).HasColumnName("receiver");
+        modelBuilder.Entity<Document>().Property(e => e.Subject).HasColumnName("subject");
+        modelBuilder.Entity<Document>().Property(e => e.LevelNo).HasColumnName("level_no");
+        modelBuilder.Entity<Document>().Property(e => e.BoxNo).HasColumnName("box_no");
+        modelBuilder.Entity<Document>().Property(e => e.RecordTitle).HasColumnName("record_title");
+        modelBuilder.Entity<Document>().Property(e => e.Poster).HasColumnName("poster");
+        modelBuilder.Entity<Document>().Property(e => e.SlotNo).HasColumnName("slot_no");
+        modelBuilder.Entity<Document>().Property(e => e.ShelfNo).HasColumnName("shelf_no");
         modelBuilder.Entity<DocumentPage>().ToTable("stg_doc_sohoa_page");
 
         var formCell = modelBuilder.Entity<FormCell>();

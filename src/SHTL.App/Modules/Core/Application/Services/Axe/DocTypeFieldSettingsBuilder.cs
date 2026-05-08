@@ -164,13 +164,15 @@ public static class DocTypeFieldSettingsBuilder
         List<StgDocFieldSettingDto> list,
         int weight)
     {
-        // Danh sách trường mặc định (ID 1-20)
-        var defaultFieldIds = Enumerable.Range(1, 20).ToList();
+        // Danh sách trường mặc định (ID 1-14)
+        var defaultFieldIds = Enumerable.Range(1, 14).ToList();
 
         foreach (var fieldId in defaultFieldIds)
         {
             var keyDf = $"DF{fieldId}";
-            if (!form.ContainsKey(keyDf))
+            var isNameField = fieldId == 1;
+            var isEnabled = AxeFormHelper.GetBool(form, $"DF_Enabled_{fieldId}") || form.ContainsKey(keyDf);
+            if (!isNameField && !isEnabled)
                 continue;
 
             weight++;
@@ -185,6 +187,8 @@ public static class DocTypeFieldSettingsBuilder
             var maxLen = AxeFormHelper.GetInt(form, $"DF_MaxLen_{fieldId}");
             if (maxLen < 0) maxLen = 0;
             var idPatternType = AxeFormHelper.GetInt(form, $"DF_Pattern_{fieldId}");
+            var patternCustom = AxeFormHelper.GetString(form, $"DF_Description_{fieldId}");
+            var fixValue = AxeFormHelper.GetString(form, $"DF_DefaultValue_{fieldId}");
             var isRequired = AxeFormHelper.GetBool(form, $"DF_Required_{fieldId}");
             var isReadOnly = AxeFormHelper.GetBool(form, $"DF_ReadOnly_{fieldId}");
             var isUpperCase = AxeFormHelper.GetBool(form, $"DF_UpperCase_{fieldId}");
@@ -195,7 +199,7 @@ public static class DocTypeFieldSettingsBuilder
             {
                 IdType = docTypeId,
                 IdField = fieldId,
-                Title = title ?? $"Field {fieldId}",
+                Title = isNameField ? (string.IsNullOrWhiteSpace(title) ? "Tên" : title) : (title ?? $"Field {fieldId}"),
                 IType = GetInputTypeId(inputType),
                 ICol = 0,
                 IRow = 0,
@@ -206,17 +210,17 @@ public static class DocTypeFieldSettingsBuilder
                 IdFieldGroup = idGroup,
                 IdCategoryType = 0,
                 IdPatternType = idPatternType,
-                PatternCustom = null,
-                FixValue = null,
+                PatternCustom = patternCustom,
+                FixValue = fixValue,
                 MinValue = minValue,
                 MaxValue = maxValue,
                 MinLen = minLen,
                 MaxLen = maxLen,
-                IsRequired = isRequired,
-                IsReadOnly = isReadOnly,
+                IsRequired = isNameField || isRequired,
+                IsReadOnly = isNameField || isReadOnly,
                 IsUpperCase = isUpperCase,
                 IsCapitalize = isCapitalize,
-                Format = null,
+                Format = isNameField ? "file_name" : null,
                 IsOcrFix = prev?.IsOcrFix ?? false
             });
         }
@@ -236,7 +240,8 @@ public static class DocTypeFieldSettingsBuilder
         {
             var fieldId = 100 + i; // ID 101-125
             var keyEf = $"EF{fieldId}";
-            if (!form.ContainsKey(keyEf))
+            var isEnabled = AxeFormHelper.GetBool(form, $"EF_Enabled_{fieldId}") || form.ContainsKey(keyEf);
+            if (!isEnabled)
                 continue;
 
             weight++;
@@ -251,6 +256,8 @@ public static class DocTypeFieldSettingsBuilder
             var maxLen = AxeFormHelper.GetInt(form, $"EF_MaxLen_{fieldId}");
             if (maxLen < 0) maxLen = 0;
             var idPatternType = AxeFormHelper.GetInt(form, $"EF_Pattern_{fieldId}");
+            var patternCustom = AxeFormHelper.GetString(form, $"EF_Description_{fieldId}");
+            var fixValue = AxeFormHelper.GetString(form, $"EF_DefaultValue_{fieldId}");
             var isRequired = AxeFormHelper.GetBool(form, $"EF_Required_{fieldId}");
             var isReadOnly = AxeFormHelper.GetBool(form, $"EF_ReadOnly_{fieldId}");
             var isUpperCase = AxeFormHelper.GetBool(form, $"EF_UpperCase_{fieldId}");
@@ -272,8 +279,8 @@ public static class DocTypeFieldSettingsBuilder
                 IdFieldGroup = idGroup,
                 IdCategoryType = 0,
                 IdPatternType = idPatternType,
-                PatternCustom = null,
-                FixValue = null,
+                PatternCustom = patternCustom,
+                FixValue = fixValue,
                 MinValue = minValue,
                 MaxValue = maxValue,
                 MinLen = minLen,
