@@ -95,6 +95,7 @@
                                 <th>Đường dẫn</th>
                                 <th>Tên</th>
                                 <th>Loại tài liệu</th>
+                                <th style="width:70px;">DPI</th>
                                 <th style="width:70px;">Số trang</th>
                                 <th style="width:120px;">Trạng thái</th>
                                 <th style="width:180px;">Đánh giá kết quả</th>
@@ -119,6 +120,7 @@
                                             <small class="text-muted">@((d.FileName ?? "—"))</small>
                                         </td>
                                         <td><small>@(d.DocTypeName ?? "—")</small></td>
+                                        <td class="text-center">@(d.MinDpi > 0 ? Math.Round(d.MinDpi).ToString("0") : "—")</td>
                                         <td class="text-center">@d.PageCount</td>
                                         <td>
                                             <span class="status-pill">@d.CurrentStepName</span>

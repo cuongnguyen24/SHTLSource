@@ -24,6 +24,9 @@ public interface IDocumentRepository
 
     /// <summary>Phục hồi job bị kẹt (app restart giữa chừng).</summary>
     Task<int> ResetStaleSearchablePdfProcessingAsync(TimeSpan olderThan);
+
+    /// <summary>Tìm các tài liệu cùng bộ theo danh sách key cấu hình (SetRecordInfo).</summary>
+    Task<IEnumerable<Document>> GetSameRecordDocumentsAsync(long documentId, IReadOnlyList<string> recordKeys, int limit = 200);
 }
 
 public class DocumentFilterParams
@@ -40,6 +43,38 @@ public class DocumentFilterParams
 
 public class DocumentRepository : BaseRepository, IDocumentRepository
 {
+    private static readonly Dictionary<string, string> RecordKeyColumnMap = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Id"] = "id",
+        ["DocTypeId"] = "doc_type_id",
+        ["RecordTypeId"] = "record_type_id",
+        ["ContentTypeId"] = "content_type_id",
+        ["SyncTypeId"] = "sync_type_id",
+        ["FolderId"] = "folder_id",
+        ["DeptId"] = "dept_id",
+        ["Name"] = "name",
+        ["SymbolNo"] = "symbol_no",
+        ["RecordNo"] = "record_no",
+        ["IssuedBy"] = "issued_by",
+        ["IssuedYear"] = "issued_year",
+        ["Author"] = "author",
+        ["Field1"] = "field1",
+        ["Field2"] = "field2",
+        ["Field3"] = "field3",
+        ["Field4"] = "field4",
+        ["Field5"] = "field5",
+        ["Field6"] = "field6",
+        ["Field7"] = "field7",
+        ["Field8"] = "field8",
+        ["Field9"] = "field9",
+        ["Field10"] = "field10",
+        ["Field11"] = "field11",
+        ["Field12"] = "field12",
+        ["Field13"] = "field13",
+        ["Field14"] = "field14",
+        ["Field15"] = "field15"
+    };
+
     public DocumentRepository(AppDbContext db) : base(db) { }
 
     public async Task<Document?> GetByIdAsync(long id)
@@ -243,6 +278,62 @@ WHERE ocr_status = @Processing
                 SystemUser = 0,
                 NegSeconds = -(int)olderThan.TotalSeconds
             });
+    }
+
+    public async Task<IEnumerable<Document>> GetSameRecordDocumentsAsync(long documentId, IReadOnlyList<string> recordKeys, int limit = 200)
+    {
+        var normalizedKeys = (recordKeys ?? Array.Empty<string>())
+            .Select(x => x?.Trim())
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(x => x!)
+            .ToList();
+        if (normalizedKeys.Count == 0)
+            return Enumerable.Empty<Document>();
+
+        var source = await GetByIdAsync(documentId);
+        if (source is null)
+            return Enumerable.Empty<Document>();
+
+        var conditions = new List<string> { "status != 2" };
+        var p = new DynamicParameters();
+        p.Add("Limit", limit <= 0 ? 200 : limit);
+        p.Add("Id", documentId);
+
+        var matchedKeyCount = 0;
+        foreach (var key in normalizedKeys)
+        {
+            if (!RecordKeyColumnMap.TryGetValue(key, out var col))
+                continue;
+
+            var prop = typeof(Document).GetProperty(key);
+            if (prop is null)
+                continue;
+
+            var value = prop.GetValue(source);
+            matchedKeyCount++;
+            if (value is null)
+            {
+                conditions.Add($"{col} IS NULL");
+            }
+            else
+            {
+                var paramName = $"k_{matchedKeyCount}";
+                conditions.Add($"{col} = @{paramName}");
+                p.Add(paramName, value);
+            }
+        }
+
+        if (matchedKeyCount == 0)
+            return Enumerable.Empty<Document>();
+
+        var sql = $@"
+            SELECT TOP (@Limit) *
+            FROM dbo.stg_documents
+            WHERE {string.Join(" AND ", conditions)}
+            ORDER BY CASE WHEN id = @Id THEN 0 ELSE 1 END, id DESC";
+        var conn = await OpenConnectionAsync();
+        return await QueryAsync<Document>(conn, sql, p);
     }
 
     private static (string where, object param) BuildWhere(DocumentFilterParams f)

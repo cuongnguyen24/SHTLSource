@@ -5,23 +5,23 @@
 @using SHTL.Modules.Shared.Contracts.ViewModels
 @{
     var doc = Model.Document!;
-    ViewData["Title"] = "Nhập liệu — " + doc.Name;
-    var submitUrl = Url.Action("Submit", "Extract", new { area = "sohoa" })!;
+    ViewData["Title"] = "Kiểm tra lần 1 — " + doc.Name;
+    var submitUrl = Url.Action("DoCheck1", "Check", new { area = "sohoa" })!;
     var previewUrl = Url.Content("~/scan/preview/" + doc.Id);
-    var indexUrl = Url.Action("Index", "Extract", new { area = "sohoa" })!;
+    var indexUrl = Url.Action("Check1", "Check", new { area = "sohoa" })!;
     var pdfViewerUrl = Url.Content("~/scan/pdf/" + doc.Id);
     var showPdfViewer = SearchablePdfDisplay.LooksLikePdf(doc.Extension, doc.FileName, doc.FilePath);
     var spLabel = doc.SearchablePdfStatusText;
+    var sameRecordDocs = Model.SameRecordDocuments ?? Array.Empty<DocumentDto>();
 
     string? Fv(FieldSettingViewModel f) =>
         Model.FieldValues.TryGetValue(f.FieldName, out var x) ? x : f.FixValue;
 
     var orderedFields = Model.FieldSettings.OrderBy(f => f.Weight).ToList();
     var cells = Model.Cells.OrderBy(c => c.Page).ThenBy(c => c.Y).ThenBy(c => c.X).ToList();
-    var sameRecordDocs = Model.SameRecordDocuments ?? Array.Empty<DocumentDto>();
 }
 @section Breadcrumb {
-    <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="Extract" asp-action="Index">Nhập liệu</a></li>
+    <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="Check" asp-action="Check1">Kiểm tra lần 1</a></li>
     <li class="breadcrumb-item active">#@doc.Id</li>
 }
 @section Styles {
@@ -90,14 +90,15 @@
             <div class="d-flex flex-wrap" style="gap:8px;">
                 <a href="@previewUrl" class="btn-figma btn-figma-secondary btn-sm" target="_blank" rel="noopener"><i class="fas fa-file-pdf mr-1"></i>Xem PDF</a>
                 <a href="@indexUrl" class="btn-figma btn-figma-secondary btn-sm">Danh sách</a>
-                <button type="button" class="btn-figma btn-figma-primary btn-sm" id="btnExtractSubmit"><i class="fas fa-save mr-1"></i>Lưu &amp; hoàn thành nhập liệu</button>
+                <button type="button" class="btn-figma btn-figma-warning btn-sm" id="btnCheck1Return"><i class="fas fa-undo mr-1"></i>Trả về nhập liệu</button>
+                <button type="button" class="btn-figma btn-figma-primary btn-sm" id="btnCheck1Pass"><i class="fas fa-check mr-1"></i>Duyệt check 1</button>
             </div>
         </div>
     </div>
 
-    <p id="extract-submit-hint" class="text-muted small d-none"><i class="fas fa-spinner fa-spin mr-1"></i>Đang gửi…</p>
+    <p id="check1-submit-hint" class="text-muted small d-none"><i class="fas fa-spinner fa-spin mr-1"></i>Đang gửi…</p>
 
-    <div class="split-layout" id="extractSplitLayout">
+    <div class="split-layout" id="check1SplitLayout">
         <div class="split-pane-left mb-3 mb-lg-0">
             <div class="card-figma h-100">
                 <div class="card-header-figma d-flex align-items-center justify-content-between flex-wrap">
@@ -110,20 +111,6 @@
                 <div class="card-content-figma p-0">
                     @if (showPdfViewer)
                     {
-                        <div class="border-bottom bg-light px-2 py-1 small text-muted">
-                            @if (doc.OcrStatus == OcrStatus.SearchablePdfReady)
-                            {
-                                <span><i class="fas fa-copy mr-1"></i>PDF 2 lớp: chọn chữ trên tài liệu bên dưới, <strong>Ctrl+C</strong> rồi dán vào các ô nhập liệu.</span>
-                            }
-                            else if (!string.IsNullOrEmpty(spLabel))
-                            {
-                                <span>@spLabel — khi xong, làm tương tự để copy nhanh hơn.</span>
-                            }
-                            else
-                            {
-                                <span>Đang hiển thị bản scan. Sau khi hệ thống tạo PDF 2 lớp, bạn có thể copy chữ từ đây.</span>
-                            }
-                        </div>
                         <iframe src="@pdfViewerUrl" title="PDF tài liệu" class="w-100 border-0 d-block" style="min-height: 560px; height: calc(100vh - 280px);"></iframe>
                     }
                     else
@@ -135,23 +122,28 @@
         </div>
         <div class="splitter" aria-hidden="true"></div>
         <div class="split-pane-right">
-            <ul class="nav nav-tabs mb-3" id="extractTabs" role="tablist">
-                <li class="nav-item">
-                    <a class="nav-link active" id="tab-info-link" data-toggle="tab" href="#tab-info" role="tab">Thông tin tài liệu</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" id="tab-same-record-link" data-toggle="tab" href="#tab-same-record" role="tab">Tài liệu cùng bộ</a>
-                </li>
-                <li class="nav-item">
-                    <span class="nav-link disabled">Ghi chú</span>
-                </li>
-                <li class="nav-item">
-                    <span class="nav-link disabled">Cá nhân xử lý</span>
-                </li>
+            <ul class="nav nav-tabs mb-3" role="tablist">
+                <li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#c1-tab-info">Thông tin tài liệu</a></li>
+                <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#c1-tab-record">Tài liệu cùng bộ</a></li>
+                <li class="nav-item"><span class="nav-link disabled">Ghi chú</span></li>
+                <li class="nav-item"><span class="nav-link disabled">Cá nhân xử lý</span></li>
             </ul>
 
-            <div class="tab-content" id="extractTabsContent">
-                <div class="tab-pane fade show active" id="tab-info" role="tabpanel">
+            <div class="tab-content">
+                <div class="tab-pane fade show active" id="c1-tab-info">
+                    <div class="card-figma mb-3">
+                        <div class="card-header-figma"><h3 class="card-title-figma mb-0">Kết luận kiểm tra</h3></div>
+                        <div class="card-content-figma">
+                            <div class="form-group mb-2">
+                                <label class="small text-muted mb-1 d-block">Ghi chú</label>
+                                <textarea id="check1-note" class="form-control" rows="2" placeholder="Ghi chú chung cho lần kiểm tra này"></textarea>
+                            </div>
+                            <div class="form-group mb-0">
+                                <label class="small text-muted mb-1 d-block">Lý do trả lại (khi trả về nhập liệu)</label>
+                                <textarea id="check1-return-reason" class="form-control" rows="2" placeholder="Nhập lý do trả về"></textarea>
+                            </div>
+                        </div>
+                    </div>
                     @{
                         var groupOrder = orderedFields
                             .GroupBy(f => f.GroupId)
@@ -176,7 +168,6 @@
                             </div>
                         </div>
                     }
-
                     @if (cells.Count > 0)
                     {
                         <div class="card-figma mb-3">
@@ -205,7 +196,7 @@
                                                 <td>@c.Page</td>
                                                 <td class="small text-muted text-truncate" style="max-width:180px;" title="@showVal">@showVal</td>
                                                 <td style="min-width:200px;">
-                                                    <input type="text" class="form-control form-control-sm ext-cell" data-cell-id="@c.Id" value="@c.ExtractedValue" placeholder="@c.Value" />
+                                                    <input type="text" class="form-control form-control-sm chk-cell" data-cell-id="@c.Id" value="@c.ExtractedValue" placeholder="@c.Value" />
                                                 </td>
                                             </tr>
                                         }
@@ -217,11 +208,9 @@
                     }
                 </div>
 
-                <div class="tab-pane fade" id="tab-same-record" role="tabpanel">
+                <div class="tab-pane fade" id="c1-tab-record">
                     <div class="card-figma mb-3">
-                        <div class="card-header-figma">
-                            <h3 class="card-title-figma mb-0">Tài liệu cùng bộ hồ sơ</h3>
-                        </div>
+                        <div class="card-header-figma"><h3 class="card-title-figma mb-0">Tài liệu cùng bộ hồ sơ</h3></div>
                         <div class="card-content-figma">
                             @if (sameRecordDocs.Count == 0)
                             {
@@ -254,25 +243,14 @@
                                                         }
                                                         else
                                                         {
-                                                            <a asp-area="sohoa" asp-controller="Extract" asp-action="Form" asp-route-id="@sdoc.Id">
-                                                                @((sdoc.FileName ?? sdoc.Name) ?? $"#{sdoc.Id}")
-                                                            </a>
+                                                            <a asp-area="sohoa" asp-controller="Check" asp-action="Check1Form" asp-route-id="@sdoc.Id">@((sdoc.FileName ?? sdoc.Name) ?? $"#{sdoc.Id}")</a>
                                                         }
                                                     </td>
-                                                    <td class="text-center">@(sdoc.ExtractedBy > 0 || isCurrent ? "✔" : "")</td>
+                                                    <td class="text-center">@(sdoc.Checked1By > 0 || isCurrent ? "✔" : "")</td>
                                                     <td>
-                                                        @if (isCurrent)
-                                                        {
-                                                            <span class="badge badge-info">Đang nhập</span>
-                                                        }
-                                                        else if (sdoc.IsExtracted)
-                                                        {
-                                                            <span class="badge badge-success">Đã nhập</span>
-                                                        }
-                                                        else
-                                                        {
-                                                            <span class="badge badge-secondary">Chưa nhập</span>
-                                                        }
+                                                        @if (isCurrent) { <span class="badge badge-info">Đang kiểm tra</span> }
+                                                        else if (sdoc.IsChecked1) { <span class="badge badge-success">Đã nhập</span> }
+                                                        else { <span class="badge badge-secondary">Chưa nhập</span> }
                                                     </td>
                                                 </tr>
                                                 rowNo++;
@@ -290,15 +268,16 @@
     </div>
 </div>
 
-<form id="antiEx" class="d-none">@Html.AntiForgeryToken()</form>
+<form id="antiCheck1" class="d-none">@Html.AntiForgeryToken()</form>
 
 @section Scripts {
     <script src="~/js/shtl-ajax.js" asp-append-version="true"></script>
     <script>
         (function () {
             var submitUrl = @Html.Raw(JsonSerializer.Serialize(submitUrl));
+            var indexUrl = @Html.Raw(JsonSerializer.Serialize(indexUrl));
             var docId = @doc.Id;
-            initSplitLayout('extractSplitLayout');
+            initSplitLayout('check1SplitLayout');
 
             function initSplitLayout(layoutId) {
                 var layout = document.getElementById(layoutId);
@@ -348,27 +327,47 @@
                 });
             }
 
-            function token() {
-                return window.ShtlAjax.getRequestVerificationToken();
-            }
+            function token() { return window.ShtlAjax.getRequestVerificationToken(); }
 
-            document.getElementById('btnExtractSubmit').onclick = function () {
+            function submitCheck(resultCode) {
                 var stg = {};
                 document.querySelectorAll('[data-stg-field]').forEach(function (el) {
                     var k = el.getAttribute('data-stg-field');
                     if (k) stg[k] = el.value;
                 });
                 var cells = [];
-                document.querySelectorAll('.ext-cell[data-cell-id]').forEach(function (el) {
+                document.querySelectorAll('.chk-cell[data-cell-id]').forEach(function (el) {
                     var id = parseInt(el.getAttribute('data-cell-id'), 10);
                     if (id) cells.push({ id: id, value: el.value });
                 });
-                var body = { documentId: docId, cells: cells, stgFieldValues: stg };
-                for (var n = 9; n <= 15; n++) {
-                    var key = 'field' + n;
-                    if (stg[key] !== undefined && stg[key] !== '') body[key] = stg[key];
+                var returnReason = (document.getElementById('check1-return-reason').value || '').trim();
+                if (resultCode === 3 && !returnReason) {
+                    alert('Vui lòng nhập lý do trả lại.');
+                    return;
                 }
-                var hint = document.getElementById('extract-submit-hint');
+                var body = {
+                    documentId: docId,
+                    step: 7,
+                    result: resultCode,
+                    note: document.getElementById('check1-note').value || null,
+                    returnReason: returnReason || null,
+                    name: stg['dc_title'] || null,
+                    symbolNo: stg['dc_symbol'] || null,
+                    recordNo: stg['dc_record'] || null,
+                    issuedBy: stg['dc_issued_by'] || null,
+                    author: stg['dc_author'] || null,
+                    noted: stg['dc_noted'] || null,
+                    field1: stg['field1'] || null,
+                    field2: stg['field2'] || null,
+                    field3: stg['field3'] || null,
+                    field4: stg['field4'] || null,
+                    field5: stg['field5'] || null,
+                    field6: stg['field6'] || null,
+                    field7: stg['field7'] || null,
+                    field8: stg['field8'] || null,
+                    cells: cells
+                };
+                var hint = document.getElementById('check1-submit-hint');
                 hint.classList.remove('d-none');
                 fetch(submitUrl, {
                     method: 'POST',
@@ -382,7 +381,7 @@
                     hint.classList.add('d-none');
                     if (j.success) {
                         if (typeof toastr !== 'undefined') toastr.success(j.message || 'Đã lưu');
-                        window.location.href = @Html.Raw(JsonSerializer.Serialize(indexUrl));
+                        window.location.href = indexUrl;
                     } else {
                         if (typeof toastr !== 'undefined') toastr.error(j.message || 'Lỗi');
                         else alert(j.message || 'Lỗi');
@@ -391,7 +390,10 @@
                     hint.classList.add('d-none');
                     if (typeof toastr !== 'undefined') toastr.error('Lỗi mạng');
                 });
-            };
+            }
+
+            document.getElementById('btnCheck1Pass').addEventListener('click', function () { submitCheck(1); });
+            document.getElementById('btnCheck1Return').addEventListener('click', function () { submitCheck(3); });
         })();
     </script>
 }

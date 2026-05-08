@@ -37,6 +37,8 @@ public class DocumentDto
     public string? Extension { get; set; }
     public long FileSize { get; set; }
     public int PageCount { get; set; }
+    public double MinDpi { get; set; }
+    public double MaxDpi { get; set; }
     public DateTime Created { get; set; }
     public string? CreatedByName { get; set; }
     public int CreatedBy { get; set; }

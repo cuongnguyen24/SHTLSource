@@ -1,0 +1,41 @@
+@model (SHTL.Modules.Shared.Contracts.ViewModels.FieldSettingViewModel Field, string? Value)
+@{
+    var f = Model.Field;
+    var val = Model.Value ?? "";
+    var safe = f.FieldName.Replace(".", "_").Replace("[", "").Replace("]", "");
+    var id = "chk_" + safe;
+    var name = f.FieldName;
+    var it = (f.InputType ?? "text").ToLowerInvariant();
+    var isNum = it == "number" || (f.Datatype?.Contains("number", StringComparison.OrdinalIgnoreCase) ?? false);
+    var isDate = it == "date" || (f.Datatype?.Contains("date", StringComparison.OrdinalIgnoreCase) ?? false) || (f.Datatype?.Contains("time", StringComparison.OrdinalIgnoreCase) ?? false);
+}
+<div class="form-group">
+    <label class="small text-muted mb-1 d-block" for="@id">
+        @f.Title @if (f.IsRequired) { <span class="text-danger">*</span> }
+    </label>
+    @if (f.IsReadOnly)
+    {
+        <input type="text" class="form-control bg-light" id="@id" value="@val" readonly data-stg-field="@name" />
+    }
+    else if (it == "textarea")
+    {
+        var rows = Math.Max(2, f.Row > 0 ? f.Row : 3);
+        <textarea class="form-control chk-field" id="@id" data-stg-field="@name" rows="@rows" @(f.MaxLen > 0 ? $"maxlength=\"{f.MaxLen}\"" : null)>@val</textarea>
+    }
+    else if (isNum)
+    {
+        <input type="number" class="form-control chk-field" id="@id" data-stg-field="@name" value="@val" />
+    }
+    else if (isDate)
+    {
+        <input type="date" class="form-control chk-field" id="@id" data-stg-field="@name" value="@val" />
+    }
+    else
+    {
+        <input type="text" class="form-control chk-field" id="@id" data-stg-field="@name" value="@val" @(f.MaxLen > 0 ? $"maxlength=\"{f.MaxLen}\"" : null) placeholder="@f.Format" />
+    }
+    @if (f.MinLen > 0 || f.MaxLen > 0)
+    {
+        <small class="text-muted d-block">Độ dài: @(f.MinLen > 0 ? f.MinLen.ToString() : "0")–@(f.MaxLen > 0 ? f.MaxLen.ToString() : "∞")</small>
+    }
+</div>

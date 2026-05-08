@@ -174,6 +174,8 @@ public class DocumentService : IDocumentService
         Extension = doc.Extension,
         FileSize = doc.FileSize,
         PageCount = doc.PageCount,
+        MinDpi = doc.MinDpi,
+        MaxDpi = doc.MaxDpi,
         Created = doc.Created,
         CreatedBy = doc.CreatedBy,
         ExtractedAt = doc.ExtractedAt,

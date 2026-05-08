@@ -31,6 +31,12 @@ public class DocumentFormViewModel
     
     /// <summary>User names map</summary>
     public IDictionary<int, string> UserNames { get; set; } = new Dictionary<int, string>();
+
+    /// <summary>Danh sách key định nghĩa "bộ hồ sơ" từ config SetRecordInfo.</summary>
+    public IReadOnlyList<string> RecordInfoKeys { get; set; } = Array.Empty<string>();
+
+    /// <summary>Các tài liệu cùng bộ hồ sơ (bao gồm tài liệu hiện tại).</summary>
+    public IReadOnlyList<DocumentDto> SameRecordDocuments { get; set; } = Array.Empty<DocumentDto>();
 }
 
 /// <summary>
