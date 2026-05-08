@@ -1,0 +1,153 @@
+@model SHTL.Modules.Shared.Contracts.ViewModels.FolderProgressViewModel
+@{
+    ViewData["Title"] = "Tiến độ theo thư mục";
+    var st = Model.ServiceStatus;
+}
+@section Breadcrumb {
+    <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="Home" asp-action="Index">Tổng quan</a></li>
+    <li class="breadcrumb-item active">Tiến độ theo thư mục</li>
+}
+@section Styles {
+    <style>
+        .progress-table th, .progress-table td { white-space: nowrap; vertical-align: middle; }
+        .progress-table thead th { text-align: center; font-size: 12px; }
+        .progress-table tbody td { font-size: 12px; }
+        .metric { display: inline-block; min-width: 86px; text-align: center; border-radius: 8px; padding: 8px 10px; background: #f8f9fa; margin-right: 8px; margin-bottom: 8px; }
+        .metric .k { display:block; font-size:11px; color:#6c757d; }
+        .metric .v { font-size:20px; font-weight:700; color:#0b7285; line-height:1.1; }
+    </style>
+}
+
+<div class="layout-expanded">
+    <div class="frame-figma mb-3">
+        <div class="frame-header">
+            <div>
+                <h6 class="mb-0 font-weight-bold" style="color:var(--primary);">Tiến độ thi công theo thư mục tài liệu</h6>
+                <div class="text-muted small">Cập nhật lúc @Model.GeneratedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss")</div>
+            </div>
+            <form method="get" class="d-flex align-items-end" style="gap:8px;">
+                <div class="search-input-figma" style="min-width:280px;">
+                    <label class="small text-muted mb-1 d-block">Lọc thư mục</label>
+                    <input type="text" name="q" value="@Model.Filter" placeholder="Tên thư mục..." />
+                    <i class="fas fa-search search-icon"></i>
+                </div>
+                <button type="submit" class="btn-figma btn-figma-primary">Lọc</button>
+                <a href="@Url.Action("FolderProgress", "Report", new { area = "sohoa" })" class="btn-figma btn-figma-outline">Làm mới</a>
+            </form>
+        </div>
+    </div>
+
+    <div class="card-figma mb-3">
+        <div class="card-header-figma">
+            <h3 class="card-title-figma mb-0"><i class="fas fa-heartbeat mr-2"></i>Trạng thái Service Pdf2Layer</h3>
+        </div>
+        <div class="card-content-figma">
+            <div class="mb-2">
+                <span class="badge badge-info p-2">Trạng thái: @st.StatusText</span>
+                @if (st.LastActivityAtUtc.HasValue)
+                {
+                    <span class="text-muted small ml-2">Hoạt động gần nhất: @st.LastActivityAtUtc.Value.ToLocalTime().ToString("dd/MM HH:mm:ss")</span>
+                }
+            </div>
+            <div>
+                <span class="metric"><span class="k">Chờ PDF 2 lớp</span><span class="v">@st.Queued</span></span>
+                <span class="metric"><span class="k">Đang OCR</span><span class="v">@st.Processing</span></span>
+                <span class="metric"><span class="k">Đã OCR</span><span class="v">@st.Ready</span></span>
+                <span class="metric"><span class="k">Lỗi OCR</span><span class="v text-danger">@st.Failed</span></span>
+            </div>
+            <div class="mt-3">
+                <h6 class="mb-2">Đang xử lý tài liệu nào?</h6>
+                @if (!st.CurrentProcessingDocs.Any())
+                {
+                    <div class="text-muted small">Hiện không có tài liệu ở trạng thái “Đang OCR”.</div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Tên</th>
+                                    <th>File</th>
+                                    <th>Đường dẫn</th>
+                                    <th>Cập nhật</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            @foreach (var d in st.CurrentProcessingDocs)
+                            {
+                                <tr>
+                                    <td>#@d.Id</td>
+                                    <td>@d.Name</td>
+                                    <td>@(d.FileName ?? "—")</td>
+                                    <td class="text-muted">@d.FilePath</td>
+                                    <td>@d.UpdatedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss")</td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="card-figma">
+        <div class="card-header-figma">
+            <h3 class="card-title-figma mb-0"><i class="fas fa-folder-open mr-2"></i>Bảng tiến độ theo thư mục</h3>
+        </div>
+        <div class="card-content-figma p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped progress-table mb-0">
+                    <thead>
+                        <tr class="table-light">
+                            <th rowspan="2">STT</th>
+                            <th rowspan="2">Thư mục</th>
+                            <th colspan="6">PDF 2 lớp</th>
+                            <th colspan="3">Nhập liệu / Kiểm tra</th>
+                        </tr>
+                        <tr class="table-light">
+                            <th>Tổng tài liệu</th>
+                            <th>Tổng PDFs</th>
+                            <th>Chờ</th>
+                            <th>Đang</th>
+                            <th>Đã OCR</th>
+                            <th>Lỗi OCR</th>
+                            <th>Đã nhập</th>
+                            <th>Check 1</th>
+                            <th>Check 2</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @if (!Model.Rows.Any())
+                    {
+                        <tr><td colspan="10" class="text-center text-muted p-4">Không có dữ liệu.</td></tr>
+                    }
+                    else
+                    {
+                        var i = 1;
+                        foreach (var r in Model.Rows)
+                        {
+                            <tr>
+                                <td class="text-center">@i</td>
+                                <td><i class="fas fa-folder text-warning mr-1"></i>@r.Folder</td>
+                                <td class="text-center font-weight-bold">@r.TotalDocs</td>
+                                <td class="text-center">@r.TotalPdfs</td>
+                                <td class="text-center text-secondary">@r.PdfQueued</td>
+                                <td class="text-center text-primary">@r.PdfProcessing</td>
+                                <td class="text-center text-success">@r.PdfReady</td>
+                                <td class="text-center text-danger">@r.PdfFailed</td>
+                                <td class="text-center">@r.ExtractedDone</td>
+                                <td class="text-center">@r.Check1Done</td>
+                                <td class="text-center">@r.Check2Done</td>
+                            </tr>
+                            i++;
+                        }
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

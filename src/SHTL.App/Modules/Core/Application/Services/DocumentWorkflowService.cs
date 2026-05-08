@@ -150,18 +150,47 @@ public class DocumentWorkflowService : IDocumentWorkflowService
         doc.Updated = DateTime.UtcNow;
         doc.UpdatedBy = user.Id;
 
-        await _docRepo.UpdateAsync(doc);
-        // Guard rail: luôn chốt bước workflow về Check1 sau khi lưu nhập liệu.
-        await _docRepo.UpdateStepAsync(doc.Id, WorkflowStep.Check1, user.Id);
+        _logger.LogInformation(
+            "SubmitExtract bắt đầu: DocumentId={DocumentId}, UserId={UserId}, Cells={CellCount}, StgFieldKeys={StgFieldCount}",
+            req.DocumentId,
+            user.Id,
+            req.Cells.Count,
+            req.StgFieldValues?.Count ?? 0);
 
-        // Cập nhật form cells nếu có
+        await RunExtractStepAsync("UPDATE stg_documents (lưu field nhập liệu)", req.DocumentId, () => _docRepo.UpdateAsync(doc));
+        // Guard rail: luôn chốt bước workflow về Check1 sau khi lưu nhập liệu.
+        await RunExtractStepAsync("UPDATE stg_documents.current_step → Check1", req.DocumentId, () =>
+            _docRepo.UpdateStepAsync(doc.Id, WorkflowStep.Check1, user.Id));
+
+        var cellIdx = 0;
         foreach (var cell in req.Cells)
         {
-            await _cellRepo.UpdateValueAsync(cell.Id, cell.Value, user.Id, WorkflowStep.Extract);
+            cellIdx++;
+            var c = cell;
+            await RunExtractStepAsync(
+                $"UPDATE stg_form_cells (ô #{cellIdx}, cell_id={c.Id})",
+                req.DocumentId,
+                () => _cellRepo.UpdateValueAsync(c.Id, c.Value, user.Id, WorkflowStep.Extract));
         }
 
-        await LogActionAsync(user, "EXTRACT", "documents", doc.Id.ToString(), "Done", null);
+        await RunExtractStepAsync("INSERT log_action_logs (EXTRACT)", req.DocumentId, () =>
+            LogActionAsync(user, "EXTRACT", "documents", doc.Id.ToString(), "Done", null));
+
+        _logger.LogInformation("SubmitExtract hoàn tất: DocumentId={DocumentId}", req.DocumentId);
         return ApiResult.Ok("Nhập liệu thành công");
+    }
+
+    private async Task RunExtractStepAsync(string stepName, long documentId, Func<Task> action)
+    {
+        try
+        {
+            await action().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "SubmitExtract: bước \"{Step}\" thất bại. DocumentId={DocumentId}", stepName, documentId);
+            throw new InvalidOperationException($"{stepName}: {ex.Message}", ex);
+        }
     }
 
     public async Task<ApiResult> Check1Async(CheckReviewRequest req, ICurrentUser user)

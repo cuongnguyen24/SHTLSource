@@ -2,6 +2,7 @@ using SHTL.Modules.Core.Domain.Entities.Stg;
 using SHTL.Modules.Infrastructure.Data.Repositories.Acc;
 using SHTL.Modules.Infrastructure.Data.Repositories.Cnf;
 using SHTL.Modules.Infrastructure.Data.Repositories.Stg;
+using SHTL.Modules.Core.Domain.Enums;
 using SHTL.Modules.Shared.Contracts.Dtos;
 using SHTL.Modules.Shared.Contracts.ViewModels;
 
@@ -59,8 +60,12 @@ public class DocumentFormViewModelBuilder : IDocumentFormViewModelBuilder
         var patterns = await _docTypeRepo.GetPatternTypesAsync();
         var cells = await _cellRepo.GetByDocumentAsync(documentId);
         var userNames = await BuildUserMapAsync(doc);
+        var recordInfoKeys = await LoadSetRecordInfoKeysAsync();
+        var sameRecordDocs = await BuildSameRecordDocumentsAsync(doc.Id, recordInfoKeys);
 
-        return BuildViewModel(docType, doc, settings, allFields, groups, categories, patterns, cells, userNames);
+        return BuildViewModel(
+            docType, doc, settings, allFields, groups, categories, patterns, cells, userNames,
+            recordInfoKeys, sameRecordDocs);
     }
 
     public Task<DocumentFormViewModel> BuildForCheck1Async(long documentId)
@@ -78,7 +83,9 @@ public class DocumentFormViewModelBuilder : IDocumentFormViewModelBuilder
         IReadOnlyList<CategoryTypeDto> categories,
         IReadOnlyList<PatternTypeDto> patterns,
         IEnumerable<FormCell> cells,
-        IDictionary<int, string> userNames)
+        IDictionary<int, string> userNames,
+        IReadOnlyList<string>? recordInfoKeys = null,
+        IReadOnlyList<DocumentDto>? sameRecordDocs = null)
     {
         var fieldMap = allFields.ToDictionary(f => f.Id);
         var fieldSettings = settings
@@ -99,6 +106,8 @@ public class DocumentFormViewModelBuilder : IDocumentFormViewModelBuilder
         if (doc != null)
         {
             fieldValues = StgFieldToDocumentMapper.ExtractValues(doc);
+            // Always display document title from physical file_name in Extract/Check forms.
+            fieldValues["dc_title"] = string.IsNullOrWhiteSpace(doc.FileName) ? doc.Name : doc.FileName;
         }
 
         var docDto = doc != null ? MapToDocumentDto(doc) : null;
@@ -113,7 +122,9 @@ public class DocumentFormViewModelBuilder : IDocumentFormViewModelBuilder
             PatternTypes = patterns,
             FieldValues = fieldValues,
             Cells = cells,
-            UserNames = userNames
+            UserNames = userNames,
+            RecordInfoKeys = recordInfoKeys ?? Array.Empty<string>(),
+            SameRecordDocuments = sameRecordDocs ?? Array.Empty<DocumentDto>()
         };
     }
 
@@ -141,7 +152,7 @@ public class DocumentFormViewModelBuilder : IDocumentFormViewModelBuilder
             MaxValue = setting.MaxValue,
             PatternCustom = setting.PatternCustom,
             PatternTypeId = setting.IdPatternType,
-            IsReadOnly = setting.IsReadOnly,
+            IsReadOnly = setting.IsReadOnly || string.Equals(field?.Name, "dc_title", StringComparison.OrdinalIgnoreCase),
             IsUpperCase = setting.IsUpperCase,
             IsCapitalize = setting.IsCapitalize,
             IsMulti = setting.IsMulti,
@@ -188,8 +199,43 @@ public class DocumentFormViewModelBuilder : IDocumentFormViewModelBuilder
             Checked1ReturnReason = doc.Checked1ReturnReason,
             Checked2By = doc.Checked2By,
             Checked2At = doc.Checked2At,
-            Checked2ReturnReason = doc.Checked2ReturnReason
+            Checked2ReturnReason = doc.Checked2ReturnReason,
+            CurrentStep = doc.CurrentStep,
+            Status = doc.Status,
+            PageCount = doc.PageCount,
+            MinDpi = doc.MinDpi,
+            MaxDpi = doc.MaxDpi,
+            OcrStatus = doc.OcrStatus,
+            PathPdfSearchable = doc.PathPdfSearchable
         };
+    }
+
+    private async Task<IReadOnlyList<string>> LoadSetRecordInfoKeysAsync()
+    {
+        var configs = await _cnfRepo.GetConfigsAsync();
+        var value = configs
+            .FirstOrDefault(x => x.Key.Equals("SetRecordInfo", StringComparison.OrdinalIgnoreCase))
+            ?.Value;
+
+        return (value ?? string.Empty)
+            .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(x => x.Trim())
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private async Task<IReadOnlyList<DocumentDto>> BuildSameRecordDocumentsAsync(long documentId, IReadOnlyList<string> recordInfoKeys)
+    {
+        if (recordInfoKeys.Count == 0)
+            return Array.Empty<DocumentDto>();
+
+        var docs = await _docRepo.GetSameRecordDocumentsAsync(documentId, recordInfoKeys, 500);
+        return docs
+            .OrderByDescending(x => x.Id == documentId)
+            .ThenByDescending(x => x.Id)
+            .Select(MapToDocumentDto)
+            .ToList();
     }
 
     private async Task<Dictionary<int, string>> BuildUserMapAsync(Document doc)

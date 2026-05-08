@@ -154,22 +154,23 @@ public class ScanController : BaseController
             return PdfNotFound("Tài liệu không tồn tại hoặc không thuộc kênh hiện tại.");
         }
 
-        if (!IsPdf(doc) || string.IsNullOrWhiteSpace(doc.FilePath))
+        var pdfRel = ResolvePdfStoragePath(doc);
+        if (!IsPdf(doc) || string.IsNullOrWhiteSpace(pdfRel))
         {
             _logger.LogWarning(
-                "Scan Pdf id={Id}: không phải PDF hoặc thiếu FilePath (Extension={Ext}, Name={Name})",
+                "Scan Pdf id={Id}: không phải PDF hoặc thiếu đường dẫn file (Extension={Ext}, Name={Name})",
                 id, doc.Extension, doc.Name);
             return PdfNotFound("Không phải PDF hoặc chưa có FilePath trong cơ sở dữ liệu.");
         }
 
-        var stream = _storage.OpenRead(doc.FilePath) ?? TryOpenPdfStreamFallback(doc.FilePath);
+        var stream = _storage.OpenRead(pdfRel) ?? TryOpenPdfStreamFallback(pdfRel);
         if (stream is null)
         {
             _logger.LogWarning(
-                "Scan Pdf id={Id}: không đọc được file. FilePath={FilePath}, Storage:RootPath={Root}",
-                id, doc.FilePath, _storageOpts.Value.RootPath);
+                "Scan Pdf id={Id}: không đọc được file. Path={Path}, Storage:RootPath={Root}",
+                id, pdfRel, _storageOpts.Value.RootPath);
             return PdfNotFound(
-                $"File không có trên đĩa hoặc path không hợp lệ.\nFilePath (DB): {doc.FilePath}\nStorage:RootPath: {_storageOpts.Value.RootPath}");
+                $"File không có trên đĩa hoặc path không hợp lệ.\nPath (DB): {pdfRel}\nStorage:RootPath: {_storageOpts.Value.RootPath}");
         }
 
         return File(stream, "application/pdf", enableRangeProcessing: true);
@@ -239,14 +240,32 @@ public class ScanController : BaseController
     public async Task<IActionResult> Download(long id)
     {
         var doc = await _docService.GetByIdAsync(id, CurrentUser);
-        if (doc is null || !IsPdf(doc) || string.IsNullOrWhiteSpace(doc.FilePath))
+        var pdfRel = doc is null ? null : ResolvePdfStoragePath(doc);
+        if (doc is null || !IsPdf(doc) || string.IsNullOrWhiteSpace(pdfRel))
             return NotFound();
 
-        var stream = _storage.OpenRead(doc.FilePath);
+        var stream = _storage.OpenRead(pdfRel);
         if (stream is null) return NotFound();
 
         var downloadName = string.IsNullOrWhiteSpace(doc.FileName) ? $"tai-lieu-{id}.pdf" : doc.FileName;
         return File(stream, "application/pdf", fileDownloadName: downloadName);
+    }
+
+    /// <summary>Ưu tiên PDF 2 lớp (PathPdfSearchable) nếu file tồn tại trên storage.</summary>
+    private string? ResolvePdfStoragePath(DocumentDto doc)
+    {
+        if (!IsPdf(doc)) return null;
+        if (!string.IsNullOrWhiteSpace(doc.PathPdfSearchable))
+        {
+            var probe = _storage.OpenRead(doc.PathPdfSearchable);
+            if (probe is not null)
+            {
+                probe.Dispose();
+                return doc.PathPdfSearchable;
+            }
+        }
+
+        return string.IsNullOrWhiteSpace(doc.FilePath) ? null : doc.FilePath;
     }
 
     private static bool IsPdf(DocumentDto doc)

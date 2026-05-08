@@ -1,4 +1,5 @@
 @model PaginatedResult<DocumentDto>
+@using SHTL.Modules.Shared.Contracts
 @{
     ViewData["Title"] = "Scan / Upload";
     var req = ViewBag.Request as DocumentFilterRequest ?? new DocumentFilterRequest();
@@ -94,6 +95,7 @@
                                 <th>Đường dẫn</th>
                                 <th>Tên</th>
                                 <th>Loại tài liệu</th>
+                                <th style="width:70px;">DPI</th>
                                 <th style="width:70px;">Số trang</th>
                                 <th style="width:120px;">Trạng thái</th>
                                 <th style="width:180px;">Đánh giá kết quả</th>
@@ -118,8 +120,15 @@
                                             <small class="text-muted">@((d.FileName ?? "—"))</small>
                                         </td>
                                         <td><small>@(d.DocTypeName ?? "—")</small></td>
+                                        <td class="text-center">@(d.MinDpi > 0 ? Math.Round(d.MinDpi).ToString("0") : "—")</td>
                                         <td class="text-center">@d.PageCount</td>
-                                        <td><span class="status-pill">@d.CurrentStepName</span></td>
+                                        <td>
+                                            <span class="status-pill">@d.CurrentStepName</span>
+                                            @if (SearchablePdfDisplay.LooksLikePdf(d.Extension, d.FileName, d.FilePath) && !string.IsNullOrEmpty(d.SearchablePdfStatusText))
+                                            {
+                                                <br /><span class="status-pill" style="background:#e7f5ff;color:#1864ab;">@d.SearchablePdfStatusText</span>
+                                            }
+                                        </td>
                                         <td><small>@eval</small></td>
                                         <td><small>@(evalAt?.ToString("dd/MM/yyyy HH:mm") ?? "—")</small></td>
                                         <td>

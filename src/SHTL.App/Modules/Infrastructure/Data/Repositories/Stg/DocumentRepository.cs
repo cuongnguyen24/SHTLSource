@@ -16,6 +16,17 @@ public interface IDocumentRepository
     Task<int> SoftDeleteAsync(long id, int deletedBy);
     Task<IEnumerable<Document>> GetByFolderAsync(long folderId, int pageIndex, int pageSize);
     Task<IEnumerable<Document>> GetPendingForStepAsync(WorkflowStep step, int limit = 50);
+
+    /// <summary>Lấy 1 tài liệu chờ PDF 2 lớp và chuyển sang trạng thái đang xử lý. Trả về null nếu không có.</summary>
+    Task<long?> TryClaimSearchablePdfJobAsync();
+
+    Task<int> UpdateSearchablePdfStateAsync(long id, OcrStatus ocrStatus, string? pathPdfSearchable, int updatedBy);
+
+    /// <summary>Phục hồi job bị kẹt (app restart giữa chừng).</summary>
+    Task<int> ResetStaleSearchablePdfProcessingAsync(TimeSpan olderThan);
+
+    /// <summary>Tìm các tài liệu cùng bộ theo danh sách key cấu hình (SetRecordInfo).</summary>
+    Task<IEnumerable<Document>> GetSameRecordDocumentsAsync(long documentId, IReadOnlyList<string> recordKeys, int limit = 200);
 }
 
 public class DocumentFilterParams
@@ -32,6 +43,46 @@ public class DocumentFilterParams
 
 public class DocumentRepository : BaseRepository, IDocumentRepository
 {
+    private static readonly Dictionary<string, string> RecordKeyColumnMap = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Id"] = "id",
+        ["DocTypeId"] = "doc_type_id",
+        ["RecordTypeId"] = "record_type_id",
+        ["ContentTypeId"] = "content_type_id",
+        ["SyncTypeId"] = "sync_type_id",
+        ["FolderId"] = "folder_id",
+        ["DeptId"] = "dept_id",
+        ["Name"] = "name",
+        ["SymbolNo"] = "symbol_no",
+        ["RecordNo"] = "record_no",
+        ["IssuedBy"] = "issued_by",
+        ["Receiver"] = "receiver",
+        ["Subject"] = "subject",
+        ["LevelNo"] = "level_no",
+        ["BoxNo"] = "box_no",
+        ["RecordTitle"] = "record_title",
+        ["Poster"] = "poster",
+        ["SlotNo"] = "slot_no",
+        ["ShelfNo"] = "shelf_no",
+        ["IssuedYear"] = "issued_year",
+        ["Author"] = "author",
+        ["Field1"] = "field1",
+        ["Field2"] = "field2",
+        ["Field3"] = "field3",
+        ["Field4"] = "field4",
+        ["Field5"] = "field5",
+        ["Field6"] = "field6",
+        ["Field7"] = "field7",
+        ["Field8"] = "field8",
+        ["Field9"] = "field9",
+        ["Field10"] = "field10",
+        ["Field11"] = "field11",
+        ["Field12"] = "field12",
+        ["Field13"] = "field13",
+        ["Field14"] = "field14",
+        ["Field15"] = "field15"
+    };
+
     public DocumentRepository(AppDbContext db) : base(db) { }
 
     public async Task<Document?> GetByIdAsync(long id)
@@ -48,6 +99,7 @@ public class DocumentRepository : BaseRepository, IDocumentRepository
             INSERT INTO dbo.stg_documents
                 (doc_type_id, record_type_id, content_type_id, sync_type_id,
                  folder_id, dept_id, name, [describe], symbol_no, record_no, issued_by,
+                 receiver, subject, level_no, box_no, record_title, poster, slot_no, shelf_no,
                  issued, issued_year, author, signer, noted, summary, search_meta,
                  file_name, file_path, path_original, path_converted, path_pdf_searchable, thumb_path, extension, file_size, page_count,
                  file_hash, is_color_scan, min_dpi, max_dpi, version_pdf, workstation_name,
@@ -73,6 +125,7 @@ public class DocumentRepository : BaseRepository, IDocumentRepository
             VALUES
                 (@DocTypeId, @RecordTypeId, @ContentTypeId, @SyncTypeId,
                  @FolderId, @DeptId, @Name, @Describe, @SymbolNo, @RecordNo, @IssuedBy,
+                 @Receiver, @Subject, @LevelNo, @BoxNo, @RecordTitle, @Poster, @SlotNo, @ShelfNo,
                  @Issued, ISNULL(@IssuedYear, 0), @Author, @Signer, @Noted, @Summary, @SearchMeta,
                  @FileName, @FilePath, @PathOriginal, @PathConverted, @PathPdfSearchable, @ThumbPath, @Extension, @FileSize, @PageCount,
                  @FileHash, @IsColorScan, @MinDpi, @MaxDpi, @VersionPdf, @WorkstationName,
@@ -103,7 +156,10 @@ public class DocumentRepository : BaseRepository, IDocumentRepository
         var sql = @"
             UPDATE dbo.stg_documents SET
                 name = @Name, [describe] = @Describe, symbol_no = @SymbolNo,
-                record_no = @RecordNo, issued_by = @IssuedBy, issued = @Issued,
+                record_no = @RecordNo, issued_by = @IssuedBy,
+                receiver = @Receiver, subject = @Subject, level_no = @LevelNo, box_no = @BoxNo,
+                record_title = @RecordTitle, poster = @Poster, slot_no = @SlotNo, shelf_no = @ShelfNo,
+                issued = @Issued,
                 issued_year = @IssuedYear, author = @Author, signer = @Signer,
                 noted = @Noted, summary = @Summary, search_meta = @SearchMeta,
                 field1 = @Field1, field2 = @Field2, field3 = @Field3, field4 = @Field4,
@@ -112,8 +168,8 @@ public class DocumentRepository : BaseRepository, IDocumentRepository
                 field13 = @Field13, field14 = @Field14, field15 = @Field15,
                 field16 = @Field16, field17 = @Field17, field18 = @Field18,
                 field19 = @Field19, field20 = @Field20,
-                checked1_return_reason = @Checked1ReturnReason,
-                checked2_return_reason = @Checked2ReturnReason,
+                checked1return_reason = @Checked1ReturnReason,
+                checked2return_reason = @Checked2ReturnReason,
                 updated = @Updated, updated_by = @UpdatedBy
             WHERE id = @Id";
         return await ExecuteAsync(conn, sql, doc);
@@ -169,6 +225,128 @@ public class DocumentRepository : BaseRepository, IDocumentRepository
             @"SELECT * FROM dbo.stg_documents WHERE current_step = @Step AND status = 1
               ORDER BY id DESC OFFSET 0 ROWS FETCH NEXT @Limit ROWS ONLY",
             new { Step = (byte)step, Limit = limit });
+    }
+
+    public async Task<long?> TryClaimSearchablePdfJobAsync()
+    {
+        var conn = await OpenConnectionAsync();
+        const string sql = @"
+UPDATE TOP (1) dbo.stg_documents
+SET ocr_status = @Processing,
+    updated = SYSUTCDATETIME(),
+    updated_by = @SystemUser
+OUTPUT INSERTED.id
+WHERE ocr_status = @Queued
+  AND status = @Active
+  AND (
+        LOWER(LTRIM(RTRIM(ISNULL(extension, N'')))) IN (N'pdf', N'.pdf')
+        OR LOWER(ISNULL(file_name, N'')) LIKE N'%.pdf'
+        OR LOWER(ISNULL(file_path, N'')) LIKE N'%.pdf'
+      );";
+        return await QueryFirstOrDefaultAsync<long?>(conn, sql, new
+        {
+            Processing = (byte)OcrStatus.SearchablePdfProcessing,
+            Queued = (byte)OcrStatus.SearchablePdfQueued,
+            Active = (byte)DocumentStatus.Active,
+            SystemUser = 0
+        });
+    }
+
+    public async Task<int> UpdateSearchablePdfStateAsync(long id, OcrStatus ocrStatus, string? pathPdfSearchable, int updatedBy)
+    {
+        var conn = await OpenConnectionAsync();
+        return await ExecuteAsync(conn, @"
+UPDATE dbo.stg_documents SET
+    ocr_status = @OcrStatus,
+    path_pdf_searchable = @PathPdfSearchable,
+    ocr_at = CASE WHEN @OcrStatus IN (12, 13) THEN SYSUTCDATETIME() ELSE ocr_at END,
+    updated = SYSUTCDATETIME(),
+    updated_by = @UpdatedBy
+WHERE id = @Id",
+            new
+            {
+                Id = id,
+                OcrStatus = (byte)ocrStatus,
+                PathPdfSearchable = pathPdfSearchable,
+                UpdatedBy = updatedBy
+            });
+    }
+
+    public async Task<int> ResetStaleSearchablePdfProcessingAsync(TimeSpan olderThan)
+    {
+        var conn = await OpenConnectionAsync();
+        return await ExecuteAsync(conn, @"
+UPDATE dbo.stg_documents
+SET ocr_status = @Queued,
+    updated = SYSUTCDATETIME(),
+    updated_by = @SystemUser
+WHERE ocr_status = @Processing
+  AND status = @Active
+  AND updated < DATEADD(SECOND, @NegSeconds, SYSUTCDATETIME());",
+            new
+            {
+                Queued = (byte)OcrStatus.SearchablePdfQueued,
+                Processing = (byte)OcrStatus.SearchablePdfProcessing,
+                Active = (byte)DocumentStatus.Active,
+                SystemUser = 0,
+                NegSeconds = -(int)olderThan.TotalSeconds
+            });
+    }
+
+    public async Task<IEnumerable<Document>> GetSameRecordDocumentsAsync(long documentId, IReadOnlyList<string> recordKeys, int limit = 200)
+    {
+        var normalizedKeys = (recordKeys ?? Array.Empty<string>())
+            .Select(x => x?.Trim())
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(x => x!)
+            .ToList();
+        if (normalizedKeys.Count == 0)
+            return Enumerable.Empty<Document>();
+
+        var source = await GetByIdAsync(documentId);
+        if (source is null)
+            return Enumerable.Empty<Document>();
+
+        var conditions = new List<string> { "status != 2" };
+        var p = new DynamicParameters();
+        p.Add("Limit", limit <= 0 ? 200 : limit);
+        p.Add("Id", documentId);
+
+        var matchedKeyCount = 0;
+        foreach (var key in normalizedKeys)
+        {
+            if (!RecordKeyColumnMap.TryGetValue(key, out var col))
+                continue;
+
+            var prop = typeof(Document).GetProperty(key);
+            if (prop is null)
+                continue;
+
+            var value = prop.GetValue(source);
+            matchedKeyCount++;
+            if (value is null)
+            {
+                conditions.Add($"{col} IS NULL");
+            }
+            else
+            {
+                var paramName = $"k_{matchedKeyCount}";
+                conditions.Add($"{col} = @{paramName}");
+                p.Add(paramName, value);
+            }
+        }
+
+        if (matchedKeyCount == 0)
+            return Enumerable.Empty<Document>();
+
+        var sql = $@"
+            SELECT TOP (@Limit) *
+            FROM dbo.stg_documents
+            WHERE {string.Join(" AND ", conditions)}
+            ORDER BY CASE WHEN id = @Id THEN 0 ELSE 1 END, id DESC";
+        var conn = await OpenConnectionAsync();
+        return await QueryAsync<Document>(conn, sql, p);
     }
 
     private static (string where, object param) BuildWhere(DocumentFilterParams f)

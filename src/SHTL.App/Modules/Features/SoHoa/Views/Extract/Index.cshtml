@@ -1,5 +1,6 @@
 @model PaginatedResult<DocumentDto>
 @using System.Text.Json
+@using SHTL.Modules.Shared.Contracts
 @{
     ViewData["Title"] = "Nhập liệu (Extract)";
     var stepStr = Context.Request.Query["step"].FirstOrDefault() ?? "Extract";
@@ -10,6 +11,7 @@
         ["docType"] = d.DocTypeName ?? "",
         ["step"] = d.CurrentStep.ToString(),
         ["fileName"] = d.FileName ?? "",
+        ["pdf2"] = SearchablePdfDisplay.LooksLikePdf(d.Extension, d.FileName, d.FilePath) ? d.SearchablePdfStatusText : "",
         ["extracted"] = d.IsExtracted ? "Rồi" : "",
         ["created"] = d.Created.ToString("yyyy-MM-dd HH:mm")
     }).ToList();
@@ -88,6 +90,7 @@
                 { data: 'docType', title: 'Loại TL', readOnly: true },
                 { data: 'step', title: 'Bước', readOnly: true },
                 { data: 'fileName', title: 'File', readOnly: true },
+                { data: 'pdf2', title: 'PDF 2 lớp', readOnly: true },
                 { data: 'extracted', title: 'Đã extract', readOnly: true },
                 { data: 'created', title: 'Tạo', readOnly: true }
             ];

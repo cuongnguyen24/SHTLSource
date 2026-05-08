@@ -65,7 +65,19 @@ public enum OcrStatus : byte
     Processing = 2,
     Done = 3,
     Error = 4,
-    Skipped = 9
+    Skipped = 9,
+
+    /// <summary>Chờ tạo PDF 2 lớp (có thể copy text).</summary>
+    SearchablePdfQueued = 10,
+
+    /// <summary>Đang chạy OCR + ghép lớp chữ vào PDF.</summary>
+    SearchablePdfProcessing = 11,
+
+    /// <summary>Đã lưu file PDF 2 lớp tại PathPdfSearchable.</summary>
+    SearchablePdfReady = 12,
+
+    /// <summary>Không tạo được PDF 2 lớp (vẫn dùng bản scan gốc).</summary>
+    SearchablePdfFailed = 13
 }
 
 public enum SyncType : int

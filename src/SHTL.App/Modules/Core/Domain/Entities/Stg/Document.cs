@@ -26,6 +26,14 @@ public class Document : BaseEntity
     public string? SymbolNo { get; set; }
     public string? RecordNo { get; set; }
     public string? IssuedBy { get; set; }
+    public string? Receiver { get; set; }
+    public string? Subject { get; set; }
+    public string? LevelNo { get; set; }
+    public string? BoxNo { get; set; }
+    public string? RecordTitle { get; set; }
+    public string? Poster { get; set; }
+    public string? SlotNo { get; set; }
+    public string? ShelfNo { get; set; }
     public DateTime? Issued { get; set; }
     public int? IssuedYear { get; set; }
     public string? Author { get; set; }

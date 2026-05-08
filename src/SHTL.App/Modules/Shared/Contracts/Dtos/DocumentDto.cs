@@ -1,4 +1,5 @@
 using SHTL.Modules.Core.Domain.Enums;
+using SHTL.Modules.Shared.Contracts;
 
 namespace SHTL.Modules.Shared.Contracts.Dtos;
 
@@ -36,6 +37,8 @@ public class DocumentDto
     public string? Extension { get; set; }
     public long FileSize { get; set; }
     public int PageCount { get; set; }
+    public double MinDpi { get; set; }
+    public double MaxDpi { get; set; }
     public DateTime Created { get; set; }
     public string? CreatedByName { get; set; }
     public int CreatedBy { get; set; }
@@ -56,6 +59,15 @@ public class DocumentDto
     public bool IsCheckedFinal { get; set; }
     public bool IsCheckedLogic { get; set; }
     public ExportStatus ExportStatus { get; set; }
+
+    /// <summary>Trạng thái OCR / PDF 2 lớp (byte trong DB).</summary>
+    public OcrStatus OcrStatus { get; set; }
+
+    /// <summary>Đường dẫn tương đối tới PDF đã có lớp chữ (copy được).</summary>
+    public string? PathPdfSearchable { get; set; }
+
+    /// <summary>Nhãn trạng thái PDF 2 lớp để hiển thị (rỗng nếu không áp dụng).</summary>
+    public string SearchablePdfStatusText => SearchablePdfDisplay.StatusLabel(OcrStatus);
 }
 
 public class DocumentCreateRequest

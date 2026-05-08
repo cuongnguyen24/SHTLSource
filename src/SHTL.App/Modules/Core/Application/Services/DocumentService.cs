@@ -73,6 +73,8 @@ public class DocumentService : IDocumentService
 
     public async Task<ApiResult<long>> CreateFromUploadAsync(UploadCallbackRequest req, ICurrentUser user)
     {
+        var ext = req.Extension ?? Path.GetExtension(req.FileName);
+        var queuedSearchable = SearchablePdfDisplay.LooksLikePdf(ext, req.FileName, req.StoredPath);
         var doc = new Document
         {
             DocTypeId = req.DocTypeId,
@@ -81,11 +83,13 @@ public class DocumentService : IDocumentService
             Name = Path.GetFileNameWithoutExtension(req.FileName),
             FileName = req.FileName,
             FilePath = req.StoredPath,
-            Extension = req.Extension ?? Path.GetExtension(req.FileName),
+            Extension = ext,
             FileSize = req.FileSize,
             WorkstationName = req.WorkstationName,
             Status = DocumentStatus.Active,
             CurrentStep = WorkflowStep.Extract,
+            IsOcrEnabled = queuedSearchable,
+            OcrStatus = queuedSearchable ? OcrStatus.SearchablePdfQueued : OcrStatus.NotRequested,
             Created = DateTime.UtcNow,
             CreatedBy = user.Id,
             Version = 1
@@ -170,6 +174,8 @@ public class DocumentService : IDocumentService
         Extension = doc.Extension,
         FileSize = doc.FileSize,
         PageCount = doc.PageCount,
+        MinDpi = doc.MinDpi,
+        MaxDpi = doc.MaxDpi,
         Created = doc.Created,
         CreatedBy = doc.CreatedBy,
         ExtractedAt = doc.ExtractedAt,
@@ -186,7 +192,9 @@ public class DocumentService : IDocumentService
         IsChecked2 = doc.IsChecked2,
         IsCheckedFinal = doc.IsCheckedFinal,
         IsCheckedLogic = doc.IsCheckedLogic,
-        ExportStatus = doc.ExportStatus
+        ExportStatus = doc.ExportStatus,
+        OcrStatus = doc.OcrStatus,
+        PathPdfSearchable = doc.PathPdfSearchable
     };
 
 }

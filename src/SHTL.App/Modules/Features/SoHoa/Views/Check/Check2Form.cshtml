@@ -1,0 +1,438 @@
+@model DocumentFormViewModel
+@using System.Text.Json
+@using SHTL.Modules.Core.Domain.Enums
+@using SHTL.Modules.Shared.Contracts
+@using SHTL.Modules.Shared.Contracts.ViewModels
+@{
+    var doc = Model.Document!;
+    ViewData["Title"] = "Kiểm tra lần 2 — " + doc.Name;
+    var submitUrl = Url.Action("DoCheck2", "Check", new { area = "sohoa" })!;
+    var previewUrl = Url.Content("~/scan/preview/" + doc.Id);
+    var indexUrl = Url.Action("Check2", "Check", new { area = "sohoa" })!;
+    var pdfViewerUrl = Url.Content("~/scan/pdf/" + doc.Id);
+    var showPdfViewer = SearchablePdfDisplay.LooksLikePdf(doc.Extension, doc.FileName, doc.FilePath);
+    var spLabel = doc.SearchablePdfStatusText;
+    var sameRecordDocs = Model.SameRecordDocuments ?? Array.Empty<DocumentDto>();
+
+    string? Fv(FieldSettingViewModel f)
+    {
+        if (!string.IsNullOrWhiteSpace(f.FieldName) && Model.FieldValues.TryGetValue(f.FieldName, out var x))
+            return x;
+
+        string[] keys = f.FieldId switch
+        {
+            1 => new[] { "dc_title", "name" },
+            2 => new[] { "dc_symbol", "symbol_no", "symbolno" },
+            3 => new[] { "issuer", "dc_issued_by", "issued_by", "issuedby" },
+            4 => new[] { "receiver", "dc_receiver" },
+            5 => new[] { "subject", "describe" },
+            6 => new[] { "levelno", "dc_box", "level_no" },
+            7 => new[] { "boxno", "dc_num1", "box_no", "hop_so" },
+            8 => new[] { "recordno", "dc_record", "record_no", "ho_so_so" },
+            9 => new[] { "recordtitle", "fc_title", "record_title" },
+            10 => new[] { "poster", "author" },
+            11 => new[] { "signer" },
+            12 => new[] { "slotno", "slot_no" },
+            13 => new[] { "shelfno", "shelf_no" },
+            14 => new[] { "noted", "dc_noted" },
+            15 => new[] { "fc_dec1", "field23" },
+            16 => new[] { "fc_date1", "field22" },
+            17 => new[] { "std_text", "field15" },
+            18 => new[] { "std_num", "field16" },
+            19 => new[] { "std_dec", "field23" },
+            20 => new[] { "std_date", "field21" },
+            >= 101 and <= 125 => new[] { $"field{f.FieldId - 100}" },
+            _ => Array.Empty<string>()
+        };
+        foreach (var key in keys)
+        {
+            if (Model.FieldValues.TryGetValue(key, out var mapped) && !string.IsNullOrWhiteSpace(mapped))
+                return mapped;
+        }
+
+        if (f.FieldId == 1)
+            return !string.IsNullOrWhiteSpace(doc.FileName) ? doc.FileName : doc.Name;
+
+        return f.FixValue;
+    }
+
+    var orderedFields = Model.FieldSettings.OrderBy(f => f.Weight).ToList();
+    var cells = Model.Cells.OrderBy(c => c.Page).ThenBy(c => c.Y).ThenBy(c => c.X).ToList();
+}
+@section Breadcrumb {
+    <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="Check" asp-action="Check2">Kiểm tra lần 2</a></li>
+    <li class="breadcrumb-item active">#@doc.Id</li>
+}
+@section Styles {
+    <style>
+        .split-layout {
+            display: flex;
+            align-items: stretch;
+            min-height: calc(100vh - 220px);
+        }
+        .split-pane-left {
+            flex: 0 0 42%;
+            min-width: 320px;
+            max-width: 78%;
+        }
+        .split-pane-right {
+            flex: 1 1 auto;
+            min-width: 360px;
+        }
+        .splitter {
+            width: 10px;
+            cursor: col-resize;
+            position: relative;
+            user-select: none;
+        }
+        .splitter::before {
+            content: "";
+            position: absolute;
+            left: 4px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #dee2e6;
+        }
+        .splitter.is-dragging::before {
+            background: var(--primary);
+        }
+        @@media (max-width: 991.98px) {
+            .split-layout {
+                display: block;
+                min-height: auto;
+            }
+            .split-pane-left,
+            .split-pane-right {
+                min-width: 0;
+                max-width: none;
+                width: 100%;
+            }
+            .splitter { display: none; }
+        }
+    </style>
+}
+
+<div class="layout-expanded">
+    <div class="frame-figma mb-3">
+        <div class="frame-header">
+            <div>
+                <h6 class="mb-0 font-weight-bold" style="color:var(--primary);">@doc.Name</h6>
+                <div class="text-muted small">
+                    Loại: @Model.DocType.Name · Bước hiện tại: @doc.CurrentStep
+                    @if (!string.IsNullOrEmpty(spLabel))
+                    {
+                        <span class="badge badge-info ml-1">@spLabel</span>
+                    }
+                </div>
+            </div>
+            <div class="d-flex flex-wrap" style="gap:8px;">
+                <a href="@previewUrl" class="btn-figma btn-figma-secondary btn-sm" target="_blank" rel="noopener"><i class="fas fa-file-pdf mr-1"></i>Xem PDF</a>
+                <a href="@indexUrl" class="btn-figma btn-figma-secondary btn-sm">Danh sách</a>
+                <button type="button" class="btn-figma btn-figma-warning btn-sm" id="btnCheck2Return"><i class="fas fa-undo mr-1"></i>Trả về check 1</button>
+                <button type="button" class="btn-figma btn-figma-primary btn-sm" id="btnCheck2Pass"><i class="fas fa-check mr-1"></i>Duyệt check 2</button>
+            </div>
+        </div>
+    </div>
+
+    <p id="check2-submit-hint" class="text-muted small d-none"><i class="fas fa-spinner fa-spin mr-1"></i>Đang gửi…</p>
+
+    <div class="split-layout" id="check2SplitLayout">
+        <div class="split-pane-left mb-3 mb-lg-0">
+            <div class="card-figma h-100">
+                <div class="card-header-figma d-flex align-items-center justify-content-between flex-wrap">
+                    <h3 class="card-title-figma mb-0">Tài liệu</h3>
+                    @if (showPdfViewer)
+                    {
+                        <a href="@previewUrl" class="btn-figma btn-figma-outline btn-sm" target="_blank" rel="noopener">Mở toàn màn hình</a>
+                    }
+                </div>
+                <div class="card-content-figma p-0">
+                    @if (showPdfViewer)
+                    {
+                        <iframe src="@pdfViewerUrl" title="PDF tài liệu" class="w-100 border-0 d-block" style="min-height: 560px; height: calc(100vh - 280px);"></iframe>
+                    }
+                    else
+                    {
+                        <div class="p-3 text-muted small mb-0">Tài liệu không phải PDF — không có khung xem kèm.</div>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="splitter" aria-hidden="true"></div>
+        <div class="split-pane-right">
+            <ul class="nav nav-tabs mb-3" role="tablist">
+                <li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#c2-tab-info">Thông tin tài liệu</a></li>
+                <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#c2-tab-record">Tài liệu cùng bộ</a></li>
+                <li class="nav-item"><span class="nav-link disabled">Ghi chú</span></li>
+                <li class="nav-item"><span class="nav-link disabled">Cá nhân xử lý</span></li>
+            </ul>
+
+            <div class="tab-content">
+                <div class="tab-pane fade show active" id="c2-tab-info">
+                    <div class="card-figma mb-3">
+                        <div class="card-header-figma"><h3 class="card-title-figma mb-0">Kết luận kiểm tra</h3></div>
+                        <div class="card-content-figma">
+                            <div class="form-group mb-2">
+                                <label class="small text-muted mb-1 d-block">Ghi chú</label>
+                                <textarea id="check2-note" class="form-control" rows="2" placeholder="Ghi chú chung cho lần kiểm tra này"></textarea>
+                            </div>
+                            <div class="form-group mb-0">
+                                <label class="small text-muted mb-1 d-block">Lý do trả lại (khi trả về check 1)</label>
+                                <textarea id="check2-return-reason" class="form-control" rows="2" placeholder="Nhập lý do trả lại"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    @{
+                        var groupOrder = orderedFields
+                            .GroupBy(f => f.GroupId)
+                            .OrderBy(g => Model.FieldGroups.TryGetValue(g.Key, out var gr) ? gr.Weight : 999);
+                    }
+                    @foreach (var grp in groupOrder)
+                    {
+                        var gtitle = Model.FieldGroups.TryGetValue(grp.Key, out var g)
+                            ? (string.IsNullOrEmpty(g.GroupName) ? g.Name : g.GroupName)
+                            : (grp.Key == 0 ? "Trường thông tin" : $"Nhóm #{grp.Key}");
+                        <div class="card-figma mb-3">
+                            <div class="card-header-figma"><h3 class="card-title-figma mb-0">@gtitle</h3></div>
+                            <div class="card-content-figma">
+                                <div class="row">
+                                    @foreach (var fs in grp.OrderBy(f => f.Weight))
+                                    {
+                                        <div class="col-md-6">
+                                            <partial name="_FieldInput" model="(fs, Fv(fs))" />
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    @if (cells.Count > 0)
+                    {
+                        <div class="card-figma mb-3">
+                            <div class="card-header-figma">
+                                <h3 class="card-title-figma mb-0"><i class="fas fa-th mr-2" style="color:var(--primary);"></i>Ô nhập từ biểu mẫu / OCR</h3>
+                            </div>
+                            <div class="card-content-figma p-0">
+                                <div class="table-container-figma mb-0" style="max-height:360px; overflow:auto;">
+                                    <table class="table table-sm table-figma mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>ID ô</th>
+                                                <th>Tiêu đề</th>
+                                                <th>Trang</th>
+                                                <th>OCR / đã nhập</th>
+                                                <th>Giá trị nhập</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                        @foreach (var c in cells)
+                                        {
+                                            var showVal = string.IsNullOrEmpty(c.ExtractedValue) ? c.Value : c.ExtractedValue;
+                                            <tr>
+                                                <td><code>@c.Id</code></td>
+                                                <td>@(c.Title ?? c.Field ?? "—")</td>
+                                                <td>@c.Page</td>
+                                                <td class="small text-muted text-truncate" style="max-width:180px;" title="@showVal">@showVal</td>
+                                                <td style="min-width:200px;">
+                                                    <input type="text" class="form-control form-control-sm chk-cell" data-cell-id="@c.Id" value="@c.ExtractedValue" placeholder="@c.Value" />
+                                                </td>
+                                            </tr>
+                                        }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <div class="tab-pane fade" id="c2-tab-record">
+                    <div class="card-figma mb-3">
+                        <div class="card-header-figma"><h3 class="card-title-figma mb-0">Tài liệu cùng bộ hồ sơ</h3></div>
+                        <div class="card-content-figma">
+                            @if (sameRecordDocs.Count == 0)
+                            {
+                                <div class="alert alert-light border mb-0">Không có tài liệu cùng bộ hoặc chưa cấu hình <code>SetRecordInfo</code>.</div>
+                            }
+                            else
+                            {
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th style="width:40px;">STT</th>
+                                                <th>Phiếu</th>
+                                                <th style="width:90px;">Đã nhận</th>
+                                                <th style="width:130px;">Trạng thái</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                        @{
+                                            var rowNo = 1;
+                                            foreach (var sdoc in sameRecordDocs)
+                                            {
+                                                var isCurrent = sdoc.Id == doc.Id;
+                                                <tr>
+                                                    <td>@rowNo</td>
+                                                    <td>
+                                                        @if (isCurrent)
+                                                        {
+                                                            <span class="text-danger font-weight-bold">@((sdoc.FileName ?? sdoc.Name) ?? $"#{sdoc.Id}")</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <a asp-area="sohoa" asp-controller="Check" asp-action="Check2Form" asp-route-id="@sdoc.Id">@((sdoc.FileName ?? sdoc.Name) ?? $"#{sdoc.Id}")</a>
+                                                        }
+                                                    </td>
+                                                    <td class="text-center">@(sdoc.Checked2By > 0 || isCurrent ? "✔" : "")</td>
+                                                    <td>
+                                                        @if (isCurrent) { <span class="badge badge-info">Đang kiểm tra</span> }
+                                                        else if (sdoc.IsChecked2) { <span class="badge badge-success">Đã nhập</span> }
+                                                        else { <span class="badge badge-secondary">Chưa nhập</span> }
+                                                    </td>
+                                                </tr>
+                                                rowNo++;
+                                            }
+                                        }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<form id="antiCheck2" class="d-none">@Html.AntiForgeryToken()</form>
+
+@section Scripts {
+    <script src="~/js/shtl-ajax.js" asp-append-version="true"></script>
+    <script>
+        (function () {
+            var submitUrl = @Html.Raw(JsonSerializer.Serialize(submitUrl));
+            var indexUrl = @Html.Raw(JsonSerializer.Serialize(indexUrl));
+            var docId = @doc.Id;
+            initSplitLayout('check2SplitLayout');
+
+            function initSplitLayout(layoutId) {
+                var layout = document.getElementById(layoutId);
+                if (!layout) return;
+                var leftPane = layout.querySelector('.split-pane-left');
+                var splitter = layout.querySelector('.splitter');
+                if (!leftPane || !splitter) return;
+
+                var dragging = false;
+                var startX = 0;
+                var startWidth = 0;
+                var blockedIframes = [];
+
+                splitter.addEventListener('mousedown', function (e) {
+                    if (window.innerWidth < 992) return;
+                    dragging = true;
+                    startX = e.clientX;
+                    startWidth = leftPane.getBoundingClientRect().width;
+                    blockedIframes = Array.prototype.slice.call(layout.querySelectorAll('iframe'));
+                    blockedIframes.forEach(function (f) { f.style.pointerEvents = 'none'; });
+                    splitter.classList.add('is-dragging');
+                    document.body.style.cursor = 'col-resize';
+                    document.body.style.userSelect = 'none';
+                    e.preventDefault();
+                });
+
+                window.addEventListener('mousemove', function (e) {
+                    if (!dragging) return;
+                    var dx = e.clientX - startX;
+                    var newWidth = startWidth + dx;
+                    var total = layout.getBoundingClientRect().width;
+                    var minWidth = 320;
+                    var maxWidth = Math.max(minWidth, total - 360 - 10);
+                    newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+                    var percent = (newWidth / total) * 100;
+                    leftPane.style.flexBasis = percent.toFixed(2) + '%';
+                });
+
+                window.addEventListener('mouseup', function () {
+                    if (!dragging) return;
+                    dragging = false;
+                    blockedIframes.forEach(function (f) { f.style.pointerEvents = ''; });
+                    blockedIframes = [];
+                    splitter.classList.remove('is-dragging');
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                });
+            }
+
+            function token() { return window.ShtlAjax.getRequestVerificationToken(); }
+
+            function submitCheck(resultCode) {
+                var stg = {};
+                document.querySelectorAll('[data-stg-field]').forEach(function (el) {
+                    var k = el.getAttribute('data-stg-field');
+                    if (k) stg[k] = el.value;
+                });
+                var cells = [];
+                document.querySelectorAll('.chk-cell[data-cell-id]').forEach(function (el) {
+                    var id = parseInt(el.getAttribute('data-cell-id'), 10);
+                    if (id) cells.push({ id: id, value: el.value });
+                });
+                var returnReason = (document.getElementById('check2-return-reason').value || '').trim();
+                if (resultCode === 3 && !returnReason) {
+                    alert('Vui lòng nhập lý do trả lại.');
+                    return;
+                }
+                var body = {
+                    documentId: docId,
+                    step: 8,
+                    result: resultCode,
+                    note: document.getElementById('check2-note').value || null,
+                    returnReason: returnReason || null,
+                    name: stg['dc_title'] || null,
+                    symbolNo: stg['dc_symbol'] || null,
+                    recordNo: stg['dc_record'] || null,
+                    issuedBy: stg['dc_issued_by'] || null,
+                    author: stg['dc_author'] || null,
+                    noted: stg['dc_noted'] || null,
+                    field1: stg['field1'] || null,
+                    field2: stg['field2'] || null,
+                    field3: stg['field3'] || null,
+                    field4: stg['field4'] || null,
+                    field5: stg['field5'] || null,
+                    field6: stg['field6'] || null,
+                    field7: stg['field7'] || null,
+                    field8: stg['field8'] || null,
+                    cells: cells
+                };
+                var hint = document.getElementById('check2-submit-hint');
+                hint.classList.remove('d-none');
+                fetch(submitUrl, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': token()
+                    },
+                    body: JSON.stringify(body)
+                }).then(function (r) { return r.json(); }).then(function (j) {
+                    hint.classList.add('d-none');
+                    if (j.success) {
+                        if (typeof toastr !== 'undefined') toastr.success(j.message || 'Đã lưu');
+                        window.location.href = indexUrl;
+                    } else {
+                        if (typeof toastr !== 'undefined') toastr.error(j.message || 'Lỗi');
+                        else alert(j.message || 'Lỗi');
+                    }
+                }).catch(function () {
+                    hint.classList.add('d-none');
+                    if (typeof toastr !== 'undefined') toastr.error('Lỗi mạng');
+                });
+            }
+
+            document.getElementById('btnCheck2Pass').addEventListener('click', function () { submitCheck(1); });
+            document.getElementById('btnCheck2Return').addEventListener('click', function () { submitCheck(3); });
+        })();
+    </script>
+}

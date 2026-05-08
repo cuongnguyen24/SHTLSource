@@ -766,6 +766,10 @@ namespace SHTL.Modules.Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("author");
 
+                    b.Property<string>("BoxNo")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("box_no");
+
                     b.Property<DateTime?>("Checked1At")
                         .HasColumnType("datetime2")
                         .HasColumnName("checked1at");
@@ -1094,6 +1098,10 @@ namespace SHTL.Modules.Infrastructure.Persistence.Migrations
                         .HasColumnType("int")
                         .HasColumnName("issued_year");
 
+                    b.Property<string>("LevelNo")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("level_no");
+
                     b.Property<DateTime?>("LockedAt")
                         .HasColumnType("datetime2")
                         .HasColumnName("locked_at");
@@ -1179,9 +1187,21 @@ namespace SHTL.Modules.Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("path_pdf_searchable");
 
+                    b.Property<string>("Poster")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("poster");
+
+                    b.Property<string>("Receiver")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("receiver");
+
                     b.Property<string>("RecordNo")
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("record_no");
+
+                    b.Property<string>("RecordTitle")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("record_title");
 
                     b.Property<int>("RecordTypeId")
                         .HasColumnType("int")
@@ -1191,9 +1211,17 @@ namespace SHTL.Modules.Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("search_meta");
 
+                    b.Property<string>("ShelfNo")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("shelf_no");
+
                     b.Property<string>("Signer")
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("signer");
+
+                    b.Property<string>("SlotNo")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("slot_no");
 
                     b.Property<string>("SortMeta")
                         .HasColumnType("nvarchar(max)")
@@ -1202,6 +1230,10 @@ namespace SHTL.Modules.Infrastructure.Persistence.Migrations
                     b.Property<byte>("Status")
                         .HasColumnType("tinyint")
                         .HasColumnName("status");
+
+                    b.Property<string>("Subject")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("subject");
 
                     b.Property<string>("Summary")
                         .HasColumnType("nvarchar(max)")
@@ -1259,6 +1291,45 @@ namespace SHTL.Modules.Infrastructure.Persistence.Migrations
                         .HasName("pk_stg_documents");
 
                     b.ToTable("stg_documents", "dbo");
+                });
+
+            modelBuilder.Entity("SHTL.Modules.Core.Domain.Entities.Stg.DocumentPage", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created");
+
+                    b.Property<long>("DocumentId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("document_id");
+
+                    b.Property<int>("DpiX")
+                        .HasColumnType("int")
+                        .HasColumnName("dpi_x");
+
+                    b.Property<int>("DpiY")
+                        .HasColumnType("int")
+                        .HasColumnName("dpi_y");
+
+                    b.Property<int>("PageNumber")
+                        .HasColumnType("int")
+                        .HasColumnName("page_number");
+
+                    b.Property<string>("PageSize")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("page_size");
+
+                    b.HasKey("Id")
+                        .HasName("pk_stg_doc_sohoa_page");
+
+                    b.ToTable("stg_doc_sohoa_page", "dbo");
                 });
 
             modelBuilder.Entity("SHTL.Modules.Core.Domain.Entities.Stg.ExportJob", b =>

@@ -1,8 +1,10 @@
 @model DocumentDto
+@using SHTL.Modules.Shared.Contracts
 @{
     ViewData["Title"] = "Xem PDF — " + Model.Name;
     var pdfUrl = Url.Content("~/scan/pdf/" + Model.Id);
     var downloadUrl = Url.Content("~/scan/download/" + Model.Id);
+    var sp = Model.SearchablePdfStatusText;
 }
 @section Breadcrumb {
     <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="Scan" asp-action="Index">Scan</a></li>
@@ -24,6 +26,10 @@
             </div>
         </div>
     </div>
+    @if (!string.IsNullOrEmpty(sp))
+    {
+        <div class="alert alert-info py-2 small mb-2">Trạng thái PDF 2 lớp: <strong>@sp</strong></div>
+    }
     @* iframe: nguồn PDF do ScanController.Pdf stream (Range-friendly cho trình xem nội bộ). *@
     <div class="flex-grow-1 border rounded overflow-hidden bg-white shadow-sm" style="min-height:480px;">
         <iframe src="@pdfUrl" title="PDF" class="w-100 h-100 border-0" style="min-height: calc(100vh - 220px);"></iframe>
