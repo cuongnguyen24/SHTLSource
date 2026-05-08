@@ -1,5 +1,7 @@
 @model DocumentFormViewModel
 @using System.Text.Json
+@using SHTL.Modules.Core.Domain.Enums
+@using SHTL.Modules.Shared.Contracts
 @using SHTL.Modules.Shared.Contracts.ViewModels
 @{
     var doc = Model.Document!;
@@ -7,6 +9,9 @@
     var submitUrl = Url.Action("Submit", "Extract", new { area = "sohoa" })!;
     var previewUrl = Url.Content("~/scan/preview/" + doc.Id);
     var indexUrl = Url.Action("Index", "Extract", new { area = "sohoa" })!;
+    var pdfViewerUrl = Url.Content("~/scan/pdf/" + doc.Id);
+    var showPdfViewer = SearchablePdfDisplay.LooksLikePdf(doc.Extension, doc.FileName, doc.FilePath);
+    var spLabel = doc.SearchablePdfStatusText;
 
     string? Fv(FieldSettingViewModel f) =>
         Model.FieldValues.TryGetValue(f.FieldName, out var x) ? x : f.FixValue;
@@ -24,7 +29,13 @@
         <div class="frame-header">
             <div>
                 <h6 class="mb-0 font-weight-bold" style="color:var(--primary);">@doc.Name</h6>
-                <div class="text-muted small">Loại: @Model.DocType.Name · Bước hiện tại: @doc.CurrentStep</div>
+                <div class="text-muted small">
+                    Loại: @Model.DocType.Name · Bước hiện tại: @doc.CurrentStep
+                    @if (!string.IsNullOrEmpty(spLabel))
+                    {
+                        <span class="badge badge-info ml-1">@spLabel</span>
+                    }
+                </div>
             </div>
             <div class="d-flex flex-wrap" style="gap:8px;">
                 <a href="@previewUrl" class="btn-figma btn-figma-secondary btn-sm" target="_blank" rel="noopener"><i class="fas fa-file-pdf mr-1"></i>Xem PDF</a>
@@ -36,69 +47,108 @@
 
     <p id="extract-submit-hint" class="text-muted small d-none"><i class="fas fa-spinner fa-spin mr-1"></i>Đang gửi…</p>
 
-    @{
-        var groupOrder = orderedFields
-            .GroupBy(f => f.GroupId)
-            .OrderBy(g => Model.FieldGroups.TryGetValue(g.Key, out var gr) ? gr.Weight : 999);
-    }
-    @foreach (var grp in groupOrder)
-    {
-        var gtitle = Model.FieldGroups.TryGetValue(grp.Key, out var g)
-            ? (string.IsNullOrEmpty(g.GroupName) ? g.Name : g.GroupName)
-            : (grp.Key == 0 ? "Trường thông tin" : $"Nhóm #{grp.Key}");
-        <div class="card-figma mb-3">
-            <div class="card-header-figma"><h3 class="card-title-figma mb-0">@gtitle</h3></div>
-            <div class="card-content-figma">
-                <div class="row">
-                    @foreach (var fs in grp.OrderBy(f => f.Weight))
+    <div class="row">
+        <div class="col-lg-5 mb-3 mb-lg-0">
+            <div class="card-figma h-100">
+                <div class="card-header-figma d-flex align-items-center justify-content-between flex-wrap">
+                    <h3 class="card-title-figma mb-0">Tài liệu</h3>
+                    @if (showPdfViewer)
                     {
-                        <div class="col-md-6">
-                            <partial name="_FieldInput" model="(fs, Fv(fs))" />
+                        <a href="@previewUrl" class="btn-figma btn-figma-outline btn-sm" target="_blank" rel="noopener">Mở toàn màn hình</a>
+                    }
+                </div>
+                <div class="card-content-figma p-0">
+                    @if (showPdfViewer)
+                    {
+                        <div class="border-bottom bg-light px-2 py-1 small text-muted">
+                            @if (doc.OcrStatus == OcrStatus.SearchablePdfReady)
+                            {
+                                <span><i class="fas fa-copy mr-1"></i>PDF 2 lớp: chọn chữ trên tài liệu bên dưới, <strong>Ctrl+C</strong> rồi dán vào các ô nhập liệu.</span>
+                            }
+                            else if (!string.IsNullOrEmpty(spLabel))
+                            {
+                                <span>@spLabel — khi xong, làm tương tự để copy nhanh hơn.</span>
+                            }
+                            else
+                            {
+                                <span>Đang hiển thị bản scan. Sau khi hệ thống tạo PDF 2 lớp, bạn có thể copy chữ từ đây.</span>
+                            }
                         </div>
+                        <iframe src="@pdfViewerUrl" title="PDF tài liệu" class="w-100 border-0 d-block" style="min-height: 560px; height: calc(100vh - 280px);"></iframe>
+                    }
+                    else
+                    {
+                        <div class="p-3 text-muted small mb-0">Tài liệu không phải PDF — không có khung xem kèm.</div>
                     }
                 </div>
             </div>
         </div>
-    }
-
-    @if (cells.Count > 0)
-    {
-        <div class="card-figma mb-3">
-            <div class="card-header-figma">
-                <h3 class="card-title-figma mb-0"><i class="fas fa-th mr-2" style="color:var(--primary);"></i>Ô nhập từ biểu mẫu / OCR</h3>
-            </div>
-            <div class="card-content-figma p-0">
-                <div class="table-container-figma mb-0" style="max-height:360px; overflow:auto;">
-                    <table class="table table-sm table-figma mb-0">
-                        <thead>
-                            <tr>
-                                <th>ID ô</th>
-                                <th>Tiêu đề</th>
-                                <th>Trang</th>
-                                <th>OCR / đã nhập</th>
-                                <th>Giá trị nhập</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        @foreach (var c in cells)
-                        {
-                            var showVal = string.IsNullOrEmpty(c.ExtractedValue) ? c.Value : c.ExtractedValue;
-                            <tr>
-                                <td><code>@c.Id</code></td>
-                                <td>@(c.Title ?? c.Field ?? "—")</td>
-                                <td>@c.Page</td>
-                                <td class="small text-muted text-truncate" style="max-width:180px;" title="@showVal">@showVal</td>
-                                <td style="min-width:200px;">
-                                    <input type="text" class="form-control form-control-sm ext-cell" data-cell-id="@c.Id" value="@c.ExtractedValue" placeholder="@c.Value" />
-                                </td>
-                            </tr>
-                        }
-                        </tbody>
-                    </table>
+        <div class="col-lg-7">
+            @{
+                var groupOrder = orderedFields
+                    .GroupBy(f => f.GroupId)
+                    .OrderBy(g => Model.FieldGroups.TryGetValue(g.Key, out var gr) ? gr.Weight : 999);
+            }
+            @foreach (var grp in groupOrder)
+            {
+                var gtitle = Model.FieldGroups.TryGetValue(grp.Key, out var g)
+                    ? (string.IsNullOrEmpty(g.GroupName) ? g.Name : g.GroupName)
+                    : (grp.Key == 0 ? "Trường thông tin" : $"Nhóm #{grp.Key}");
+                <div class="card-figma mb-3">
+                    <div class="card-header-figma"><h3 class="card-title-figma mb-0">@gtitle</h3></div>
+                    <div class="card-content-figma">
+                        <div class="row">
+                            @foreach (var fs in grp.OrderBy(f => f.Weight))
+                            {
+                                <div class="col-md-6">
+                                    <partial name="_FieldInput" model="(fs, Fv(fs))" />
+                                </div>
+                            }
+                        </div>
+                    </div>
                 </div>
-            </div>
+            }
+
+            @if (cells.Count > 0)
+            {
+                <div class="card-figma mb-3">
+                    <div class="card-header-figma">
+                        <h3 class="card-title-figma mb-0"><i class="fas fa-th mr-2" style="color:var(--primary);"></i>Ô nhập từ biểu mẫu / OCR</h3>
+                    </div>
+                    <div class="card-content-figma p-0">
+                        <div class="table-container-figma mb-0" style="max-height:360px; overflow:auto;">
+                            <table class="table table-sm table-figma mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>ID ô</th>
+                                        <th>Tiêu đề</th>
+                                        <th>Trang</th>
+                                        <th>OCR / đã nhập</th>
+                                        <th>Giá trị nhập</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                @foreach (var c in cells)
+                                {
+                                    var showVal = string.IsNullOrEmpty(c.ExtractedValue) ? c.Value : c.ExtractedValue;
+                                    <tr>
+                                        <td><code>@c.Id</code></td>
+                                        <td>@(c.Title ?? c.Field ?? "—")</td>
+                                        <td>@c.Page</td>
+                                        <td class="small text-muted text-truncate" style="max-width:180px;" title="@showVal">@showVal</td>
+                                        <td style="min-width:200px;">
+                                            <input type="text" class="form-control form-control-sm ext-cell" data-cell-id="@c.Id" value="@c.ExtractedValue" placeholder="@c.Value" />
+                                        </td>
+                                    </tr>
+                                }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
         </div>
-    }
+    </div>
 </div>
 
 <form id="antiEx" class="d-none">@Html.AntiForgeryToken()</form>

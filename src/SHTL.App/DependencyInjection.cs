@@ -122,7 +122,7 @@ public static class DependencyInjection
         services.AddShtlAccessLogging(configuration);
         services.AddInfrastructureStorage(configuration);
         services.AddInfrastructureSearch(configuration);
-        services.AddCoreApplication();
+        services.AddCoreApplication(configuration);
 
         // ExportWorker depends on scoped repositories; register a scope-safe adapter when enabling the queue:
         // services.AddHostedService<ExportWorkerHostedService>();

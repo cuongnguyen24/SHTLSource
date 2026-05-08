@@ -16,6 +16,14 @@ public interface IDocumentRepository
     Task<int> SoftDeleteAsync(long id, int deletedBy);
     Task<IEnumerable<Document>> GetByFolderAsync(long folderId, int pageIndex, int pageSize);
     Task<IEnumerable<Document>> GetPendingForStepAsync(WorkflowStep step, int limit = 50);
+
+    /// <summary>Lấy 1 tài liệu chờ PDF 2 lớp và chuyển sang trạng thái đang xử lý. Trả về null nếu không có.</summary>
+    Task<long?> TryClaimSearchablePdfJobAsync();
+
+    Task<int> UpdateSearchablePdfStateAsync(long id, OcrStatus ocrStatus, string? pathPdfSearchable, int updatedBy);
+
+    /// <summary>Phục hồi job bị kẹt (app restart giữa chừng).</summary>
+    Task<int> ResetStaleSearchablePdfProcessingAsync(TimeSpan olderThan);
 }
 
 public class DocumentFilterParams
@@ -169,6 +177,72 @@ public class DocumentRepository : BaseRepository, IDocumentRepository
             @"SELECT * FROM dbo.stg_documents WHERE current_step = @Step AND status = 1
               ORDER BY id DESC OFFSET 0 ROWS FETCH NEXT @Limit ROWS ONLY",
             new { Step = (byte)step, Limit = limit });
+    }
+
+    public async Task<long?> TryClaimSearchablePdfJobAsync()
+    {
+        var conn = await OpenConnectionAsync();
+        const string sql = @"
+UPDATE TOP (1) dbo.stg_documents
+SET ocr_status = @Processing,
+    updated = SYSUTCDATETIME(),
+    updated_by = @SystemUser
+OUTPUT INSERTED.id
+WHERE ocr_status = @Queued
+  AND status = @Active
+  AND (
+        LOWER(LTRIM(RTRIM(ISNULL(extension, N'')))) IN (N'pdf', N'.pdf')
+        OR LOWER(ISNULL(file_name, N'')) LIKE N'%.pdf'
+        OR LOWER(ISNULL(file_path, N'')) LIKE N'%.pdf'
+      );";
+        return await QueryFirstOrDefaultAsync<long?>(conn, sql, new
+        {
+            Processing = (byte)OcrStatus.SearchablePdfProcessing,
+            Queued = (byte)OcrStatus.SearchablePdfQueued,
+            Active = (byte)DocumentStatus.Active,
+            SystemUser = 0
+        });
+    }
+
+    public async Task<int> UpdateSearchablePdfStateAsync(long id, OcrStatus ocrStatus, string? pathPdfSearchable, int updatedBy)
+    {
+        var conn = await OpenConnectionAsync();
+        return await ExecuteAsync(conn, @"
+UPDATE dbo.stg_documents SET
+    ocr_status = @OcrStatus,
+    path_pdf_searchable = @PathPdfSearchable,
+    ocr_at = CASE WHEN @OcrStatus IN (12, 13) THEN SYSUTCDATETIME() ELSE ocr_at END,
+    updated = SYSUTCDATETIME(),
+    updated_by = @UpdatedBy
+WHERE id = @Id",
+            new
+            {
+                Id = id,
+                OcrStatus = (byte)ocrStatus,
+                PathPdfSearchable = pathPdfSearchable,
+                UpdatedBy = updatedBy
+            });
+    }
+
+    public async Task<int> ResetStaleSearchablePdfProcessingAsync(TimeSpan olderThan)
+    {
+        var conn = await OpenConnectionAsync();
+        return await ExecuteAsync(conn, @"
+UPDATE dbo.stg_documents
+SET ocr_status = @Queued,
+    updated = SYSUTCDATETIME(),
+    updated_by = @SystemUser
+WHERE ocr_status = @Processing
+  AND status = @Active
+  AND updated < DATEADD(SECOND, @NegSeconds, SYSUTCDATETIME());",
+            new
+            {
+                Queued = (byte)OcrStatus.SearchablePdfQueued,
+                Processing = (byte)OcrStatus.SearchablePdfProcessing,
+                Active = (byte)DocumentStatus.Active,
+                SystemUser = 0,
+                NegSeconds = -(int)olderThan.TotalSeconds
+            });
     }
 
     private static (string where, object param) BuildWhere(DocumentFilterParams f)

@@ -1,13 +1,22 @@
+using SHTL.Modules.Core.Application.Options;
 using SHTL.Modules.Core.Application.Services;
 using SHTL.Modules.Core.Application.Services.Axe;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace SHTL.Modules.Core.Application;
 
 public static class AppServiceExtensions
 {
-    public static IServiceCollection AddCoreApplication(this IServiceCollection services)
+    public static IServiceCollection AddCoreApplication(this IServiceCollection services, IConfiguration configuration)
     {
+        services.Configure<SearchablePdfOptions>(configuration.GetSection(SearchablePdfOptions.SectionName));
+        services.AddScoped<ISearchablePdfPythonRunner, SearchablePdfPythonRunner>();
+        services.AddScoped<ISearchablePdfProcessor, SearchablePdfProcessor>();
+        var pdfOpts = configuration.GetSection(SearchablePdfOptions.SectionName).Get<SearchablePdfOptions>() ?? new SearchablePdfOptions();
+        if (pdfOpts.RunWorkerInWebProcess)
+            services.AddHostedService<SearchablePdfHostedService>();
+
         services.AddScoped<IDocumentService, DocumentService>();
         services.AddScoped<IDocumentWorkflowService, DocumentWorkflowService>();
         services.AddScoped<IUserManagementService, UserManagementService>();

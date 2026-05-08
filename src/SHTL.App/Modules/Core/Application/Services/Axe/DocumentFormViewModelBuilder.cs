@@ -2,6 +2,7 @@ using SHTL.Modules.Core.Domain.Entities.Stg;
 using SHTL.Modules.Infrastructure.Data.Repositories.Acc;
 using SHTL.Modules.Infrastructure.Data.Repositories.Cnf;
 using SHTL.Modules.Infrastructure.Data.Repositories.Stg;
+using SHTL.Modules.Core.Domain.Enums;
 using SHTL.Modules.Shared.Contracts.Dtos;
 using SHTL.Modules.Shared.Contracts.ViewModels;
 
@@ -188,7 +189,12 @@ public class DocumentFormViewModelBuilder : IDocumentFormViewModelBuilder
             Checked1ReturnReason = doc.Checked1ReturnReason,
             Checked2By = doc.Checked2By,
             Checked2At = doc.Checked2At,
-            Checked2ReturnReason = doc.Checked2ReturnReason
+            Checked2ReturnReason = doc.Checked2ReturnReason,
+            CurrentStep = doc.CurrentStep,
+            Status = doc.Status,
+            PageCount = doc.PageCount,
+            OcrStatus = doc.OcrStatus,
+            PathPdfSearchable = doc.PathPdfSearchable
         };
     }
 

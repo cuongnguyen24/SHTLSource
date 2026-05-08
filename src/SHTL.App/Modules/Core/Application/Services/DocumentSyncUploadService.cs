@@ -6,6 +6,7 @@ using SHTL.Modules.Infrastructure.Data.Repositories.Stg;
 using SHTL.Modules.Infrastructure.Storage;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
+using SHTL.Modules.Shared.Contracts;
 using SHTL.Modules.Shared.Contracts.Dtos;
 
 namespace SHTL.Modules.Core.Application.Services;
@@ -183,7 +184,10 @@ public sealed class DocumentSyncUploadService : IDocumentSyncUploadService
                     FileSize = item.File.Length,
                     Status = DocumentStatus.Active,
                     CurrentStep = WorkflowStep.Extract,
-                    OcrStatus = OcrStatus.NotRequested,
+                    IsOcrEnabled = SearchablePdfDisplay.LooksLikePdf(ext, fileName, null),
+                    OcrStatus = SearchablePdfDisplay.LooksLikePdf(ext, fileName, null)
+                        ? OcrStatus.SearchablePdfQueued
+                        : OcrStatus.NotRequested,
                     Version = 1,
                     Created = DateTime.UtcNow,
                     CreatedBy = userId,
