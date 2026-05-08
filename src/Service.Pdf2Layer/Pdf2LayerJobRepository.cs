@@ -106,4 +106,17 @@ internal sealed class Pdf2LayerJobRepository
                 NegSeconds = -(int)olderThan.TotalSeconds
             }, cancellationToken: cancellationToken)).ConfigureAwait(false);
     }
+
+    public async Task<string?> GetConfigValueAsync(string key, CancellationToken cancellationToken = default)
+    {
+        const string sql = """
+            SELECT TOP (1) value
+            FROM dbo.cnf_configs
+            WHERE [key] = @Key;
+            """;
+        await using var conn = new SqlConnection(_connectionString);
+        await conn.OpenAsync(cancellationToken).ConfigureAwait(false);
+        return await conn.ExecuteScalarAsync<string?>(
+            new CommandDefinition(sql, new { Key = key }, cancellationToken: cancellationToken)).ConfigureAwait(false);
+    }
 }

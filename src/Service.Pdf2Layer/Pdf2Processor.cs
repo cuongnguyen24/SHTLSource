@@ -34,6 +34,7 @@ internal sealed class Pdf2Processor
         if (doc is null)
         {
             _logger.LogWarning("Pdf2Layer: tài liệu {Id} không tồn tại", documentId);
+            await AppDataFileLog.WriteAsync("WARN", $"Tài liệu #{documentId} không tồn tại khi xử lý.").ConfigureAwait(false);
             return;
         }
 
@@ -46,6 +47,7 @@ internal sealed class Pdf2Processor
         if (!SearchablePdfPathHelper.LooksLikePdf(doc.Extension, doc.FileName, doc.FilePath)
             || string.IsNullOrWhiteSpace(doc.FilePath))
         {
+            await AppDataFileLog.WriteAsync("ERROR", $"Tài liệu #{documentId} không hợp lệ để tạo PDF 2 lớp. extension={doc.Extension}; file={doc.FileName}; path={doc.FilePath}").ConfigureAwait(false);
             await _repo.UpdateSearchablePdfStateAsync(documentId, Pdf2OcrStatus.SearchablePdfFailed, null, 0, cancellationToken)
                 .ConfigureAwait(false);
             return;
@@ -55,19 +57,23 @@ internal sealed class Pdf2Processor
         if (inputFull is null || !File.Exists(inputFull))
         {
             _logger.LogError("Pdf2Layer: không đọc file gốc id={Id} path={Path}", documentId, doc.FilePath);
+            await AppDataFileLog.WriteAsync("ERROR", $"Không đọc được file gốc tài liệu #{documentId}. db_path={doc.FilePath}; root={_storageOpts.Value.RootPath}").ConfigureAwait(false);
             await _repo.UpdateSearchablePdfStateAsync(documentId, Pdf2OcrStatus.SearchablePdfFailed, null, 0, cancellationToken)
                 .ConfigureAwait(false);
             return;
         }
 
         var dpi = Math.Clamp(_pdfOpts.Value.RenderDpi, 72, 300);
+        var maxPages = await ResolveMaxPagesAsync(cancellationToken).ConfigureAwait(false);
         var tempOut = Path.Combine(Path.GetTempPath(), $"shtl-searchable-{documentId}-{Guid.NewGuid():N}.pdf");
         try
         {
             _logger.LogInformation("Pdf2Layer: đang xử lý id={Id}", documentId);
-            var ok = await _runner.RunAsync(inputFull, tempOut, dpi, cancellationToken).ConfigureAwait(false);
+            await AppDataFileLog.WriteAsync("INFO", $"Bắt đầu xử lý tài liệu #{documentId}. input={inputFull}; dpi={dpi}; maxPages={(maxPages <= 0 ? "ALL" : maxPages)}").ConfigureAwait(false);
+            var ok = await _runner.RunAsync(inputFull, tempOut, dpi, maxPages, cancellationToken).ConfigureAwait(false);
             if (!ok)
             {
+                await AppDataFileLog.WriteAsync("ERROR", $"Runner trả lỗi cho tài liệu #{documentId}. input={inputFull}").ConfigureAwait(false);
                 await _repo.UpdateSearchablePdfStateAsync(documentId, Pdf2OcrStatus.SearchablePdfFailed, null, 0, cancellationToken)
                     .ConfigureAwait(false);
                 return;
@@ -89,10 +95,12 @@ internal sealed class Pdf2Processor
             }
 
             _logger.LogInformation("Pdf2Layer: hoàn tất id={Id} → {Path}", documentId, storedRel);
+            await AppDataFileLog.WriteAsync("INFO", $"Hoàn tất tài liệu #{documentId}. output={storedRel}").ConfigureAwait(false);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Pdf2Layer: lỗi id={Id}", documentId);
+            await AppDataFileLog.WriteAsync("ERROR", $"Exception khi xử lý tài liệu #{documentId}", ex).ConfigureAwait(false);
             await _repo.UpdateSearchablePdfStateAsync(documentId, Pdf2OcrStatus.SearchablePdfFailed, null, 0, cancellationToken)
                 .ConfigureAwait(false);
         }
@@ -119,5 +127,22 @@ internal sealed class Pdf2Processor
         var ok = combined.Equals(root, StringComparison.OrdinalIgnoreCase)
                  || combined.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase);
         return ok ? combined : null;
+    }
+
+    private async Task<int> ResolveMaxPagesAsync(CancellationToken cancellationToken)
+    {
+        var fallback = _pdfOpts.Value.NumberOfPagesRunInPDF2Layer;
+        try
+        {
+            var raw = await _repo.GetConfigValueAsync("NumberOfPagesRunInPDF2Layer", cancellationToken).ConfigureAwait(false);
+            if (int.TryParse(raw, out var parsed))
+                return parsed <= 0 ? 0 : Math.Clamp(parsed, 1, 5000);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Pdf2Layer: không đọc được config NumberOfPagesRunInPDF2Layer từ DB, dùng fallback.");
+        }
+
+        return fallback <= 0 ? 0 : Math.Clamp(fallback, 1, 5000);
     }
 }

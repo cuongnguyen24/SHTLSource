@@ -30,13 +30,16 @@ def quad_to_rect(box, fitz_mod):
 
 def main() -> int:
     if len(sys.argv) < 3:
-        print("Usage: generate_searchable_pdf.py <input.pdf> <output.pdf> [dpi]", file=sys.stderr)
+        print("Usage: generate_searchable_pdf.py <input.pdf> <output.pdf> [dpi] [max_pages]", file=sys.stderr)
         return 2
 
     inp = sys.argv[1]
     outp = sys.argv[2]
     dpi = int(sys.argv[3]) if len(sys.argv) > 3 else 150
     dpi = max(72, min(300, dpi))
+    max_pages = int(sys.argv[4]) if len(sys.argv) > 4 else 0
+    if max_pages < 0:
+        max_pages = 0
 
     if not os.path.isfile(inp):
         print(f"Input not found: {inp}", file=sys.stderr)
@@ -54,7 +57,9 @@ def main() -> int:
     out = fitz.open()
     try:
         mat = fitz.Matrix(dpi / 72.0, dpi / 72.0)
-        for i in range(len(src)):
+        total_pages = len(src)
+        limit = total_pages if max_pages <= 0 else min(total_pages, max_pages)
+        for i in range(limit):
             page = src[i]
             pix = page.get_pixmap(matrix=mat, alpha=False)
             w, h = pix.width, pix.height
