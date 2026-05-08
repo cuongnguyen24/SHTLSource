@@ -20,9 +20,10 @@ public interface IDocumentSyncUploadService
     /// </summary>
     Task<WebSyncUploadBatchResult> UploadAsync(
         int userId,
-        int syncTypeId,
+        IReadOnlyList<int> syncTypeIds,
         IReadOnlyList<SyncUploadFormFile> files,
         bool onlyPdf,
+        string? pathPrefix = null,
         CancellationToken cancellationToken = default);
 }
 
@@ -59,9 +60,10 @@ public sealed class DocumentSyncUploadService : IDocumentSyncUploadService
 
     public async Task<WebSyncUploadBatchResult> UploadAsync(
         int userId,
-        int syncTypeId,
+        IReadOnlyList<int> syncTypeIds,
         IReadOnlyList<SyncUploadFormFile> files,
         bool onlyPdf,
+        string? pathPrefix = null,
         CancellationToken cancellationToken = default)
     {
         var results = new List<WebSyncUploadItemResult>();
@@ -77,8 +79,11 @@ public sealed class DocumentSyncUploadService : IDocumentSyncUploadService
             return new WebSyncUploadBatchResult { Items = results };
         }
 
-        var syncType = await _syncRepo.GetAsync(syncTypeId);
-        if (syncType == null)
+        var selectedIds = (syncTypeIds ?? Array.Empty<int>())
+            .Where(x => x > 0)
+            .Distinct()
+            .ToHashSet();
+        if (selectedIds.Count == 0)
         {
             foreach (var f in files)
             {
@@ -87,13 +92,21 @@ public sealed class DocumentSyncUploadService : IDocumentSyncUploadService
                     FileName = f.File.FileName,
                     RelativePath = f.RelativePath,
                     Success = false,
-                    Message = "Loại đồng bộ không tồn tại"
+                    Message = "Chưa chọn loại đồng bộ"
                 });
             }
             return new WebSyncUploadBatchResult { Items = results };
         }
 
-        if (syncType.DocTypeId <= 0)
+        var allSyncTypes = (await _syncRepo.ListAsync(null))
+            .Where(x => x.DocTypeId > 0)
+            .OrderBy(x => x.Weight)
+            .ThenBy(x => x.Id)
+            .ToList();
+        var selectedSyncTypes = allSyncTypes
+            .Where(x => selectedIds.Contains(x.Id))
+            .ToList();
+        if (selectedSyncTypes.Count == 0)
         {
             foreach (var f in files)
             {
@@ -102,20 +115,56 @@ public sealed class DocumentSyncUploadService : IDocumentSyncUploadService
                     FileName = f.File.FileName,
                     RelativePath = f.RelativePath,
                     Success = false,
-                    Message = "Loại đồng bộ chưa gắn loại tài liệu"
+                    Message = "Không tìm thấy loại đồng bộ đã chọn"
                 });
             }
             return new WebSyncUploadBatchResult { Items = results };
         }
 
-        var settings = (await _syncRepo.GetSettingsAsync(syncTypeId)).ToList();
+        // Tự mở rộng theo "họ cấu trúc" để đảm bảo các loại trong cùng bộ (Bìa/Tài liệu) được chia đúng.
+        var familyRootTokens = selectedSyncTypes
+            .Select(x => GetFirstLiteralSegment(x.Format))
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var candidateSyncTypes = allSyncTypes
+            .Where(x => selectedIds.Contains(x.Id)
+                        || (GetFirstLiteralSegment(x.Format) is string token && familyRootTokens.Contains(token)))
+            .DistinctBy(x => x.Id)
+            .OrderBy(x => x.Weight)
+            .ThenBy(x => x.Id)
+            .ToList();
+        if (candidateSyncTypes.Count == 0 || candidateSyncTypes.Any(x => x.DocTypeId <= 0))
+        {
+            foreach (var f in files)
+            {
+                results.Add(new WebSyncUploadItemResult
+                {
+                    FileName = f.File.FileName,
+                    RelativePath = f.RelativePath,
+                    Success = false,
+                    Message = "Loại đồng bộ không hợp lệ hoặc chưa gắn loại tài liệu"
+                });
+            }
+            return new WebSyncUploadBatchResult { Items = results };
+        }
+
+        var settingsBySyncTypeId = new Dictionary<int, List<DocTypeSyncSettingDto>>();
+        foreach (var st in candidateSyncTypes)
+            settingsBySyncTypeId[st.Id] = (await _syncRepo.GetSettingsAsync(st.Id)).ToList();
+
         var allFields = (await _fieldRepo.GetAllFieldsAsync()).ToDictionary(x => x.Id);
 
         foreach (var item in files)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var rel = string.IsNullOrWhiteSpace(item.RelativePath) ? item.File.FileName : item.RelativePath.Trim();
-            var logicalPath = SyncUploadPathNormalizer.ToLogicalRelativePath(rel, syncType.ScanPathRoot);
+            var relRaw = string.IsNullOrWhiteSpace(item.RelativePath) ? item.File.FileName : item.RelativePath.Trim();
+            var rel = CombinePathPrefix(pathPrefix, relRaw);
+            var normalizedRel = rel.Replace('\\', '/');
+            var matchedSync = ResolveSyncTypeForPath(normalizedRel, candidateSyncTypes) ?? candidateSyncTypes[0];
+            var settings = settingsBySyncTypeId.TryGetValue(matchedSync.Id, out var value) ? value : new List<DocTypeSyncSettingDto>();
+            var logicalPath = BuildLogicalPathByFormat(normalizedRel, matchedSync);
             var fileName = Path.GetFileName(string.IsNullOrEmpty(logicalPath) ? rel : logicalPath.Replace('/', Path.DirectorySeparatorChar));
             if (string.IsNullOrEmpty(fileName))
                 fileName = item.File.FileName;
@@ -126,7 +175,7 @@ public sealed class DocumentSyncUploadService : IDocumentSyncUploadService
                 results.Add(new WebSyncUploadItemResult
                 {
                     FileName = fileName,
-                    RelativePath = rel,
+                    RelativePath = relRaw,
                     Success = false,
                     Message = "File rỗng"
                 });
@@ -138,7 +187,7 @@ public sealed class DocumentSyncUploadService : IDocumentSyncUploadService
                 results.Add(new WebSyncUploadItemResult
                 {
                     FileName = fileName,
-                    RelativePath = rel,
+                    RelativePath = relRaw,
                     Success = false,
                     Message = $"Vượt giới hạn dung lượng ({_storageOpt.MaxFileSizeBytes} byte)"
                 });
@@ -151,7 +200,7 @@ public sealed class DocumentSyncUploadService : IDocumentSyncUploadService
                 results.Add(new WebSyncUploadItemResult
                 {
                     FileName = fileName,
-                    RelativePath = rel,
+                    RelativePath = relRaw,
                     Success = false,
                     Message = "Đang bật \"Chỉ tải lên PDF\" — bỏ tích tùy chọn này hoặc chỉ chọn file .pdf"
                 });
@@ -165,7 +214,7 @@ public sealed class DocumentSyncUploadService : IDocumentSyncUploadService
                 results.Add(new WebSyncUploadItemResult
                 {
                     FileName = fileName,
-                    RelativePath = rel,
+                    RelativePath = relRaw,
                     Success = false,
                     Message = $"Đuôi file không được phép: {ext}"
                 });
@@ -175,11 +224,11 @@ public sealed class DocumentSyncUploadService : IDocumentSyncUploadService
             var fn = fileName;
             try
             {
-                var pathValues = SyncPathFormatParser.Parse(syncType.Format, relForMeta);
+                var pathValues = ParseBySyncFormat(matchedSync.Format, relForMeta);
                 var doc = new Document
                 {
-                    DocTypeId = syncType.DocTypeId,
-                    SyncTypeId = syncTypeId,
+                    DocTypeId = matchedSync.DocTypeId,
+                    SyncTypeId = matchedSync.Id,
                     FolderId = 0,
                     FileName = fileName,
                     PathOriginal = relForMeta,
@@ -213,7 +262,7 @@ public sealed class DocumentSyncUploadService : IDocumentSyncUploadService
                 if (string.IsNullOrWhiteSpace(doc.Name))
                     doc.Name = Path.GetFileNameWithoutExtension(fileName);
 
-                var sub = SyncUploadPathNormalizer.BuildStorageSubPath(syncTypeId, relForMeta);
+                var sub = BuildStorageSubPathByLogicalPath(relForMeta);
                 await using var stream = item.File.OpenReadStream();
                 var stored = await _storage.SaveFileAsync(stream, fileName, sub);
                 doc.FilePath = stored;
@@ -267,7 +316,7 @@ public sealed class DocumentSyncUploadService : IDocumentSyncUploadService
                 results.Add(new WebSyncUploadItemResult
                 {
                     FileName = fn,
-                    RelativePath = rel,
+                    RelativePath = relForMeta,
                     Success = true,
                     Message = "Đã lưu",
                     DocumentId = id
@@ -278,7 +327,7 @@ public sealed class DocumentSyncUploadService : IDocumentSyncUploadService
                 results.Add(new WebSyncUploadItemResult
                 {
                     FileName = fn,
-                    RelativePath = rel,
+                    RelativePath = relRaw,
                     Success = false,
                     Message = ex.Message
                 });
@@ -286,6 +335,193 @@ public sealed class DocumentSyncUploadService : IDocumentSyncUploadService
         }
 
         return new WebSyncUploadBatchResult { Items = results };
+    }
+
+    private static string BuildStorageSubPathByLogicalPath(string logicalRelativePath)
+    {
+        logicalRelativePath = logicalRelativePath.Trim().Replace('\\', '/');
+        if (logicalRelativePath.Length == 0)
+            return string.Empty;
+
+        var dirOnly = Path.GetDirectoryName(logicalRelativePath.Replace('/', Path.DirectorySeparatorChar));
+        if (string.IsNullOrWhiteSpace(dirOnly))
+            return string.Empty;
+
+        var parts = new List<string>();
+        foreach (var seg in dirOnly.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var s = SanitizePathSegment(seg);
+            if (s.Length > 0 && s is not ("." or ".."))
+                parts.Add(s);
+        }
+
+        return parts.Count == 0 ? string.Empty : Path.Combine(parts.ToArray());
+    }
+
+    private static string SanitizePathSegment(string seg)
+    {
+        var invalid = Path.GetInvalidFileNameChars();
+        return string.Concat(seg.Trim().Select(c => invalid.Contains(c) ? '_' : c));
+    }
+
+    private static string CombinePathPrefix(string? pathPrefix, string relativePath)
+    {
+        var rel = (relativePath ?? string.Empty).Trim().Replace('\\', '/').Trim('/');
+        var prefix = (pathPrefix ?? string.Empty).Trim().Replace('\\', '/').Trim('/');
+        if (string.IsNullOrWhiteSpace(prefix))
+            return rel;
+        if (string.IsNullOrWhiteSpace(rel))
+            return prefix;
+        if (rel.StartsWith(prefix + "/", StringComparison.OrdinalIgnoreCase) || rel.Equals(prefix, StringComparison.OrdinalIgnoreCase))
+            return rel;
+        return prefix + "/" + rel;
+    }
+
+    private static DocTypeSyncListItemDto? ResolveSyncTypeForPath(string relativePath, IReadOnlyList<DocTypeSyncListItemDto> candidates)
+    {
+        var fileName = Path.GetFileName(relativePath.Replace('\\', '/'));
+
+        // Rule ưu tiên theo tên file literal ở cuối format, ví dụ ".../BIA.pdf" (không phân biệt hoa thường).
+        foreach (var sync in candidates.OrderBy(x => x.Weight).ThenBy(x => x.Id))
+        {
+            if (IsLiteralFileNamePatternMatch(fileName, sync.Format))
+                return sync;
+        }
+
+        // Rule cho "{File_name}": nhận mọi file .pdf còn lại.
+        foreach (var sync in candidates.OrderBy(x => x.Weight).ThenBy(x => x.Id))
+        {
+            if (IsFileNamePlaceholderPattern(sync.Format) && fileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                return sync;
+        }
+
+        // Fallback strict theo cấu trúc format.
+        foreach (var sync in candidates.OrderBy(x => x.Weight).ThenBy(x => x.Id))
+        {
+            if (IsPathMatchingSyncFormat(relativePath, sync.Format))
+                return sync;
+        }
+        return null;
+    }
+
+    private static bool IsLiteralFileNamePatternMatch(string fileName, string? format)
+    {
+        var formatSegments = SplitPathSegments((format ?? "").Replace('\\', '/'));
+        if (formatSegments.Count == 0)
+            return false;
+        var tail = formatSegments[^1];
+        if (IsPlaceholder(tail))
+            return false;
+        return tail.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase)
+               && tail.Equals(fileName, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsFileNamePlaceholderPattern(string? format)
+    {
+        var formatSegments = SplitPathSegments((format ?? "").Replace('\\', '/'));
+        if (formatSegments.Count == 0)
+            return false;
+        var tail = formatSegments[^1];
+        return IsPlaceholder(tail) && tail[1..^1].Trim().Equals("File_name", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsPathMatchingSyncFormat(string relativePath, string? format)
+    {
+        var logical = BuildLogicalPathByFormat(relativePath, format);
+        if (string.IsNullOrEmpty(logical))
+            return false;
+
+        var pathSegments = SplitPathSegments(logical);
+        var formatSegments = SplitPathSegments((format ?? "").Replace('\\', '/'));
+        if (pathSegments.Count == 0 || formatSegments.Count == 0 || pathSegments.Count < formatSegments.Count)
+            return false;
+
+        for (var i = 0; i < formatSegments.Count; i++)
+        {
+            var part = formatSegments[i];
+            if (IsPlaceholder(part))
+            {
+                var name = part[1..^1].Trim();
+                if (name.Equals("File_name", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (i != formatSegments.Count - 1)
+                        return false;
+                    if (!pathSegments[i].EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                        return false;
+                }
+                continue;
+            }
+
+            if (!part.Equals(pathSegments[i], StringComparison.OrdinalIgnoreCase))
+                return false;
+        }
+
+        return true;
+    }
+
+    private static Dictionary<string, string?> ParseBySyncFormat(string? format, string logicalPath)
+    {
+        var data = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        var pathSegments = SplitPathSegments(logicalPath);
+        var formatSegments = SplitPathSegments((format ?? "").Replace('\\', '/'));
+
+        for (var i = 0; i < formatSegments.Count && i < pathSegments.Count; i++)
+        {
+            var segment = formatSegments[i];
+            if (!IsPlaceholder(segment))
+                continue;
+
+            var key = segment[1..^1].Trim();
+            if (key.Length == 0)
+                continue;
+            data[key] = pathSegments[i];
+        }
+
+        return data;
+    }
+
+    private static string BuildLogicalPathByFormat(string relativePath, DocTypeSyncListItemDto sync)
+        => BuildLogicalPathByFormat(relativePath, sync.Format);
+
+    private static string BuildLogicalPathByFormat(string relativePath, string? format)
+    {
+        var segments = SplitPathSegments(relativePath);
+        var formatSegments = SplitPathSegments((format ?? "").Replace('\\', '/'));
+        if (segments.Count == 0 || formatSegments.Count == 0)
+            return relativePath.Replace('\\', '/');
+
+        var rootLiteral = GetFirstLiteralSegment(format);
+        var start = 0;
+        if (!string.IsNullOrWhiteSpace(rootLiteral))
+        {
+            start = segments.FindIndex(x => x.Equals(rootLiteral, StringComparison.OrdinalIgnoreCase));
+            if (start < 0)
+                return string.Join("/", new[] { rootLiteral }.Concat(segments));
+        }
+
+        return string.Join("/", segments.Skip(start));
+    }
+
+    private static string? GetFirstLiteralSegment(string? format)
+    {
+        foreach (var segment in SplitPathSegments((format ?? "").Replace('\\', '/')))
+        {
+            if (!IsPlaceholder(segment))
+                return segment;
+        }
+        return null;
+    }
+
+    private static bool IsPlaceholder(string segment)
+        => segment.Length >= 3 && segment[0] == '{' && segment[^1] == '}';
+
+    private static List<string> SplitPathSegments(string value)
+    {
+        return value.Trim()
+            .Replace('\\', '/')
+            .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(Uri.UnescapeDataString)
+            .ToList();
     }
 
     private static string? GetPathValue(Dictionary<string, string?> pathValues, string? settingTitle)

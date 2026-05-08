@@ -9,7 +9,7 @@ using SHTL.Modules.Infrastructure.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.WebHost.ConfigureKestrel(o => o.Limits.MaxRequestBodySize = 524_288_000);
+builder.WebHost.ConfigureKestrel(o => o.Limits.MaxRequestBodySize = null);
 
 // IIS: ghi key ring ra đĩa (ContentRoot/dp-keys) để antiforgery + cookie ổn định; cấp quyền ghi cho app pool.
 var dpKeysDir = Path.Combine(builder.Environment.ContentRootPath, "dp-keys");

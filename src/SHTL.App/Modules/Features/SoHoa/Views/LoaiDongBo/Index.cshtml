@@ -73,7 +73,7 @@
                                         <td class="text-center">@stt</td>
                                         <td><strong>@item.Name</strong></td>
                                         <td><small class="text-muted">@(item.Describe ?? "—")</small></td>
-                                        <td><small class="text-muted">@(item.ScanPathRoot ?? "—")</small></td>
+                                        <td><small class="text-muted">@(item.Format ?? "—")</small></td>
                                         <td>
                                             <a href="@Url.Action("Edit", "LoaiDongBo", new { area = "sohoa", id = item.Id })" 
                                                class="btn btn-sm btn-outline-primary action-btn">

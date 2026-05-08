@@ -47,13 +47,17 @@ public class SyncUploadController : BaseController
 
     [HttpPost("submit")]
     [ValidateAntiForgeryToken]
-    [RequestSizeLimit(524_288_000)] // 500 MB batch
-    [RequestFormLimits(MultipartBodyLengthLimit = 524_288_000)]
-    public async Task<IActionResult> Submit([FromForm] int syncTypeId, CancellationToken cancellationToken)
+    [RequestSizeLimit(long.MaxValue)]
+    [RequestFormLimits(MultipartBodyLengthLimit = long.MaxValue)]
+    public async Task<IActionResult> Submit([FromForm] List<int> syncTypeIds, [FromForm] string? pathPrefix, CancellationToken cancellationToken)
     {
-        if (syncTypeId <= 0)
+        syncTypeIds = (syncTypeIds ?? new List<int>())
+            .Where(x => x > 0)
+            .Distinct()
+            .ToList();
+        if (syncTypeIds.Count == 0)
         {
-            SetError("Chọn loại đồng bộ.");
+            SetError("Chọn ít nhất một loại đồng bộ.");
             return RedirectToAction(nameof(Index));
         }
 
@@ -75,7 +79,7 @@ public class SyncUploadController : BaseController
         var onlyPdf = Request.Form.TryGetValue("onlyPdf", out var op)
             && op.Any(v => v == "1" || string.Equals(v, "on", StringComparison.OrdinalIgnoreCase));
 
-        var result = await _upload.UploadAsync(CurrentUser.Id, syncTypeId, items, onlyPdf, cancellationToken);
+        var result = await _upload.UploadAsync(CurrentUser.Id, syncTypeIds, items, onlyPdf, pathPrefix, cancellationToken);
         if (result.SuccessCount > 0 && result.FailCount == 0)
             SetSuccess($"Đã nhập {result.SuccessCount} tài liệu.");
         else if (result.SuccessCount > 0)

@@ -57,17 +57,24 @@
                     <textarea id="sync-desc" name="Describe" class="form-control" rows="3">@Model.Sync.Describe</textarea>
                 </div>
                 <div class="row">
-                    <div class="col-md-6">
+                    <div class="col-md-12">
                         <div class="form-group-figma">
-                            <label class="label-figma" for="sync-path">Cấu trúc thư mục đồng bộ <span class="text-danger">*</span></label>
-                            <input type="text" id="sync-path" name="ScanPathRoot" class="form-control" value="@Model.Sync.ScanPathRoot" placeholder="Ví dụ: CSDL_SOHOA_{Mã số}/{Thể số}/{Hộp số}" required />
-                            <small class="form-text text-muted">Ví dụ: CSDL_SOHOA_{Mã số}/{Thể số}/{Hộp số}</small>
+                            <label class="label-figma" for="sync-format">Cấu trúc thư mục đồng bộ (Format) <span class="text-danger">*</span></label>
+                            <input type="text" id="sync-format" name="Format" class="form-control" value="@Model.Sync.Format" placeholder="Ví dụ: CSDL_SOHOA_KBNN/{Dot}/{so}/BIA.pdf hoặc CSDL_SOHOA_KBNN/{Dot}/{so}/{File_name}" required />
+                            <small class="form-text text-muted">
+                                <strong>Cú pháp:</strong> Dùng <code>{placeholder}</code> cho thư mục/tên file động, literal cho cố định.<br/>
+                                <strong>Ví dụ Bìa:</strong> <code>CSDL_SOHOA_KBNN/{Dot}/{so}/BIA.pdf</code> (tên file cố định)<br/>
+                                <strong>Ví dụ Tài liệu:</strong> <code>CSDL_SOHOA_KBNN/{Dot}/{so}/{File_name}</code> (tên file bất kỳ)
+                            </small>
                         </div>
                     </div>
+                </div>
+                <div class="row">
                     <div class="col-md-6">
                         <div class="form-group-figma">
                             <label class="label-figma" for="sync-weight">Thứ tự ưu tiên (Weight)</label>
                             <input type="number" id="sync-weight" name="Weight" class="form-control" value="@Model.Sync.Weight" min="0" />
+                            <small class="form-text text-muted">Số nhỏ = ưu tiên cao. Loại có cấu trúc cụ thể (BIA.pdf) nên có weight thấp hơn loại chung ({File_name}).</small>
                         </div>
                     </div>
                 </div>
