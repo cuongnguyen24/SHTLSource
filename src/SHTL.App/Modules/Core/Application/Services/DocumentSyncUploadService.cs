@@ -37,6 +37,7 @@ public sealed class DocumentSyncUploadService : IDocumentSyncUploadService
     private readonly IAxeSyncTypeRepository _syncRepo;
     private readonly IAxeDocTypeRepository _fieldRepo;
     private readonly IDocumentRepository _documents;
+    private readonly IDocumentPageRepository _documentPages;
     private readonly IStorageService _storage;
     private readonly StorageOptions _storageOpt;
 
@@ -44,12 +45,14 @@ public sealed class DocumentSyncUploadService : IDocumentSyncUploadService
         IAxeSyncTypeRepository syncRepo,
         IAxeDocTypeRepository fieldRepo,
         IDocumentRepository documents,
+        IDocumentPageRepository documentPages,
         IStorageService storage,
         IOptions<StorageOptions> storageOpt)
     {
         _syncRepo = syncRepo;
         _fieldRepo = fieldRepo;
         _documents = documents;
+        _documentPages = documentPages;
         _storage = storage;
         _storageOpt = storageOpt.Value;
     }
@@ -215,6 +218,29 @@ public sealed class DocumentSyncUploadService : IDocumentSyncUploadService
                 var stored = await _storage.SaveFileAsync(stream, fileName, sub);
                 doc.FilePath = stored;
 
+                List<PdfPageDpiCalculator.PageDpiInfo>? pdfPageInfos = null;
+                if (SearchablePdfDisplay.LooksLikePdf(ext, fileName, stored))
+                {
+                    var fullPdfPath = ResolveStoredFullPath(stored);
+                    if (!string.IsNullOrEmpty(fullPdfPath) && File.Exists(fullPdfPath))
+                    {
+                        pdfPageInfos = PdfPageDpiCalculator.CalculateAllPages(fullPdfPath);
+                        if (pdfPageInfos.Count > 0)
+                        {
+                            doc.PageCount = pdfPageInfos.Count;
+                            var allDpi = pdfPageInfos
+                                .SelectMany(x => new[] { x.DpiX, x.DpiY })
+                                .Where(x => x > 0)
+                                .ToList();
+                            if (allDpi.Count > 0)
+                            {
+                                doc.MinDpi = allDpi.Min();
+                                doc.MaxDpi = allDpi.Max();
+                            }
+                        }
+                    }
+                }
+
                 doc.SearchMeta = string.Join(" ", new[]
                 {
                     doc.Name, doc.SymbolNo, doc.RecordNo, doc.IssuedBy, doc.Author,
@@ -223,6 +249,21 @@ public sealed class DocumentSyncUploadService : IDocumentSyncUploadService
                 }.Where(x => !string.IsNullOrWhiteSpace(x)));
 
                 var id = await _documents.InsertAsync(doc);
+
+                if (pdfPageInfos is { Count: > 0 })
+                {
+                    var pages = pdfPageInfos.Select(x => new DocumentPage
+                    {
+                        DocumentId = id,
+                        PageNumber = x.PageNumber,
+                        DpiX = x.DpiX,
+                        DpiY = x.DpiY,
+                        PageSize = x.PageSize,
+                        Created = DateTime.UtcNow
+                    });
+                    await _documentPages.InsertManyAsync(pages);
+                }
+
                 results.Add(new WebSyncUploadItemResult
                 {
                     FileName = fn,
@@ -255,5 +296,17 @@ public sealed class DocumentSyncUploadService : IDocumentSyncUploadService
             return v;
         var key = pathValues.Keys.FirstOrDefault(k => k.Equals(settingTitle.Trim(), StringComparison.OrdinalIgnoreCase));
         return key != null ? pathValues[key] : null;
+    }
+
+    private string? ResolveStoredFullPath(string? storedPath)
+    {
+        if (string.IsNullOrWhiteSpace(storedPath))
+            return null;
+        var root = Path.GetFullPath(_storageOpt.RootPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        var combined = Path.GetFullPath(Path.Combine(root, storedPath.Replace('/', Path.DirectorySeparatorChar).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)));
+        var rootPrefix = root + Path.DirectorySeparatorChar;
+        var ok = combined.Equals(root, StringComparison.OrdinalIgnoreCase)
+                 || combined.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase);
+        return ok ? combined : null;
     }
 }

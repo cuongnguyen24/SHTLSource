@@ -19,6 +19,7 @@ public class AppDbContext : DbContext
     public DbSet<AccRolePermission> AccRolePermissions => Set<AccRolePermission>();
 
     public DbSet<Document> Documents => Set<Document>();
+    public DbSet<DocumentPage> DocumentPages => Set<DocumentPage>();
     public DbSet<FormCell> FormCells => Set<FormCell>();
     public DbSet<OcrJob> OcrJobs => Set<OcrJob>();
     public DbSet<ExportJob> ExportJobs => Set<ExportJob>();
@@ -60,6 +61,7 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<Document>().ToTable("stg_documents");
         modelBuilder.Entity<Document>().Property(e => e.Describe).HasColumnName("describe");
+        modelBuilder.Entity<DocumentPage>().ToTable("stg_doc_sohoa_page");
 
         var formCell = modelBuilder.Entity<FormCell>();
         formCell.ToTable("stg_form_cells");

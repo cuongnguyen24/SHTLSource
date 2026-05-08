@@ -34,6 +34,7 @@ public static class DataServiceExtensions
         services.AddScoped<ICnfRepository, CnfRepository>();
 
         services.AddScoped<IDocumentRepository, DocumentRepository>();
+        services.AddScoped<IDocumentPageRepository, DocumentPageRepository>();
         services.AddScoped<IDocCatalogRepository, DocCatalogRepository>();
         services.AddScoped<IAxeDocTypeRepository, AxeDocTypeRepository>();
         services.AddScoped<IAxeSyncTypeRepository, AxeSyncTypeRepository>();

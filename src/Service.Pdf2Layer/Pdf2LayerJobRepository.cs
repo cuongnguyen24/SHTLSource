@@ -119,4 +119,19 @@ internal sealed class Pdf2LayerJobRepository
         return await conn.ExecuteScalarAsync<string?>(
             new CommandDefinition(sql, new { Key = key }, cancellationToken: cancellationToken)).ConfigureAwait(false);
     }
+
+    public async Task<int?> GetPreferredDpiAsync(long documentId, CancellationToken cancellationToken = default)
+    {
+        const string sql = """
+            SELECT TOP (1) dpi_x
+            FROM dbo.stg_doc_sohoa_page
+            WHERE document_id = @DocumentId
+              AND dpi_x > 0
+            ORDER BY page_number ASC;
+            """;
+        await using var conn = new SqlConnection(_connectionString);
+        await conn.OpenAsync(cancellationToken).ConfigureAwait(false);
+        return await conn.ExecuteScalarAsync<int?>(
+            new CommandDefinition(sql, new { DocumentId = documentId }, cancellationToken: cancellationToken)).ConfigureAwait(false);
+    }
 }

@@ -63,7 +63,17 @@ internal sealed class Pdf2Processor
             return;
         }
 
-        var dpi = Math.Clamp(_pdfOpts.Value.RenderDpi, 72, 300);
+        var dpiFromPage = await _repo.GetPreferredDpiAsync(documentId, cancellationToken).ConfigureAwait(false);
+        if (!dpiFromPage.HasValue || dpiFromPage.Value <= 0)
+        {
+            _logger.LogError("Pdf2Layer: không có DPI theo trang cho tài liệu id={Id}", documentId);
+            await AppDataFileLog.WriteAsync("ERROR", $"Không có DPI theo trang (stg_doc_sohoa_page) cho tài liệu #{documentId}.").ConfigureAwait(false);
+            await _repo.UpdateSearchablePdfStateAsync(documentId, Pdf2OcrStatus.SearchablePdfFailed, null, 0, cancellationToken)
+                .ConfigureAwait(false);
+            return;
+        }
+
+        var dpi = Math.Clamp(dpiFromPage.Value, 72, 300);
         var maxPages = await ResolveMaxPagesAsync(cancellationToken).ConfigureAwait(false);
         var tempOut = Path.Combine(Path.GetTempPath(), $"shtl-searchable-{documentId}-{Guid.NewGuid():N}.pdf");
         try

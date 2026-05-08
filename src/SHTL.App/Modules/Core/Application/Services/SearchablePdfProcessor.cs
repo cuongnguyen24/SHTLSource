@@ -18,24 +18,24 @@ public interface ISearchablePdfProcessor
 public sealed class SearchablePdfProcessor : ISearchablePdfProcessor
 {
     private readonly IDocumentRepository _documents;
+    private readonly IDocumentPageRepository _documentPages;
     private readonly IStorageService _storage;
     private readonly IOptions<StorageOptions> _storageOpts;
-    private readonly IOptions<SearchablePdfOptions> _pdfOpts;
     private readonly ISearchablePdfPythonRunner _runner;
     private readonly ILogger<SearchablePdfProcessor> _logger;
 
     public SearchablePdfProcessor(
         IDocumentRepository documents,
+        IDocumentPageRepository documentPages,
         IStorageService storage,
         IOptions<StorageOptions> storageOpts,
-        IOptions<SearchablePdfOptions> pdfOpts,
         ISearchablePdfPythonRunner runner,
         ILogger<SearchablePdfProcessor> logger)
     {
         _documents = documents;
+        _documentPages = documentPages;
         _storage = storage;
         _storageOpts = storageOpts;
-        _pdfOpts = pdfOpts;
         _runner = runner;
         _logger = logger;
     }
@@ -72,7 +72,16 @@ public sealed class SearchablePdfProcessor : ISearchablePdfProcessor
             return;
         }
 
-        var dpi = Math.Clamp(_pdfOpts.Value.RenderDpi, 72, 300);
+        var dpiFromPage = await _documentPages.GetPreferredDpiAsync(documentId).ConfigureAwait(false);
+        if (!dpiFromPage.HasValue || dpiFromPage.Value <= 0)
+        {
+            _logger.LogError("Searchable PDF: không có DPI theo trang cho tài liệu id={Id}", documentId);
+            await _documents.UpdateSearchablePdfStateAsync(documentId, OcrStatus.SearchablePdfFailed, null, 0)
+                .ConfigureAwait(false);
+            return;
+        }
+
+        var dpi = Math.Clamp((int)Math.Round(dpiFromPage.Value), 72, 300);
         var tempOut = Path.Combine(Path.GetTempPath(), $"shtl-searchable-{documentId}-{Guid.NewGuid():N}.pdf");
         try
         {
