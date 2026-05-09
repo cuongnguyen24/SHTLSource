@@ -47,6 +47,8 @@ public class FieldSettingViewModel
     public int Id { get; set; }                      // stg_doc_field_settings.id
     public int FieldId { get; set; }                 // stg_doc_fields.id
     public string FieldName { get; set; } = string.Empty;  // stg_doc_fields.name (dc_title, fc_start...)
+    /// <summary>Key gửi khi lưu (data-stg-field). Khi <see cref="FieldName"/> rỗng, map từ FieldId giống fallback hiển thị.</summary>
+    public string PostFieldKey { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;      // Nhãn hiển thị
     public string InputType { get; set; } = "text";        // text, number, date, select, textarea
     public string Datatype { get; set; } = string.Empty;   // dctext, fcnumber, datetime...

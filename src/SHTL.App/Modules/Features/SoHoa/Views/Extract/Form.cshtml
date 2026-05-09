@@ -60,6 +60,15 @@
     var orderedFields = Model.FieldSettings.OrderBy(f => f.Weight).ToList();
     var cells = Model.Cells.OrderBy(c => c.Page).ThenBy(c => c.Y).ThenBy(c => c.X).ToList();
     var sameRecordDocs = Model.SameRecordDocuments ?? Array.Empty<DocumentDto>();
+    var requireCheckFirstScan = (bool?)ViewBag.RequireCheckFirstScan ?? true;
+    var requireCheckSecondScan = (bool?)ViewBag.RequireCheckSecondScan ?? true;
+    var scanOkForExtract = (!requireCheckFirstScan || doc.IsCheckedScan1) && (!requireCheckSecondScan || doc.IsCheckedScan2);
+    // Đã nhập liệu nhưng chưa duyệt Check1 (hoặc bị trả về) — cho phép sửa/lưu lại không cần chặn scan.
+    var canReEditExtractBeforeCheck1 = doc.IsExtracted && !doc.IsChecked1;
+    var canSubmitExtract = scanOkForExtract || canReEditExtractBeforeCheck1;
+    var extractBlockedReason = canSubmitExtract
+        ? string.Empty
+        : $"Tài liệu chưa đủ điều kiện nhập liệu: {(requireCheckFirstScan && !doc.IsCheckedScan1 ? "Check scan 1" : string.Empty)}{(requireCheckFirstScan && !doc.IsCheckedScan1 && requireCheckSecondScan && !doc.IsCheckedScan2 ? ", " : string.Empty)}{(requireCheckSecondScan && !doc.IsCheckedScan2 ? "Check scan 2" : string.Empty)} chưa hoàn thành.";
 }
 @section Breadcrumb {
     <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="Extract" asp-action="Index">Nhập liệu</a></li>
@@ -131,7 +140,15 @@
             <div class="d-flex flex-wrap" style="gap:8px;">
                 <a href="@previewUrl" class="btn-figma btn-figma-secondary btn-sm" target="_blank" rel="noopener"><i class="fas fa-file-pdf mr-1"></i>Xem PDF</a>
                 <a href="@indexUrl" class="btn-figma btn-figma-secondary btn-sm">Danh sách</a>
-                <button type="button" class="btn-figma btn-figma-primary btn-sm" id="btnExtractSubmit"><i class="fas fa-save mr-1"></i>Lưu &amp; hoàn thành nhập liệu</button>
+                <button type="button"
+                        class="btn-figma btn-figma-primary btn-sm"
+                        id="btnExtractSubmit"
+                        data-can-submit="@(canSubmitExtract ? "true" : "false")"
+                        data-block-reason="@extractBlockedReason"
+                        title="@(canSubmitExtract ? "Lưu dữ liệu nhập liệu" : extractBlockedReason)"
+                        @(canSubmitExtract ? null : "disabled")>
+                    <i class="fas fa-save mr-1"></i>Lưu &amp; hoàn thành nhập liệu
+                </button>
             </div>
         </div>
     </div>
@@ -286,6 +303,8 @@
                                             foreach (var sdoc in sameRecordDocs)
                                             {
                                                 var isCurrent = sdoc.Id == doc.Id;
+                                                var isEligibleForExtract = (!requireCheckFirstScan || sdoc.IsCheckedScan1)
+                                                    && (!requireCheckSecondScan || sdoc.IsCheckedScan2);
                                                 <tr>
                                                     <td>@rowNo</td>
                                                     <td>
@@ -309,6 +328,10 @@
                                                         else if (sdoc.IsExtracted)
                                                         {
                                                             <span class="badge badge-success">Đã nhập</span>
+                                                        }
+                                                        else if (!isEligibleForExtract)
+                                                        {
+                                                            <span class="badge badge-secondary">Không đủ điều kiện</span>
                                                         }
                                                         else
                                                         {
@@ -402,6 +425,11 @@
             }
 
             document.getElementById('btnExtractSubmit').onclick = function () {
+                var submitBtn = document.getElementById('btnExtractSubmit');
+                if (submitBtn.getAttribute('data-can-submit') !== 'true') {
+                    toastErrorLong(submitBtn.getAttribute('data-block-reason') || 'Tài liệu chưa đủ điều kiện nhập liệu.');
+                    return;
+                }
                 var stg = {};
                 document.querySelectorAll('[data-stg-field]').forEach(function (el) {
                     var k = el.getAttribute('data-stg-field');

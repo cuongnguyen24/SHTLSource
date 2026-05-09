@@ -10,6 +10,7 @@ using Microsoft.IdentityModel.Tokens;
 using SHTL.Modules.Core.Application;
 using SHTL.Modules.Features.Account.Models;
 using SHTL.Modules.Features.Shared;
+using SHTL.Modules.Features.SoHoa.Filters;
 using SHTL.Modules.Infrastructure.Data;
 using SHTL.Modules.Infrastructure.Identity;
 using SHTL.Modules.Infrastructure.Search;
@@ -31,9 +32,11 @@ public static class DependencyInjection
         services.Configure<SHTL.Modules.Features.Dashboard.Models.ErrorHandlingOptions>(
             configuration.GetSection(SHTL.Modules.Features.Dashboard.Models.ErrorHandlingOptions.SectionName));
 
+        services.AddScoped<SoHoaMenuTogglesActionFilter>();
         services.Configure<MvcOptions>(o =>
         {
             o.Conventions.Add(new FeatureModuleAreaConvention());
+            o.Filters.AddService<SoHoaMenuTogglesActionFilter>();
         });
         services.Configure<RazorViewEngineOptions>(o =>
         {

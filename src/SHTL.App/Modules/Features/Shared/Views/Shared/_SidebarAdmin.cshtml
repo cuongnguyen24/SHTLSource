@@ -1,27 +1,32 @@
 <div class="d-flex flex-column h-100" style="background: var(--background);">
     <div class="d-flex align-items-center justify-content-between" style="height: var(--header-height); padding: 0 12px 0 16px; border-bottom: 1px solid var(--border-color); flex-shrink: 0;">
-        <div class="d-flex align-items-center overflow-hidden sidebar-text">
-            <div style="width: 30px; height: 30px; border-radius: 6px; background: var(--primary); display: flex; align-items: center; justify-content: center;"><span style="color:#fff;font-size:12px;font-weight:700;">A</span></div>
-            <div class="ml-2 overflow-hidden">
+        <div class="d-flex align-items-center overflow-hidden sidebar-text flex-grow-1 min-w-0">
+            <div style="width: 30px; height: 30px; border-radius: 6px; background: var(--primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><span style="color:#fff;font-size:12px;font-weight:700;">A</span></div>
+            <div class="ml-2 overflow-hidden min-w-0">
                 <div style="font-size: 12px; font-weight: 700; color: var(--primary); white-space: nowrap;">Quản trị</div>
                 <div style="font-size: 10px; color: var(--text-muted); white-space: nowrap;">SHTL Admin</div>
+            </div>
+        </div>
+        <div class="sidebar-logo-collapsed flex-shrink-0">
+            <div style="width: 34px; height: 34px; border-radius: 8px; background: var(--primary); display: flex; align-items: center; justify-content: center;">
+                <span style="color: #fff; font-size: 11px; font-weight: 700;">A</span>
             </div>
         </div>
     </div>
     <div class="flex-grow-1 overflow-auto p-2" style="scrollbar-width: thin;">
         <nav><ul class="nav flex-column p-0">
-            <li class="nav-item"><a class="nav-link nav-link-figma" asp-area="admin" asp-controller="Home" asp-action="Index"><i class="fas fa-tachometer-alt fa-fw mr-2"></i>Tổng quan</a></li>
-            <li class="nav-item"><a class="nav-link nav-link-figma" asp-area="admin" asp-controller="User" asp-action="Index"><i class="fas fa-users fa-fw mr-2"></i>Người dùng</a></li>
-            <li class="nav-item"><a class="nav-link nav-link-figma" asp-area="admin" asp-controller="Dept" asp-action="Index"><i class="fas fa-sitemap fa-fw mr-2"></i>Phòng ban</a></li>
-            <li class="nav-item"><a class="nav-link nav-link-figma" asp-area="admin" asp-controller="Role" asp-action="Index"><i class="fas fa-user-shield fa-fw mr-2"></i>Vai trò</a></li>
-            <li class="nav-item"><a class="nav-link nav-link-figma" asp-area="admin" asp-controller="Config" asp-action="Index"><i class="fas fa-sliders-h fa-fw mr-2"></i>Cấu hình thông số</a></li>
-            <li class="nav-item"><a class="nav-link nav-link-figma" asp-area="admin" asp-controller="ConfigVersion" asp-action="Index"><i class="fas fa-code-branch fa-fw mr-2"></i>Phiên bản cấu hình</a></li>
-            <li class="nav-item"><a class="nav-link nav-link-figma" asp-area="admin" asp-controller="ExportType" asp-action="Index"><i class="fas fa-file-export fa-fw mr-2"></i>Loại xuất dữ liệu</a></li>
-            <li class="nav-item"><span class="nav-link text-muted small text-uppercase">Nhật ký</span></li>
-            <li class="nav-item"><a class="nav-link nav-link-figma pl-3" asp-area="admin" asp-controller="Log" asp-action="Login"><i class="fas fa-sign-in-alt fa-fw mr-2"></i>Đăng nhập</a></li>
-            <li class="nav-item"><a class="nav-link nav-link-figma pl-3" asp-area="admin" asp-controller="Log" asp-action="Access"><i class="fas fa-door-open fa-fw mr-2"></i>Truy cập</a></li>
-            <li class="nav-item"><a class="nav-link nav-link-figma pl-3" asp-area="admin" asp-controller="Log" asp-action="Action"><i class="fas fa-history fa-fw mr-2"></i>Thao tác</a></li>
-            <li class="nav-item mt-2"><a class="nav-link nav-link-figma" asp-area="dashboard" asp-controller="Home" asp-action="Index"><i class="fas fa-arrow-left fa-fw mr-2"></i>Về trang chủ</a></li>
+            <li class="nav-item"><a class="nav-link nav-link-figma d-flex align-items-center" asp-area="admin" asp-controller="Home" asp-action="Index" title="Tổng quan"><i class="fas fa-tachometer-alt fa-fw mr-2"></i><span class="nav-item-text">Tổng quan</span></a></li>
+            <li class="nav-item"><a class="nav-link nav-link-figma d-flex align-items-center" asp-area="admin" asp-controller="User" asp-action="Index" title="Người dùng"><i class="fas fa-users fa-fw mr-2"></i><span class="nav-item-text">Người dùng</span></a></li>
+            <li class="nav-item"><a class="nav-link nav-link-figma d-flex align-items-center" asp-area="admin" asp-controller="Dept" asp-action="Index" title="Phòng ban"><i class="fas fa-sitemap fa-fw mr-2"></i><span class="nav-item-text">Phòng ban</span></a></li>
+            <li class="nav-item"><a class="nav-link nav-link-figma d-flex align-items-center" asp-area="admin" asp-controller="Role" asp-action="Index" title="Vai trò"><i class="fas fa-user-shield fa-fw mr-2"></i><span class="nav-item-text">Vai trò</span></a></li>
+            <li class="nav-item"><a class="nav-link nav-link-figma d-flex align-items-center" asp-area="admin" asp-controller="Config" asp-action="Index" title="Cấu hình thông số"><i class="fas fa-sliders-h fa-fw mr-2"></i><span class="nav-item-text">Cấu hình thông số</span></a></li>
+            <li class="nav-item"><a class="nav-link nav-link-figma d-flex align-items-center" asp-area="admin" asp-controller="ConfigVersion" asp-action="Index" title="Phiên bản cấu hình"><i class="fas fa-code-branch fa-fw mr-2"></i><span class="nav-item-text">Phiên bản cấu hình</span></a></li>
+            <li class="nav-item"><a class="nav-link nav-link-figma d-flex align-items-center" asp-area="admin" asp-controller="ExportType" asp-action="Index" title="Loại xuất dữ liệu"><i class="fas fa-file-export fa-fw mr-2"></i><span class="nav-item-text">Loại xuất dữ liệu</span></a></li>
+            <li class="nav-item"><span class="nav-link text-muted small text-uppercase sidebar-section-heading">Nhật ký</span></li>
+            <li class="nav-item"><a class="nav-link nav-link-figma pl-3 d-flex align-items-center" asp-area="admin" asp-controller="Log" asp-action="Login" title="Đăng nhập"><i class="fas fa-sign-in-alt fa-fw mr-2"></i><span class="nav-item-text">Đăng nhập</span></a></li>
+            <li class="nav-item"><a class="nav-link nav-link-figma pl-3 d-flex align-items-center" asp-area="admin" asp-controller="Log" asp-action="Access" title="Truy cập"><i class="fas fa-door-open fa-fw mr-2"></i><span class="nav-item-text">Truy cập</span></a></li>
+            <li class="nav-item"><a class="nav-link nav-link-figma pl-3 d-flex align-items-center" asp-area="admin" asp-controller="Log" asp-action="Action" title="Thao tác"><i class="fas fa-history fa-fw mr-2"></i><span class="nav-item-text">Thao tác</span></a></li>
+            <li class="nav-item mt-2"><a class="nav-link nav-link-figma d-flex align-items-center" asp-area="dashboard" asp-controller="Home" asp-action="Index" title="Về trang chủ"><i class="fas fa-arrow-left fa-fw mr-2"></i><span class="nav-item-text">Về trang chủ</span></a></li>
         </ul></nav>
     </div>
 </div>

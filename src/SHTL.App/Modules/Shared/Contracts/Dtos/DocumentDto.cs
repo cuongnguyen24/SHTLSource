@@ -46,6 +46,8 @@ public class DocumentDto
     public int ExtractedBy { get; set; }
     public DateTime? Checked1At { get; set; }
     public int Checked1By { get; set; }
+    public StepResult Checked1Result { get; set; }
+    public int Checked1ReturnCount { get; set; }
     public DateTime? Checked2At { get; set; }
     public int Checked2By { get; set; }
 
@@ -117,6 +119,7 @@ public class DocumentUpdateRequest : DocumentCreateRequest
 public class DocumentFilterRequest : PageRequest
 {
     public WorkflowStep? Step { get; set; }
+    public bool IncludeExtractedInCheck1 { get; set; }
     public int? DocTypeId { get; set; }
     public int? CreatedBy { get; set; }
     public DateTime? StartDate { get; set; }

@@ -133,11 +133,13 @@ public class DocumentFormViewModelBuilder : IDocumentFormViewModelBuilder
         Dictionary<int, StgDocFieldDto> fieldMap)
     {
         var field = fieldMap.GetValueOrDefault(setting.IdField);
+        var rawName = field?.Name ?? "";
         return new FieldSettingViewModel
         {
             Id = setting.Id,
             FieldId = setting.IdField,
-            FieldName = field?.Name ?? "",
+            FieldName = rawName,
+            PostFieldKey = StgFieldToDocumentMapper.ResolvePostFieldKey(rawName, setting.IdField),
             Title = string.IsNullOrEmpty(setting.Title) ? (field?.Title ?? "") : setting.Title,
             InputType = GetInputTypeString(setting.IType),
             Datatype = field?.Datatype ?? "",
@@ -194,19 +196,26 @@ public class DocumentFormViewModelBuilder : IDocumentFormViewModelBuilder
             Created = doc.Created,
             ExtractedBy = doc.ExtractedBy,
             ExtractedAt = doc.ExtractedAt,
+            IsExtracted = doc.IsExtracted,
             Checked1By = doc.Checked1By,
             Checked1At = doc.Checked1At,
+            Checked1Result = doc.Checked1Result,
+            Checked1ReturnCount = doc.Checked1ReturnCount,
             Checked1ReturnReason = doc.Checked1ReturnReason,
             Checked2By = doc.Checked2By,
             Checked2At = doc.Checked2At,
             Checked2ReturnReason = doc.Checked2ReturnReason,
+            IsCheckedScan1 = doc.IsCheckedScan1,
+            IsCheckedScan2 = doc.IsCheckedScan2,
             CurrentStep = doc.CurrentStep,
             Status = doc.Status,
             PageCount = doc.PageCount,
             MinDpi = doc.MinDpi,
             MaxDpi = doc.MaxDpi,
             OcrStatus = doc.OcrStatus,
-            PathPdfSearchable = doc.PathPdfSearchable
+            PathPdfSearchable = doc.PathPdfSearchable,
+            IsChecked1 = doc.IsChecked1,
+            IsChecked2 = doc.IsChecked2
         };
     }
 

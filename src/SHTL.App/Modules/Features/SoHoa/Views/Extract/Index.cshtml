@@ -1,29 +1,30 @@
 @model PaginatedResult<DocumentDto>
-@using System.Text.Json
+@using SHTL.Modules.Core.Domain.Enums
 @using SHTL.Modules.Shared.Contracts
 @{
     ViewData["Title"] = "Nhập liệu (Extract)";
     var stepStr = Context.Request.Query["step"].FirstOrDefault() ?? "Extract";
-    var hotData = Model.Items.Select(d => new Dictionary<string, object?>
-    {
-        ["id"] = d.Id,
-        ["name"] = d.Name,
-        ["docType"] = d.DocTypeName ?? "",
-        ["step"] = d.CurrentStep.ToString(),
-        ["fileName"] = d.FileName ?? "",
-        ["pdf2"] = SearchablePdfDisplay.LooksLikePdf(d.Extension, d.FileName, d.FilePath) ? d.SearchablePdfStatusText : "",
-        ["extracted"] = d.IsExtracted ? "Rồi" : "",
-        ["created"] = d.Created.ToString("yyyy-MM-dd HH:mm")
-    }).ToList();
-    var json = JsonSerializer.Serialize(hotData);
-    var formTpl = Url.Action("Form", "Extract", new { area = "sohoa", id = 987654321L });
+    var requireCheckFirstScan = (bool?)ViewBag.RequireCheckFirstScan ?? true;
+    var requireCheckSecondScan = (bool?)ViewBag.RequireCheckSecondScan ?? true;
 }
 @section Breadcrumb {
     <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="Home" asp-action="Index">Tổng quan</a></li>
     <li class="breadcrumb-item active">Nhập liệu</li>
 }
 @section Styles {
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable@14.1.0/dist/handsontable.full.min.css" />
+    <style>
+        .extract-table tbody tr:hover { background-color: #f9f9f9; cursor: pointer; }
+        .extract-table tbody tr.is-selected { background-color: #eef6ff; }
+        .status-pill {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            background: #f1f3f5;
+            color: #6c757d;
+            white-space: nowrap;
+        }
+    </style>
 }
 
 <div class="layout-expanded">
@@ -68,51 +69,108 @@
             </form>
         </div>
         <div class="p-3">
-            <p id="ex-hot-loading" class="text-muted small mb-2"><i class="fas fa-spinner fa-spin mr-1"></i>Đang tải…</p>
-            <div id="ex-hot-empty" class="alert alert-light border d-none mb-0">Không có bản ghi.</div>
-            <div id="ex-hot" class="d-none"></div>
-            <partial name="_Pager" model="Model" />
-            <p class="text-muted small mt-2 mb-0">Chọn dòng rồi <strong>Mở form</strong> hoặc double-click.</p>
+            @if (!Model.Items.Any())
+            {
+                <div class="alert alert-light border mb-0">Không có bản ghi.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover extract-table mb-0" id="extractTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:40px;">STT</th>
+                                <th style="min-width:220px;">Đường dẫn</th>
+                                <th>Tên</th>
+                                <th>Loại tài liệu</th>
+                                <th style="width:140px;">Trạng thái nhập</th>
+                                <th style="width:100px;">Số lần trả về</th>
+                                <th style="width:180px;">Đánh giá kết quả thực hiện</th>
+                                <th style="width:140px;">Ngày nhập</th>
+                                <th style="width:120px;">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{
+                                var stt = ((Model.PageIndex - 1) * Model.PageSize) + 1;
+                                foreach (var d in Model.Items)
+                                {
+                                    var inputStatus = ((requireCheckFirstScan && !d.IsCheckedScan1) || (requireCheckSecondScan && !d.IsCheckedScan2))
+                                        ? "Chưa đủ điều kiện"
+                                        : (d.IsExtracted ? "Đã nhập" : "Chưa nhập");
+                                    var checkEval = d.Checked1At.HasValue
+                                        ? (d.Checked1Result == StepResult.Pass
+                                            ? "Đạt"
+                                            : (d.Checked1Result == StepResult.Return
+                                                ? "Trả về"
+                                                : (d.Checked1Result == StepResult.Fail ? "Lỗi" : "Chưa đánh giá")))
+                                        : "Chưa đánh giá";
+                                    var rowClass = inputStatus == "Chưa đủ điều kiện" ? "status-pill text-white bg-secondary" :
+                                                   inputStatus == "Đã nhập" ? "status-pill text-white bg-success" :
+                                                   "status-pill";
+                                    <tr data-id="@d.Id">
+                                        <td class="text-center">@stt</td>
+                                        <td><small>@(string.IsNullOrWhiteSpace(d.FilePath) ? "—" : d.FilePath)</small></td>
+                                        <td>
+                                            <div><strong>@d.Name</strong></div>
+                                            <small class="text-muted">@((d.FileName ?? "—"))</small>
+                                        </td>
+                                        <td><small>@(d.DocTypeName ?? "—")</small></td>
+                                        <td><span class="@rowClass">@inputStatus</span></td>
+                                        <td class="text-center">@d.Checked1ReturnCount</td>
+                                        <td><small>@checkEval</small></td>
+                                        <td><small>@(d.ExtractedAt?.ToString("dd/MM/yyyy HH:mm") ?? "—")</small></td>
+                                        <td>
+                                            <a asp-area="sohoa" asp-controller="Extract" asp-action="Form" asp-route-id="@d.Id"
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    stt++;
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <partial name="_Pager" model="Model" />
+                <p class="text-muted small mt-2 mb-0">Chọn dòng rồi bấm <strong>Mở form</strong> hoặc double-click để mở nhanh.</p>
+            }
         </div>
     </div>
 </div>
 
 @section Scripts {
-    <script src="https://cdn.jsdelivr.net/npm/handsontable@14.1.0/dist/handsontable.full.min.js"></script>
-    <script src="~/js/shtl-handsontable.js" asp-append-version="true"></script>
     <script>
         (function () {
-            var formTpl = @Html.Raw(JsonSerializer.Serialize(formTpl));
             var selId = null;
-            var cols = [
-                { data: 'id', title: 'ID', type: 'numeric', readOnly: true },
-                { data: 'name', title: 'Tên', readOnly: true },
-                { data: 'docType', title: 'Loại TL', readOnly: true },
-                { data: 'step', title: 'Bước', readOnly: true },
-                { data: 'fileName', title: 'File', readOnly: true },
-                { data: 'pdf2', title: 'PDF 2 lớp', readOnly: true },
-                { data: 'extracted', title: 'Đã extract', readOnly: true },
-                { data: 'created', title: 'Tạo', readOnly: true }
-            ];
-            var data = @Html.Raw(json);
-            var hot = window.ShtlHot.initReadOnly('ex-hot', document.getElementById('ex-hot-loading'), document.getElementById('ex-hot-empty'), cols, data, { height: 440 });
+            var table = document.getElementById('extractTable');
+            var openFormUrlTemplate = '@Url.Action("Form", "Extract", new { area = "sohoa", id = "__ID__" })';
             function syncBtn() {
                 document.getElementById('btnOpenForm').disabled = !(selId && selId > 0);
             }
-            if (hot) {
-                hot.addHook('afterSelectionEnd', function (r1) {
-                    if (r1 < 0) return;
-                    selId = hot.getDataAtRowProp(r1, 'id');
-                    syncBtn();
-                });
-                hot.addHook('afterOnCellDblClick', function (_e, coords) {
-                    if (!coords || coords.row < 0) return;
-                    var id = hot.getDataAtRowProp(coords.row, 'id');
-                    if (id) window.location.href = formTpl.replace('987654321', String(id));
+
+            if (table) {
+                table.querySelectorAll('tbody tr[data-id]').forEach(function (row) {
+                    row.addEventListener('click', function () {
+                        table.querySelectorAll('tbody tr.is-selected').forEach(function (selected) {
+                            selected.classList.remove('is-selected');
+                        });
+                        row.classList.add('is-selected');
+                        var id = parseInt(row.getAttribute('data-id'), 10);
+                        selId = id > 0 ? id : null;
+                        syncBtn();
+                    });
+
+                    row.addEventListener('dblclick', function () {
+                        var id = parseInt(row.getAttribute('data-id'), 10);
+                        if (id > 0) window.location.href = openFormUrlTemplate.replace('__ID__', String(id));
+                    });
                 });
             }
+
             document.getElementById('btnOpenForm').onclick = function () {
-                if (selId) window.location.href = formTpl.replace('987654321', String(selId));
+                if (selId) window.location.href = openFormUrlTemplate.replace('__ID__', String(selId));
             };
         })();
     </script>

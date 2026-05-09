@@ -1,30 +1,45 @@
 <div class="d-flex flex-column h-100" style="background: var(--background);">
     <div class="d-flex align-items-center justify-content-between" style="height: var(--header-height); padding: 0 12px 0 16px; border-bottom: 1px solid var(--border-color); flex-shrink: 0;">
-        <div class="d-flex align-items-center overflow-hidden sidebar-text">
-            <div style="width: 30px; height: 30px; border-radius: 6px; background: var(--primary); display: flex; align-items: center; justify-content: center;"><span style="color:#fff;font-size:12px;font-weight:700;">H</span></div>
-            <div class="ml-2 overflow-hidden">
+        <div class="d-flex align-items-center overflow-hidden sidebar-text flex-grow-1 min-w-0">
+            <div style="width: 30px; height: 30px; border-radius: 6px; background: var(--primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><span style="color:#fff;font-size:12px;font-weight:700;">H</span></div>
+            <div class="ml-2 overflow-hidden min-w-0">
                 <div style="font-size: 12px; font-weight: 700; color: var(--primary); white-space: nowrap;">Số hóa</div>
                 <div style="font-size: 10px; color: var(--text-muted); white-space: nowrap;">Quy trình tài liệu</div>
+            </div>
+        </div>
+        <div class="sidebar-logo-collapsed flex-shrink-0">
+            <div style="width: 34px; height: 34px; border-radius: 8px; background: var(--primary); display: flex; align-items: center; justify-content: center;">
+                <span style="color: #fff; font-size: 11px; font-weight: 700;">H</span>
             </div>
         </div>
     </div>
     <div class="flex-grow-1 overflow-auto p-2" style="scrollbar-width: thin;">
         <nav><ul class="nav flex-column p-0">
-            <li class="nav-item"><a class="nav-link nav-link-figma" asp-area="sohoa" asp-controller="Home" asp-action="Index"><i class="fas fa-tachometer-alt fa-fw mr-2"></i>Tổng quan</a></li>
-            <li class="nav-item"><a class="nav-link nav-link-figma" asp-area="sohoa" asp-controller="Scan" asp-action="Index"><i class="fas fa-upload fa-fw mr-2"></i>Scan / Upload</a></li>
-            <li class="nav-item"><a class="nav-link nav-link-figma pl-3" asp-area="sohoa" asp-controller="Scan" asp-action="CheckScan1List"><i class="fas fa-search fa-fw mr-2"></i>Kiểm tra scan 1</a></li>
-            <li class="nav-item"><a class="nav-link nav-link-figma pl-3" asp-area="sohoa" asp-controller="Scan" asp-action="CheckScan2List"><i class="fas fa-search-plus fa-fw mr-2"></i>Kiểm tra scan 2</a></li>
-            <li class="nav-item"><a class="nav-link nav-link-figma" asp-area="sohoa" asp-controller="SyncUpload" asp-action="Index"><i class="fas fa-cloud-upload-alt fa-fw mr-2"></i>Upload đồng bộ</a></li>
-            <li class="nav-item"><a class="nav-link nav-link-figma" asp-area="sohoa" asp-controller="Extract" asp-action="Index"><i class="fas fa-keyboard fa-fw mr-2"></i>Nhập liệu</a></li>
-            <li class="nav-item"><a class="nav-link nav-link-figma" asp-area="sohoa" asp-controller="Check" asp-action="Check1"><i class="fas fa-check-double fa-fw mr-2"></i>Kiểm tra lần 1</a></li>
-            <li class="nav-item"><a class="nav-link nav-link-figma" asp-area="sohoa" asp-controller="Check" asp-action="Check2"><i class="fas fa-check-double fa-fw mr-2"></i>Kiểm tra lần 2</a></li>
-            <li class="nav-item"><a class="nav-link nav-link-figma" asp-area="sohoa" asp-controller="Check" asp-action="CheckFinal"><i class="fas fa-flag-checkered fa-fw mr-2"></i>Kiểm tra cuối</a></li>
-            <li class="nav-item"><a class="nav-link nav-link-figma" asp-area="sohoa" asp-controller="Check" asp-action="CheckLogic"><i class="fas fa-project-diagram fa-fw mr-2"></i>Kiểm tra logic</a></li>
-            <li class="nav-item"><a class="nav-link nav-link-figma" asp-area="sohoa" asp-controller="Export" asp-action="Index"><i class="fas fa-file-export fa-fw mr-2"></i>Export</a></li>
-            <li class="nav-item"><span class="nav-link text-muted small text-uppercase">Danh mục</span></li>
-            <li class="nav-item"><a class="nav-link nav-link-figma pl-3" asp-area="sohoa" asp-controller="LoaiTaiLieu" asp-action="Index"><i class="fas fa-tags fa-fw mr-2"></i>Loại tài liệu</a></li>
-            <li class="nav-item"><a class="nav-link nav-link-figma pl-3" asp-area="sohoa" asp-controller="LoaiDongBo" asp-action="Index"><i class="fas fa-sync-alt fa-fw mr-2"></i>Loại đồng bộ</a></li>
-            <li class="nav-item mt-2"><a class="nav-link nav-link-figma" asp-area="dashboard" asp-controller="Home" asp-action="Index"><i class="fas fa-arrow-left fa-fw mr-2"></i>Về trang chủ</a></li>
+            <li class="nav-item"><a class="nav-link nav-link-figma d-flex align-items-center" asp-area="sohoa" asp-controller="Home" asp-action="Index" title="Tổng quan"><i class="fas fa-tachometer-alt fa-fw mr-2"></i><span class="nav-item-text">Tổng quan</span></a></li>
+            <li class="nav-item"><a class="nav-link nav-link-figma d-flex align-items-center" asp-area="sohoa" asp-controller="Scan" asp-action="Index" title="Scan / Upload"><i class="fas fa-upload fa-fw mr-2"></i><span class="nav-item-text">Scan / Upload</span></a></li>
+            @if (ViewBag.ShowCheckFirstScan is not false)
+            {
+                <li class="nav-item"><a class="nav-link nav-link-figma pl-3 d-flex align-items-center" asp-area="sohoa" asp-controller="Scan" asp-action="CheckScan1List" title="Kiểm tra scan 1"><i class="fas fa-search fa-fw mr-2"></i><span class="nav-item-text">Kiểm tra scan 1</span></a></li>
+            }
+            @if (ViewBag.ShowCheckSecondScan is not false)
+            {
+                <li class="nav-item"><a class="nav-link nav-link-figma pl-3 d-flex align-items-center" asp-area="sohoa" asp-controller="Scan" asp-action="CheckScan2List" title="Kiểm tra scan 2"><i class="fas fa-search-plus fa-fw mr-2"></i><span class="nav-item-text">Kiểm tra scan 2</span></a></li>
+            }
+            <li class="nav-item"><a class="nav-link nav-link-figma d-flex align-items-center" asp-area="sohoa" asp-controller="SyncUpload" asp-action="Index" title="Upload đồng bộ"><i class="fas fa-cloud-upload-alt fa-fw mr-2"></i><span class="nav-item-text">Upload đồng bộ</span></a></li>
+            <li class="nav-item"><a class="nav-link nav-link-figma d-flex align-items-center" asp-area="sohoa" asp-controller="Extract" asp-action="Index" title="Nhập liệu"><i class="fas fa-keyboard fa-fw mr-2"></i><span class="nav-item-text">Nhập liệu</span></a></li>
+            @if (ViewBag.ShowCheck1 is not false)
+            {
+                <li class="nav-item"><a class="nav-link nav-link-figma d-flex align-items-center" asp-area="sohoa" asp-controller="Check" asp-action="Check1" title="Kiểm tra lần 1"><i class="fas fa-check-double fa-fw mr-2"></i><span class="nav-item-text">Kiểm tra lần 1</span></a></li>
+            }
+            @if (ViewBag.ShowCheck2 is not false)
+            {
+                <li class="nav-item"><a class="nav-link nav-link-figma d-flex align-items-center" asp-area="sohoa" asp-controller="Check" asp-action="Check2" title="Kiểm tra lần 2"><i class="fas fa-check-double fa-fw mr-2"></i><span class="nav-item-text">Kiểm tra lần 2</span></a></li>
+            }
+            <li class="nav-item"><a class="nav-link nav-link-figma d-flex align-items-center" asp-area="sohoa" asp-controller="Export" asp-action="Index" title="Export"><i class="fas fa-file-export fa-fw mr-2"></i><span class="nav-item-text">Export</span></a></li>
+            <li class="nav-item"><span class="nav-link text-muted small text-uppercase sidebar-section-heading">Danh mục</span></li>
+            <li class="nav-item"><a class="nav-link nav-link-figma pl-3 d-flex align-items-center" asp-area="sohoa" asp-controller="LoaiTaiLieu" asp-action="Index" title="Loại tài liệu"><i class="fas fa-tags fa-fw mr-2"></i><span class="nav-item-text">Loại tài liệu</span></a></li>
+            <li class="nav-item"><a class="nav-link nav-link-figma pl-3 d-flex align-items-center" asp-area="sohoa" asp-controller="LoaiDongBo" asp-action="Index" title="Loại đồng bộ"><i class="fas fa-sync-alt fa-fw mr-2"></i><span class="nav-item-text">Loại đồng bộ</span></a></li>
+            <li class="nav-item mt-2"><a class="nav-link nav-link-figma d-flex align-items-center" asp-area="dashboard" asp-controller="Home" asp-action="Index" title="Về trang chủ"><i class="fas fa-arrow-left fa-fw mr-2"></i><span class="nav-item-text">Về trang chủ</span></a></li>
         </ul></nav>
     </div>
 </div>
