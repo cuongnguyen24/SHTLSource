@@ -11,12 +11,48 @@ public static class StgFieldToDocumentMapper
         => values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v));
 
     /// <summary>
+    /// Khóa POST cho trường động: ưu tiên <paramref name="dbFieldName"/>; nếu rỗng thì suy ra từ id trường (đồng bộ với fallback hiển thị form Extract).
+    /// Tránh <c>data-stg-field=""</c> khiến JS bỏ qua và không gửi giá trị lên server.
+    /// </summary>
+    public static string ResolvePostFieldKey(string? dbFieldName, int fieldId)
+    {
+        if (!string.IsNullOrWhiteSpace(dbFieldName))
+            return dbFieldName.Trim();
+
+        return fieldId switch
+        {
+            1 => "dc_title",
+            2 => "dc_symbol",
+            3 => "dc_issued_by",
+            4 => "receiver",
+            5 => "subject",
+            6 => "levelno",
+            7 => "boxno",
+            8 => "recordno",
+            9 => "recordtitle",
+            10 => "poster",
+            11 => "signer",
+            12 => "slotno",
+            13 => "shelfno",
+            14 => "noted",
+            15 => "fc_dec1",
+            16 => "fc_date1",
+            17 => "std_text",
+            18 => "std_num",
+            19 => "std_dec",
+            20 => "std_date",
+            >= 101 and <= 125 => $"field{fieldId - 100}",
+            _ => string.Empty
+        };
+    }
+
+    /// <summary>
     /// Extract giá trị từ Document entity thành dictionary theo field name
     /// </summary>
     public static Dictionary<string, string?> ExtractValues(Document doc)
     {
         var values = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
-        
+
         // Core fields
         // dc_title always reflects physical file name (stg_documents.file_name)
         values["dc_title"] = string.IsNullOrWhiteSpace(doc.FileName) ? doc.Name : doc.FileName;
@@ -42,7 +78,7 @@ public static class StgFieldToDocumentMapper
         values["signer"] = doc.Signer;
         values["summary"] = doc.Summary;
         values["describe"] = doc.Describe;
-        
+
         // Extended fields (Field1-25)
         values["field1"] = doc.Field1;
         values["field2"] = doc.Field2;
@@ -107,32 +143,54 @@ public static class StgFieldToDocumentMapper
         values["ho_so_so"] = FirstNotEmpty(doc.RecordNo, doc.RecordTitle);
         values["hop_so"] = FirstNotEmpty(doc.BoxNo, doc.SymbolNo);
         values["dot_so"] = FirstNotEmpty(doc.LevelNo, doc.RecordNo);
-        
+
         return values;
     }
-    
+
     /// <summary>
     /// Apply giá trị từ form vào Document entity dựa trên field name
     /// </summary>
     public static void ApplyValue(Document doc, string fieldName, string? value)
     {
-        switch (fieldName.ToLowerInvariant())
+        if (string.IsNullOrWhiteSpace(fieldName)) return;
+
+        var trimmed = fieldName.Trim();
+        var canonical = GetFieldNameForLegacyField(trimmed);
+        if (canonical != null &&
+            !string.Equals(canonical, trimmed, StringComparison.OrdinalIgnoreCase))
+        {
+            ApplyValue(doc, canonical, value);
+            return;
+        }
+
+        switch (trimmed.ToLowerInvariant())
         {
             case "dc_title":
             case "title":
+            case "name":
                 doc.Name = value ?? "";
                 break;
             case "dc_symbol":
+            case "symbolno":
+            case "symbol_no":
+            case "dc_symbol_no":
                 doc.SymbolNo = value;
                 break;
             case "dc_record":
+            case "recordno":
+            case "record_no":
+            case "dc_record_no":
                 doc.RecordNo = value;
                 break;
             case "dc_issued_by":
             case "issuer":
+            case "issuedby":
+            case "issued_by":
+            case "dc_issuedby":
                 doc.IssuedBy = value;
                 break;
             case "dc_author":
+            case "author":
                 doc.Author = value;
                 break;
             case "poster":
@@ -142,15 +200,25 @@ public static class StgFieldToDocumentMapper
                 doc.Signer = value;
                 break;
             case "dc_issued":
+            case "issued":
                 if (DateTime.TryParse(value, out var issued))
                     doc.Issued = issued;
                 break;
             case "dc_issued_year":
+            case "issuedyear":
+            case "issued_year":
                 if (int.TryParse(value, out var year))
                     doc.IssuedYear = year;
                 break;
             case "dc_noted":
+            case "noted":
                 doc.Noted = value;
+                break;
+            case "describe":
+                doc.Describe = value;
+                break;
+            case "summary":
+                doc.Summary = value;
                 break;
             case "subject":
                 doc.Subject = value;
@@ -249,11 +317,13 @@ public static class StgFieldToDocumentMapper
             case "dc_box":
             case "levelno":
             case "fc_store":
+            case "dot_so":
                 doc.LevelNo = value;
                 break;
             case "dc_num1":
             case "boxno":
             case "fc_pages":
+            case "hop_so":
                 doc.BoxNo = value;
                 break;
             case "dc_custom1":
@@ -292,9 +362,12 @@ public static class StgFieldToDocumentMapper
                 if (decimal.TryParse(value, out var dec))
                     doc.Field23 = dec;
                 break;
+            case "ho_so_so":
+                doc.RecordNo = value;
+                break;
         }
     }
-    
+
     /// <summary>
     /// Parse form collection và apply vào Document
     /// </summary>
@@ -307,21 +380,28 @@ public static class StgFieldToDocumentMapper
             ApplyValue(doc, fieldName, value);
         }
     }
-    
+
     /// <summary>
     /// Get field name mapping cho các trường cố định (backward compatibility)
     /// </summary>
     public static string? GetFieldNameForLegacyField(string legacyFieldName)
     {
-        return legacyFieldName.ToLowerInvariant() switch
+        return legacyFieldName.Trim().ToLowerInvariant() switch
         {
             "name" => "dc_title",
             "symbolno" => "dc_symbol",
+            "symbol_no" => "dc_symbol",
+            "dc_symbol_no" => "dc_symbol",
             "recordno" => "dc_record",
+            "record_no" => "dc_record",
+            "dc_record_no" => "dc_record",
             "issuedby" => "dc_issued_by",
+            "issued_by" => "dc_issued_by",
+            "dc_issuedby" => "dc_issued_by",
             "author" => "dc_author",
             "issued" => "dc_issued",
             "issuedyear" => "dc_issued_year",
+            "issued_year" => "dc_issued_year",
             "noted" => "dc_noted",
             _ => null
         };

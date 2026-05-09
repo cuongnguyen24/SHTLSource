@@ -1,0 +1,82 @@
+@model SHTL.Modules.Features.SoHoa.Models.CreateExportJobForm
+@using SHTL.Modules.Features.SoHoa.Models
+@{
+    var exportTypes = ViewBag.ExportTypes as IEnumerable<SHTL.Modules.Core.Domain.Entities.Stg.ExportType> ?? Array.Empty<SHTL.Modules.Core.Domain.Entities.Stg.ExportType>();
+    var docTypes = ViewBag.DocTypes as IEnumerable<SHTL.Modules.Shared.Contracts.Dtos.DocTypeFullDto> ?? Array.Empty<SHTL.Modules.Shared.Contracts.Dtos.DocTypeFullDto>();
+    var syncTypes = ViewBag.SyncTypes as IEnumerable<SHTL.Modules.Shared.Contracts.Dtos.DocTypeSyncListItemDto> ?? Array.Empty<SHTL.Modules.Shared.Contracts.Dtos.DocTypeSyncListItemDto>();
+}
+
+<div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+<div class="form-group">
+    <label asp-for="Name"></label><span class="text-danger">*</span>
+    <input asp-for="Name" class="form-control input-figma" placeholder="Tên xuất dữ liệu" />
+    <span asp-validation-for="Name" class="text-danger small"></span>
+</div>
+
+<div class="form-row">
+    <div class="form-group col-md-6">
+        <label asp-for="ExportTypeId">Loại xuất</label><span class="text-danger">*</span>
+        <select asp-for="ExportTypeId" class="form-control input-figma">
+            <option value="">— Chọn —</option>
+            @foreach (var e in exportTypes)
+            {
+                <option value="@e.Id">@e.Name</option>
+            }
+        </select>
+        <span asp-validation-for="ExportTypeId" class="text-danger small"></span>
+    </div>
+    <div class="form-group col-md-6">
+        <label asp-for="DocStatus">Trạng thái phiếu</label>
+        <select asp-for="DocStatus" class="form-control input-figma">
+            @foreach (var ds in ExportJobFormLists.DocStatuses)
+            {
+                <option value="@ds.Value">@ds.Text</option>
+            }
+        </select>
+    </div>
+</div>
+
+<div class="form-row">
+    <div class="form-group col-md-6">
+        <label asp-for="DocTypeId">Loại tài liệu</label>
+        <select asp-for="DocTypeId" id="docTypeSelect" class="form-control input-figma">
+            <option value="">— Chưa chọn / Tất cả —</option>
+            @foreach (var d in docTypes)
+            {
+                <option value="@d.Id">@d.Name</option>
+            }
+        </select>
+    </div>
+    <div class="form-group col-md-6 d-flex align-items-end">
+        <div class="custom-control custom-checkbox mb-3">
+            <input asp-for="IsExportFile" class="custom-control-input" id="IsExportFile" />
+            <label asp-for="IsExportFile" class="custom-control-label" for="IsExportFile"></label>
+        </div>
+    </div>
+</div>
+
+<div class="form-group">
+    <label asp-for="SyncTypeId">Loại đồng bộ</label>
+    <select asp-for="SyncTypeId" id="syncTypeSelect" class="form-control input-figma">
+        <option value="">— Chưa chọn —</option>
+        @foreach (var s in syncTypes)
+        {
+            <option value="@s.Id" data-doc-type="@s.DocTypeId">@s.Name (@s.DocTypeName)</option>
+        }
+    </select>
+    <small class="text-muted">Bắt buộc khi dữ liệu cấp thư mục nằm ở Field1, Field2… theo <code>stg_doc_type_sync_settings</code> (AXE: <code>FieldFolderN_Field</code> = tên cột; ô dưới = lọc <code>fieldFoldersN</code>, tùy chọn).</small>
+</div>
+
+<div id="folderFieldsContainer" class="mb-3"></div>
+
+<div class="form-group">
+    <label asp-for="ThuMucXuat">Thư mục xuất</label>
+    <select asp-for="ThuMucXuat" class="form-control input-figma">
+        @foreach (var tm in ExportJobFormLists.ThuMucXuat)
+        {
+            <option value="@tm.Value">@tm.Text</option>
+        }
+    </select>
+    <small class="text-muted">Ghi nhận vào cấu hình job (<code>thuMucXuat</code>); worker có thể dùng sau.</small>
+</div>

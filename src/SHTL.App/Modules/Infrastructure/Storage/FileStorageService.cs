@@ -1,6 +1,5 @@
-using System.Linq;
-using SHTL.Modules.Core.Domain.Contracts;
 using Microsoft.Extensions.Options;
+using SHTL.Modules.Core.Domain.Contracts;
 
 namespace SHTL.Modules.Infrastructure.Storage;
 

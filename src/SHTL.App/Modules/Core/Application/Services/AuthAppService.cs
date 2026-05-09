@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Http;
 using SHTL.Modules.Infrastructure.Identity;
 using SHTL.Modules.Shared.Contracts;
 using SHTL.Modules.Shared.Contracts.Dtos;

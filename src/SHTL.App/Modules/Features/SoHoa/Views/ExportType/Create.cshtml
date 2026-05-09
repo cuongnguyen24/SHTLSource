@@ -1,6 +1,6 @@
 @model CreateExportTypeRequest
 @{ ViewData["Title"] = "Tạo loại xuất"; }
-@section Breadcrumb { <li class="breadcrumb-item"><a asp-action="Index">Loại xuất</a></li><li class="breadcrumb-item active">Tạo</li> }
+@section Breadcrumb { <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="ExportType" asp-action="Index">Loại xuất</a></li><li class="breadcrumb-item active">Tạo</li> }
 <div class="layout-expanded">
     <div class="frame-figma mb-3">
         <div class="frame-header">
@@ -16,7 +16,7 @@
     <div class="card-figma">
         <div class="card-content-figma">
             <div asp-validation-summary="All" class="text-danger mb-3"></div>
-            <form asp-action="Create" method="post" enctype="multipart/form-data">
+            <form asp-area="sohoa" asp-controller="ExportType" asp-action="Create" method="post" enctype="multipart/form-data">
                 @Html.AntiForgeryToken()
                 <div class="form-group-figma">
                     <label asp-for="Name" class="label-figma"></label>
@@ -36,7 +36,7 @@
                 </div>
                 <div class="d-flex flex-wrap" style="gap:8px;">
                     <button type="submit" class="btn-figma btn-figma-primary">Lưu</button>
-                    <a asp-action="Index" class="btn-figma btn-figma-outline">Hủy</a>
+                    <a asp-area="sohoa" asp-controller="ExportType" asp-action="Index" class="btn-figma btn-figma-outline">Hủy</a>
                 </div>
             </form>
         </div>

@@ -1,6 +1,4 @@
 using SHTL.Modules.Core.Domain.Contracts;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace SHTL.Modules.Infrastructure.Identity;
 

@@ -1,7 +1,6 @@
 using Dapper;
 using SHTL.Modules.Core.Domain.Entities.Stg;
 using SHTL.Modules.Core.Domain.Enums;
-using SHTL.Modules.Infrastructure.Persistence;
 
 namespace SHTL.Modules.Infrastructure.Data.Repositories.Stg;
 
@@ -33,6 +32,7 @@ public class DocumentFilterParams
 {
     public string? Search { get; set; }
     public WorkflowStep? Step { get; set; }
+    public bool IncludeExtractedInCheck1 { get; set; }
     public DocumentStatus? Status { get; set; }
     public int? DocTypeId { get; set; }
     public int? CreatedBy { get; set; }
@@ -168,8 +168,55 @@ public class DocumentRepository : BaseRepository, IDocumentRepository
                 field13 = @Field13, field14 = @Field14, field15 = @Field15,
                 field16 = @Field16, field17 = @Field17, field18 = @Field18,
                 field19 = @Field19, field20 = @Field20,
+                field21 = @Field21, field22 = @Field22, field23 = @Field23,
+                field24 = @Field24, field25 = @Field25,
+                current_step = @CurrentStep,
+                is_checked_scan1 = @IsCheckedScan1,
+                checked_scan1at = @CheckedScan1At,
+                checked_scan1by = @CheckedScan1By,
+                checked_scan1result = @CheckedScan1Result,
+                is_checked_scan2 = @IsCheckedScan2,
+                checked_scan2at = @CheckedScan2At,
+                checked_scan2by = @CheckedScan2By,
+                checked_scan2result = @CheckedScan2Result,
+                is_zoned = @IsZoned,
+                zoned_at = @ZonedAt,
+                zoned_by = @ZonedBy,
+                zoned_result = @ZonedResult,
+                ocr_status = @OcrStatus,
+                is_ocr_enabled = @IsOcrEnabled,
+                ocr_at = @OcrAt,
+                ocr_by = @OcrBy,
+                ocr_result = @OcrResult,
+                is_extracted = @IsExtracted,
+                extracted_at = @ExtractedAt,
+                extracted_by = @ExtractedBy,
+                extracted_result = @ExtractedResult,
+                extracted_return_count = @ExtractedReturnCount,
+                extracted_return_reason = @ExtractedReturnReason,
+                is_checked1 = @IsChecked1,
+                checked1at = @Checked1At,
+                checked1by = @Checked1By,
+                checked1result = @Checked1Result,
+                checked1return_count = @Checked1ReturnCount,
                 checked1return_reason = @Checked1ReturnReason,
+                is_checked2 = @IsChecked2,
+                checked2at = @Checked2At,
+                checked2by = @Checked2By,
+                checked2result = @Checked2Result,
                 checked2return_reason = @Checked2ReturnReason,
+                is_checked_final = @IsCheckedFinal,
+                checked_final_at = @CheckedFinalAt,
+                checked_final_by = @CheckedFinalBy,
+                checked_final_result = @CheckedFinalResult,
+                checked_final_change_info = @CheckedFinalChangeInfo,
+                is_checked_logic = @IsCheckedLogic,
+                checked_logic_at = @CheckedLogicAt,
+                checked_logic_by = @CheckedLogicBy,
+                checked_logic_result = @CheckedLogicResult,
+                export_status = @ExportStatus,
+                exported_at = @ExportedAt,
+                exported_by = @ExportedBy,
                 updated = @Updated, updated_by = @UpdatedBy
             WHERE id = @Id";
         return await ExecuteAsync(conn, sql, doc);
@@ -360,7 +407,19 @@ WHERE ocr_status = @Processing
             conditions.Add("(search_meta LIKE @Search OR name LIKE @Search)");
             p.Add("Search", $"%{f.Search}%");
         }
-        if (f.Step.HasValue) { conditions.Add("current_step = @Step"); p.Add("Step", (byte)f.Step.Value); }
+        if (f.Step.HasValue)
+        {
+            if (f.IncludeExtractedInCheck1 && f.Step.Value == WorkflowStep.Extract)
+            {
+                conditions.Add("(current_step = @Step OR is_extracted = 1)");
+                p.Add("Step", (byte)WorkflowStep.Extract);
+            }
+            else
+            {
+                conditions.Add("current_step = @Step");
+                p.Add("Step", (byte)f.Step.Value);
+            }
+        }
         if (f.Status.HasValue) { conditions.Add("status = @Status"); p.Add("Status", (byte)f.Status.Value); }
         if (f.DocTypeId.HasValue) { conditions.Add("doc_type_id = @DocTypeId"); p.Add("DocTypeId", f.DocTypeId.Value); }
         if (f.CreatedBy.HasValue) { conditions.Add("created_by = @CreatedBy"); p.Add("CreatedBy", f.CreatedBy.Value); }

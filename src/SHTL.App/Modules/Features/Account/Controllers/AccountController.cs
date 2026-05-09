@@ -1,10 +1,10 @@
-using SHTL.Modules.Core.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
-using SHTL.Modules.Shared.Contracts.Dtos;
+using SHTL.Modules.Core.Application.Services;
 using SHTL.Modules.Features.Account.Logging;
 using SHTL.Modules.Features.Account.Models;
+using SHTL.Modules.Shared.Contracts.Dtos;
 
 namespace SHTL.Modules.Features.Account.Controllers;
 

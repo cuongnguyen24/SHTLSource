@@ -1,9 +1,9 @@
-using System.Diagnostics;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using SHTL.Modules.Features.Dashboard.Models;
 using SHTL.Modules.Features.Shared;
+using System.Diagnostics;
 
 namespace SHTL.Modules.Features.Dashboard.Controllers;
 

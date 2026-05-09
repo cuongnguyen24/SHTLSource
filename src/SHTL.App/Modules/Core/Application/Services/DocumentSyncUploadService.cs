@@ -1,11 +1,10 @@
+using Microsoft.Extensions.Options;
 using SHTL.Modules.Core.Application.Services.Axe;
 using SHTL.Modules.Core.Domain.Contracts;
 using SHTL.Modules.Core.Domain.Entities.Stg;
 using SHTL.Modules.Core.Domain.Enums;
 using SHTL.Modules.Infrastructure.Data.Repositories.Stg;
 using SHTL.Modules.Infrastructure.Storage;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Options;
 using SHTL.Modules.Shared.Contracts;
 using SHTL.Modules.Shared.Contracts.Dtos;
 using System.Globalization;
@@ -473,7 +472,7 @@ public sealed class DocumentSyncUploadService : IDocumentSyncUploadService
             var matches = Regex.Matches(segment, @"\{([^{}]+)\}");
             if (matches.Count == 0)
                 continue;
-            
+
             // Typical case: whole segment is one placeholder, e.g. "{Đợt số}"
             if (matches.Count == 1 && segment.Trim().Equals(matches[0].Value, StringComparison.Ordinal))
             {
@@ -591,26 +590,26 @@ public sealed class DocumentSyncUploadService : IDocumentSyncUploadService
         switch (sf.Name.ToLowerInvariant())
         {
             case "levelno":
-            {
-                var v = GetPathValue(pathValues, "Đợt số") ?? GetPathValue(pathValues, "Tầng số");
-                if (!string.IsNullOrWhiteSpace(v))
-                    return v;
-                break;
-            }
+                {
+                    var v = GetPathValue(pathValues, "Đợt số") ?? GetPathValue(pathValues, "Tầng số");
+                    if (!string.IsNullOrWhiteSpace(v))
+                        return v;
+                    break;
+                }
             case "boxno":
-            {
-                var v = GetPathValue(pathValues, "Hộp số");
-                if (!string.IsNullOrWhiteSpace(v))
-                    return v;
-                break;
-            }
+                {
+                    var v = GetPathValue(pathValues, "Hộp số");
+                    if (!string.IsNullOrWhiteSpace(v))
+                        return v;
+                    break;
+                }
             case "recordno":
-            {
-                var v = GetPathValue(pathValues, "Hồ sơ số");
-                if (!string.IsNullOrWhiteSpace(v))
-                    return v;
-                break;
-            }
+                {
+                    var v = GetPathValue(pathValues, "Hồ sơ số");
+                    if (!string.IsNullOrWhiteSpace(v))
+                        return v;
+                    break;
+                }
         }
 
         // Trường mở rộng (id 101–125 → field1–field25): nếu chưa match theo title, lấy theo thứ tự placeholder

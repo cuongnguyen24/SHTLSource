@@ -2,7 +2,8 @@
 @{
     var f = Model.Field;
     var val = Model.Value ?? "";
-    var safe = f.FieldName.Replace(".", "_").Replace("[", "").Replace("]", "");
+    var postKey = !string.IsNullOrEmpty(f.PostFieldKey) ? f.PostFieldKey : f.FieldName;
+    var safe = (string.IsNullOrEmpty(postKey) ? "f" + f.FieldId : postKey).Replace(".", "_").Replace("[", "").Replace("]", "");
     var id = "chk_" + safe;
     var name = f.FieldName;
     var isTitleField = f.FieldId == 1 || string.Equals(name, "dc_title", StringComparison.OrdinalIgnoreCase);
@@ -17,24 +18,24 @@
     </label>
     @if (isReadOnlyField)
     {
-        <input type="text" class="form-control bg-light" id="@id" value="@val" readonly data-stg-field="@name" />
+        <input type="text" class="form-control bg-light" id="@id" value="@val" readonly data-stg-field="@postKey" />
     }
     else if (it == "textarea")
     {
         var rows = Math.Max(2, f.Row > 0 ? f.Row : 3);
-        <textarea class="form-control chk-field" id="@id" data-stg-field="@name" rows="@rows" @(f.MaxLen > 0 ? $"maxlength=\"{f.MaxLen}\"" : null)>@val</textarea>
+        <textarea class="form-control chk-field" id="@id" data-stg-field="@postKey" rows="@rows" @(f.MaxLen > 0 ? $"maxlength=\"{f.MaxLen}\"" : null)>@val</textarea>
     }
     else if (isNum)
     {
-        <input type="number" class="form-control chk-field" id="@id" data-stg-field="@name" value="@val" />
+        <input type="number" class="form-control chk-field" id="@id" data-stg-field="@postKey" value="@val" />
     }
     else if (isDate)
     {
-        <input type="date" class="form-control chk-field" id="@id" data-stg-field="@name" value="@val" />
+        <input type="date" class="form-control chk-field" id="@id" data-stg-field="@postKey" value="@val" />
     }
     else
     {
-        <input type="text" class="form-control chk-field" id="@id" data-stg-field="@name" value="@val" @(f.MaxLen > 0 ? $"maxlength=\"{f.MaxLen}\"" : null) placeholder="@f.Format" />
+        <input type="text" class="form-control chk-field" id="@id" data-stg-field="@postKey" value="@val" @(f.MaxLen > 0 ? $"maxlength=\"{f.MaxLen}\"" : null) placeholder="@f.Format" />
     }
     @if (f.MinLen > 0 || f.MaxLen > 0)
     {

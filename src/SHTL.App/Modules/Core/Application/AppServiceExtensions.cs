@@ -1,8 +1,6 @@
 using SHTL.Modules.Core.Application.Options;
 using SHTL.Modules.Core.Application.Services;
 using SHTL.Modules.Core.Application.Services.Axe;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace SHTL.Modules.Core.Application;
 

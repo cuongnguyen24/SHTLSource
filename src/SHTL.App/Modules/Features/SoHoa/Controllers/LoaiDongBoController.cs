@@ -1,9 +1,9 @@
-using SHTL.Modules.Core.Application.Services.Axe;
-using SHTL.Modules.Core.Domain.Enums;
-using SHTL.Modules.Infrastructure.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SHTL.Modules.Core.Application.Services.Axe;
+using SHTL.Modules.Core.Domain.Enums;
 using SHTL.Modules.Features.Shared;
+using SHTL.Modules.Infrastructure.Identity;
 
 namespace SHTL.Modules.Features.SoHoa.Controllers;
 

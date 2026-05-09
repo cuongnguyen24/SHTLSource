@@ -1,4 +1,3 @@
-using SHTL.Modules.Core.Domain.Entities;
 using SHTL.Modules.Core.Domain.Enums;
 
 namespace SHTL.Modules.Core.Domain.Entities.Stg;

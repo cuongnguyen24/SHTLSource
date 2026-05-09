@@ -1,5 +1,3 @@
-using System.ComponentModel.DataAnnotations;
-
 namespace SHTL.Modules.Shared.Contracts.Dtos;
 
 public class UploadFileResponse

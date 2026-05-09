@@ -2,7 +2,6 @@ using SHTL.Modules.Core.Domain.Contracts;
 using SHTL.Modules.Core.Domain.Entities.Stg;
 using SHTL.Modules.Core.Domain.Enums;
 using SHTL.Modules.Infrastructure.Data.Repositories.Stg;
-using SHTL.Modules.Infrastructure.Storage;
 using SHTL.Modules.Shared.Contracts;
 using SHTL.Modules.Shared.Contracts.Dtos;
 
@@ -35,6 +34,7 @@ public class DocumentService : IDocumentService
         {
             Search = req.Search,
             Step = req.Step,
+            IncludeExtractedInCheck1 = req.IncludeExtractedInCheck1,
             DocTypeId = req.DocTypeId,
             CreatedBy = req.CreatedBy,
             StartDate = req.StartDate,
@@ -182,6 +182,8 @@ public class DocumentService : IDocumentService
         ExtractedBy = doc.ExtractedBy,
         Checked1At = doc.Checked1At,
         Checked1By = doc.Checked1By,
+        Checked1Result = doc.Checked1Result,
+        Checked1ReturnCount = doc.Checked1ReturnCount,
         Checked2At = doc.Checked2At,
         Checked2By = doc.Checked2By,
         IsCheckedScan1 = doc.IsCheckedScan1,

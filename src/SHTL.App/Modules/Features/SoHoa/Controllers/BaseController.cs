@@ -1,5 +1,5 @@
-using SHTL.Modules.Core.Domain.Contracts;
 using Microsoft.AspNetCore.Mvc;
+using SHTL.Modules.Core.Domain.Contracts;
 using SHTL.Modules.Shared.Contracts;
 
 namespace SHTL.Modules.Features.SoHoa.Controllers;

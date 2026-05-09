@@ -1,14 +1,13 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using SHTL.Modules.Core.Application.Services;
 using SHTL.Modules.Core.Application.Services.Axe;
 using SHTL.Modules.Core.Domain.Enums;
 using SHTL.Modules.Infrastructure.Data.Repositories.Acc;
+using SHTL.Modules.Infrastructure.Data.Repositories.Cnf;
 using SHTL.Modules.Infrastructure.Data.Repositories.Stg;
 using SHTL.Modules.Infrastructure.Identity;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Logging;
 using SHTL.Modules.Shared.Contracts;
 using SHTL.Modules.Shared.Contracts.Dtos;
 using System.Text;
@@ -26,6 +25,7 @@ public class ExtractController : BaseController
     private readonly IDocumentWorkflowService _workflowService;
     private readonly IFormCellRepository _cellRepo;
     private readonly IUserRepository _userRepo;
+    private readonly ICnfRepository _cnfRepo;
     private readonly IDocumentFormViewModelBuilder _formBuilder;
     private readonly ILogger<ExtractController> _logger;
     private readonly IWebHostEnvironment _env;
@@ -35,6 +35,7 @@ public class ExtractController : BaseController
         IDocumentWorkflowService workflowService,
         IFormCellRepository cellRepo,
         IUserRepository userRepo,
+        ICnfRepository cnfRepo,
         IDocumentFormViewModelBuilder formBuilder,
         ILogger<ExtractController> logger,
         IWebHostEnvironment env)
@@ -43,6 +44,7 @@ public class ExtractController : BaseController
         _workflowService = workflowService;
         _cellRepo = cellRepo;
         _userRepo = userRepo;
+        _cnfRepo = cnfRepo;
         _formBuilder = formBuilder;
         _logger = logger;
         _env = env;
@@ -52,6 +54,10 @@ public class ExtractController : BaseController
     [HttpGet]
     public async Task<IActionResult> Index()
     {
+        var scanConfig = await LoadScanCheckConfigAsync();
+        ViewBag.RequireCheckFirstScan = scanConfig.requireFirst;
+        ViewBag.RequireCheckSecondScan = scanConfig.requireSecond;
+
         WorkflowStep? step = WorkflowStep.Extract;
         if (Enum.TryParse<WorkflowStep>(Request.Query["step"], true, out var parsedStep))
             step = parsedStep;
@@ -61,7 +67,8 @@ public class ExtractController : BaseController
             PageIndex = GetPageRequest().PageIndex,
             PageSize = GetPageRequest().PageSize,
             Search = Request.Query["q"],
-            Step = step
+            Step = step,
+            IncludeExtractedInCheck1 = step == WorkflowStep.Extract
         };
         var result = await _docService.GetListAsync(req, CurrentUser);
         return View(result);
@@ -94,6 +101,10 @@ public class ExtractController : BaseController
     {
         try
         {
+            var scanConfig = await LoadScanCheckConfigAsync();
+            ViewBag.RequireCheckFirstScan = scanConfig.requireFirst;
+            ViewBag.RequireCheckSecondScan = scanConfig.requireSecond;
+
             var vm = await _formBuilder.BuildForExtractAsync(id);
             return View(vm);
         }
@@ -184,5 +195,21 @@ public class ExtractController : BaseController
         }
 
         return null;
+    }
+
+    private async Task<(bool requireFirst, bool requireSecond)> LoadScanCheckConfigAsync()
+    {
+        var configs = await _cnfRepo.GetConfigsAsync();
+        var map = configs.ToDictionary(x => x.Key ?? string.Empty, x => x.Value, StringComparer.OrdinalIgnoreCase);
+        return (ReadToggle(map, "IsCheckFirstScan"), ReadToggle(map, "IsCheckSecondScan"));
+    }
+
+    private static bool ReadToggle(IReadOnlyDictionary<string, string?> configs, string key)
+    {
+        if (!configs.TryGetValue(key, out var value) || string.IsNullOrWhiteSpace(value))
+            return true;
+
+        var normalized = value.Trim().ToLowerInvariant();
+        return normalized is "1" or "true" or "on" or "yes";
     }
 }

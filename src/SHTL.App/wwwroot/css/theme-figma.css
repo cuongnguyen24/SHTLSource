@@ -225,6 +225,32 @@ body {
     border-left: none !important;
 }
 
+/* Màu chữ menu mở rộng (tránh xanh mặc định của .nav-link Bootstrap) */
+.sidebar-figma .nav-link-figma:not(.active) {
+    color: var(--text-muted) !important;
+}
+
+.sidebar-figma .nav-link-figma.active {
+    color: var(--primary) !important;
+    font-weight: 600;
+    background-color: var(--primary-light) !important;
+}
+
+.sidebar-figma .nav-link-figma:hover:not(.active) {
+    color: var(--primary) !important;
+    background-color: var(--muted) !important;
+}
+
+/* Logo thu gọn: ẩn khi mở rộng, hiện khi body.sidebar-collapsed (rule chi tiết ở cuối file) */
+.sidebar-figma .sidebar-logo-collapsed {
+    display: none !important;
+}
+
+/* Tiêu đề nhóm (Danh mục, …) — ẩn khi sidebar thu nhỏ */
+.sidebar-collapsed .sidebar-figma .sidebar-section-heading {
+    display: none !important;
+}
+
 /* Consistent spacing for all nav-items (expanded only) */
 .sidebar-figma .nav-item {
     margin-bottom: 1px;
@@ -1533,14 +1559,43 @@ a.btn-figma:focus {
     border-left: none !important;
 }
 
+/* Cột menu đúng bề ngang sidebar, căn giữa — tránh icon lệch phải / bị overflow cắt */
+.sidebar-collapsed .sidebar-figma .flex-grow-1 {
+    overflow-x: hidden !important;
+}
+
+.sidebar-collapsed .sidebar-figma nav,
+.sidebar-collapsed .sidebar-figma .nav.flex-column {
+    width: 100% !important;
+    max-width: 64px !important;
+    align-items: center !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    box-sizing: border-box !important;
+}
+
+.sidebar-collapsed .sidebar-figma .nav-item {
+    width: 64px !important;
+    max-width: 64px !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    box-sizing: border-box !important;
+}
+
 /* Centering the link container */
 .sidebar-collapsed .sidebar-figma .nav-link-figma {
     display: flex !important;
     justify-content: center !important;
     align-items: center !important;
     width: 64px !important;
+    max-width: 64px !important;
     height: 52px !important;
     position: relative !important;
+    color: var(--text-muted) !important;
+    box-sizing: border-box !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
 }
 
 /* Fix for multi-level items: making the wrapper div transparent to flex layout */
@@ -1565,28 +1620,41 @@ a.btn-figma:focus {
 
 /* SCENARIO A: Multi-level menus (The icon is inside a <div> along with the label) */
 .sidebar-collapsed .sidebar-figma .nav-link-figma div i:first-of-type {
-    display: flex !important;
-    justify-content: center !important;
-    align-items: center !important;
-    font-size: 20px !important;
-    width: 20px !important;
-    height: 20px !important;
+    /* inline-block + line-height: glyph Font Awesome (::before) căn giữa ổn định hơn display:flex trên <i> */
+    display: inline-block !important;
+    text-align: center !important;
+    vertical-align: middle !important;
+    font-size: 18px !important;
+    width: 24px !important;
+    min-width: 24px !important;
+    height: 24px !important;
+    line-height: 24px !important;
     margin: 0 !important;
+    padding: 0 !important;
     opacity: 1 !important;
     visibility: visible !important;
 }
 
 /* SCENARIO B: Standalone items (The icon is a DIRECT child of the <a>, not in a div) */
 .sidebar-collapsed .sidebar-figma .nav-link-figma > i:first-child:not(.fa-chevron-right):not(.fa-angle-right) {
-    display: flex !important;
-    justify-content: center !important;
-    align-items: center !important;
-    font-size: 20px !important;
-    width: 20px !important;
-    height: 20px !important;
+    display: inline-block !important;
+    text-align: center !important;
+    vertical-align: middle !important;
+    font-size: 18px !important;
+    width: 24px !important;
+    min-width: 24px !important;
+    height: 24px !important;
+    line-height: 24px !important;
     margin: 0 !important;
+    padding: 0 !important;
     opacity: 1 !important;
     visibility: visible !important;
+}
+
+/* Bỏ mr/me/ml từ utility Bootstrap trên icon khi thu gọn (thường đẩy icon sang phải) */
+.sidebar-collapsed .sidebar-figma .nav-link-figma i[class*="fa-"] {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
 }
 
 /* Force hide all spans and other children */

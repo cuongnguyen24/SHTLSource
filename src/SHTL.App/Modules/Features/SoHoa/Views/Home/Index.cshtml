@@ -21,8 +21,25 @@
     </div>
     <div class="row">
         <div class="col-md-4 col-sm-6 mb-3"><a class="card card-body shadow-sm h-100 text-decoration-none frame-figma" asp-area="sohoa" asp-controller="Scan" asp-action="Index"><i class="fas fa-upload text-primary mb-2"></i><div class="font-weight-bold text-dark">Scan / Upload</div></a></div>
+        @if (ViewBag.ShowCheckFirstScan is not false)
+        {
+            <div class="col-md-4 col-sm-6 mb-3"><a class="card card-body shadow-sm h-100 text-decoration-none frame-figma" asp-area="sohoa" asp-controller="Scan" asp-action="CheckScan1List"><i class="fas fa-search text-primary mb-2"></i><div class="font-weight-bold text-dark">Kiểm tra scan 1</div></a></div>
+        }
+        @if (ViewBag.ShowCheckSecondScan is not false)
+        {
+            <div class="col-md-4 col-sm-6 mb-3"><a class="card card-body shadow-sm h-100 text-decoration-none frame-figma" asp-area="sohoa" asp-controller="Scan" asp-action="CheckScan2List"><i class="fas fa-search-plus text-primary mb-2"></i><div class="font-weight-bold text-dark">Kiểm tra scan 2</div></a></div>
+        }
         <div class="col-md-4 col-sm-6 mb-3"><a class="card card-body shadow-sm h-100 text-decoration-none frame-figma" asp-area="sohoa" asp-controller="Extract" asp-action="Index"><i class="fas fa-keyboard text-primary mb-2"></i><div class="font-weight-bold text-dark">Nhập liệu</div></a></div>
+        @if (ViewBag.ShowCheck1 is not false)
+        {
+            <div class="col-md-4 col-sm-6 mb-3"><a class="card card-body shadow-sm h-100 text-decoration-none frame-figma" asp-area="sohoa" asp-controller="Check" asp-action="Check1"><i class="fas fa-check-double text-primary mb-2"></i><div class="font-weight-bold text-dark">Kiểm tra lần 1</div></a></div>
+        }
+        @if (ViewBag.ShowCheck2 is not false)
+        {
+            <div class="col-md-4 col-sm-6 mb-3"><a class="card card-body shadow-sm h-100 text-decoration-none frame-figma" asp-area="sohoa" asp-controller="Check" asp-action="Check2"><i class="fas fa-check-double text-primary mb-2"></i><div class="font-weight-bold text-dark">Kiểm tra lần 2</div></a></div>
+        }
         <div class="col-md-4 col-sm-6 mb-3"><a class="card card-body shadow-sm h-100 text-decoration-none frame-figma" asp-area="sohoa" asp-controller="Export" asp-action="Index"><i class="fas fa-file-export text-primary mb-2"></i><div class="font-weight-bold text-dark">Export</div></a></div>
+        <div class="col-md-4 col-sm-6 mb-3"><a class="card card-body shadow-sm h-100 text-decoration-none frame-figma" asp-area="sohoa" asp-controller="ExportType" asp-action="Index"><i class="fas fa-cogs text-primary mb-2"></i><div class="font-weight-bold text-dark">Cấu hình loại xuất</div></a></div>
         <div class="col-md-4 col-sm-6 mb-3"><a class="card card-body shadow-sm h-100 text-decoration-none frame-figma" asp-area="sohoa" asp-controller="LoaiTaiLieu" asp-action="Index"><i class="fas fa-tags text-primary mb-2"></i><div class="font-weight-bold text-dark">Loại tài liệu</div></a></div>
         <div class="col-md-4 col-sm-6 mb-3"><a class="card card-body shadow-sm h-100 text-decoration-none frame-figma" asp-area="sohoa" asp-controller="LoaiDongBo" asp-action="Index"><i class="fas fa-sync-alt text-primary mb-2"></i><div class="font-weight-bold text-dark">Loại đồng bộ</div></a></div>
         <div class="col-md-4 col-sm-6 mb-3"><a class="card card-body shadow-sm h-100 text-decoration-none frame-figma" asp-area="sohoa" asp-controller="Report" asp-action="FolderProgress"><i class="fas fa-chart-line text-primary mb-2"></i><div class="font-weight-bold text-dark">Tiến độ theo thư mục</div></a></div>

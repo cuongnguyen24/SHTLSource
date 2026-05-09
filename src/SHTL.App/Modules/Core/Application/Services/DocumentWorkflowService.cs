@@ -1,11 +1,11 @@
+using SHTL.Modules.Core.Application.Services.Axe;
 using SHTL.Modules.Core.Domain.Contracts;
 using SHTL.Modules.Core.Domain.Entities.Log;
 using SHTL.Modules.Core.Domain.Entities.Stg;
 using SHTL.Modules.Core.Domain.Enums;
+using SHTL.Modules.Infrastructure.Data.Repositories.Cnf;
 using SHTL.Modules.Infrastructure.Data.Repositories.Log;
 using SHTL.Modules.Infrastructure.Data.Repositories.Stg;
-using Microsoft.Extensions.Logging;
-using SHTL.Modules.Core.Application.Services.Axe;
 using SHTL.Modules.Shared.Contracts;
 using SHTL.Modules.Shared.Contracts.Dtos;
 using StgExportType = SHTL.Modules.Core.Domain.Entities.Stg.ExportType;
@@ -36,6 +36,7 @@ public class DocumentWorkflowService : IDocumentWorkflowService
     private readonly IDocumentRepository _docRepo;
     private readonly IFormCellRepository _cellRepo;
     private readonly IExportJobRepository _exportRepo;
+    private readonly ICnfRepository _cnfRepo;
     private readonly IActionLogRepository _logRepo;
     private readonly IRepository<StgExportType> _exportTypeRepo;
     private readonly IStorageService _storage;
@@ -45,6 +46,7 @@ public class DocumentWorkflowService : IDocumentWorkflowService
         IDocumentRepository docRepo,
         IFormCellRepository cellRepo,
         IExportJobRepository exportRepo,
+        ICnfRepository cnfRepo,
         IActionLogRepository logRepo,
         IRepository<StgExportType> exportTypeRepo,
         IStorageService storage,
@@ -53,6 +55,7 @@ public class DocumentWorkflowService : IDocumentWorkflowService
         _docRepo = docRepo;
         _cellRepo = cellRepo;
         _exportRepo = exportRepo;
+        _cnfRepo = cnfRepo;
         _logRepo = logRepo;
         _exportTypeRepo = exportTypeRepo;
         _storage = storage;
@@ -137,6 +140,20 @@ public class DocumentWorkflowService : IDocumentWorkflowService
     {
         var doc = await _docRepo.GetByIdAsync(req.DocumentId);
         if (doc is null) return ApiResult.Fail("Tài liệu không tồn tại");
+
+        var (requireFirstScan, requireSecondScan) = await LoadScanCheckConfigAsync();
+        // Đã extract nhưng chưa duyệt Check1: cho phép cập nhật lại metadata (đồng bộ với form Extract).
+        var canUpdateExtractWithoutScanGate = doc.IsExtracted && !doc.IsChecked1;
+        if (!canUpdateExtractWithoutScanGate)
+        {
+            var missingChecks = new List<string>();
+            if (requireFirstScan && !doc.IsCheckedScan1) missingChecks.Add("Check scan 1");
+            if (requireSecondScan && !doc.IsCheckedScan2) missingChecks.Add("Check scan 2");
+            if (missingChecks.Count > 0)
+            {
+                return ApiResult.Fail($"Tài liệu chưa đủ điều kiện nhập liệu ({string.Join(", ", missingChecks)} chưa hoàn thành).");
+            }
+        }
 
         // Cập nhật fields
         MapExtractFields(doc, req);
@@ -254,7 +271,7 @@ public class DocumentWorkflowService : IDocumentWorkflowService
         // Lookup ExportType by code
         var exportTypes = await _exportTypeRepo.GetAllAsync();
         var exportTypeEntity = exportTypes.FirstOrDefault(x => x.Code == exportType);
-        
+
         if (exportTypeEntity is null)
             return ApiResult.Fail($"Loại export '{exportType}' không tồn tại");
 
@@ -421,6 +438,12 @@ public class DocumentWorkflowService : IDocumentWorkflowService
         if (req.Field21.HasValue) doc.Field21 = req.Field21;
         if (req.Field22.HasValue) doc.Field22 = req.Field22;
         if (req.Field23.HasValue) doc.Field23 = req.Field23;
+
+        doc.SearchMeta = string.Join(" ", new[] {
+            doc.Name, doc.SymbolNo, doc.RecordNo, doc.IssuedBy, doc.Author,
+            doc.Field1, doc.Field2, doc.Field3, doc.Field4, doc.Field5,
+            doc.Subject, doc.RecordTitle, doc.Describe, doc.Summary
+        }.Where(x => !string.IsNullOrWhiteSpace(x)));
     }
 
     private static void ApplyCheckEdits(Document doc, CheckReviewRequest req)
@@ -454,5 +477,21 @@ public class DocumentWorkflowService : IDocumentWorkflowService
             Description = description,
             CreatedAt = DateTime.UtcNow
         });
+    }
+
+    private async Task<(bool requireFirst, bool requireSecond)> LoadScanCheckConfigAsync()
+    {
+        var configs = await _cnfRepo.GetConfigsAsync();
+        var map = configs.ToDictionary(x => x.Key ?? string.Empty, x => x.Value, StringComparer.OrdinalIgnoreCase);
+        return (ReadToggle(map, "IsCheckFirstScan"), ReadToggle(map, "IsCheckSecondScan"));
+    }
+
+    private static bool ReadToggle(IReadOnlyDictionary<string, string?> configs, string key)
+    {
+        if (!configs.TryGetValue(key, out var value) || string.IsNullOrWhiteSpace(value))
+            return true;
+
+        var normalized = value.Trim().ToLowerInvariant();
+        return normalized is "1" or "true" or "on" or "yes";
     }
 }

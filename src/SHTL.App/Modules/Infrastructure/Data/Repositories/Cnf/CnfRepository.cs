@@ -1,5 +1,3 @@
-using Dapper;
-using SHTL.Modules.Infrastructure.Persistence;
 using SHTL.Modules.Shared.Contracts.Dtos;
 
 namespace SHTL.Modules.Infrastructure.Data.Repositories.Cnf;

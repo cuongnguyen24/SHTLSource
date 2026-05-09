@@ -1,8 +1,8 @@
+using Microsoft.AspNetCore.Mvc;
 using SHTL.Modules.Core.Application.Services;
 using SHTL.Modules.Core.Domain.Contracts;
-using Microsoft.AspNetCore.Mvc;
-using SHTL.Modules.Shared.Contracts.Dtos;
 using SHTL.Modules.Features.Uploader.Security;
+using SHTL.Modules.Shared.Contracts.Dtos;
 
 namespace SHTL.Modules.Features.Uploader.Controllers;
 

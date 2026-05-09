@@ -1,7 +1,18 @@
-using SHTL.Modules.Infrastructure.Persistence;
 using SHTL.Modules.Shared.Contracts.Dtos;
 
 namespace SHTL.Modules.Infrastructure.Data.Repositories.Stg;
+
+file static class ExportSyncFolderFieldResolver
+{
+    internal static string? ResolveFieldName(int idField, IReadOnlyDictionary<int, string> idToName)
+    {
+        if (idToName.TryGetValue(idField, out var n) && !string.IsNullOrWhiteSpace(n))
+            return n.Trim();
+        if (idField is >= 101 and <= 125)
+            return "Field" + (idField - 100);
+        return null;
+    }
+}
 
 public interface IAxeSyncTypeRepository
 {
@@ -15,6 +26,12 @@ public interface IAxeSyncTypeRepository
     Task<IReadOnlyList<DocTypeSyncSettingDto>> GetSettingsAsync(int syncTypeId);
     Task DeleteSettingsAsync(int syncTypeId);
     Task InsertSettingsAsync(IReadOnlyList<DocTypeSyncSettingDto> rows);
+
+    /// <summary>
+    /// Các cấp thư mục cho export (AXE ExportQueue GetFieldFolderAll): chỉ setting có Title xuất hiện trong Format,
+    /// map <c>id_field</c> → <c>stg_doc_fields.name</c> (Field1, Field70…). Tối đa 4 cấp như UI AXE.
+    /// </summary>
+    Task<IReadOnlyList<ExportSyncFolderFieldInfo>> GetExportFolderFieldsForJobAsync(int syncTypeId);
 }
 
 public class AxeSyncTypeRepository : BaseRepository, IAxeSyncTypeRepository
@@ -123,6 +140,47 @@ public class AxeSyncTypeRepository : BaseRepository, IAxeSyncTypeRepository
                    is_read_only AS IsReadOnly, is_upper_case AS IsUpperCase, is_capitalize AS IsCapitalize
             FROM dbo.stg_doc_type_sync_settings WHERE id_type = @Id ORDER BY weight",
             new { Id = syncTypeId })).ToList();
+    }
+
+    public async Task<IReadOnlyList<ExportSyncFolderFieldInfo>> GetExportFolderFieldsForJobAsync(int syncTypeId)
+    {
+        var sync = await GetAsync(syncTypeId);
+        if (sync == null || string.IsNullOrWhiteSpace(sync.Format))
+            return Array.Empty<ExportSyncFolderFieldInfo>();
+
+        var format = sync.Format;
+        var settings = await GetSettingsAsync(syncTypeId);
+        var conn = await OpenConnectionAsync();
+        var idNameRows = await QueryAsync<(int Id, string Name)>(conn,
+            "SELECT id AS Id, name AS Name FROM dbo.stg_doc_fields", null);
+        var idToName = idNameRows.ToDictionary(x => x.Id, x => x.Name);
+
+        var list = new List<ExportSyncFolderFieldInfo>();
+        foreach (var s in settings.OrderBy(x => x.Weight).ThenBy(x => x.Id))
+        {
+            if (s.IsCatalog)
+                continue;
+            if (string.IsNullOrWhiteSpace(s.Title))
+                continue;
+            if (format.IndexOf(s.Title.Trim(), StringComparison.Ordinal) < 0)
+                continue;
+
+            var fieldName = ExportSyncFolderFieldResolver.ResolveFieldName(s.IdField, idToName);
+            if (string.IsNullOrEmpty(fieldName))
+                continue;
+
+            list.Add(new ExportSyncFolderFieldInfo
+            {
+                Title = s.Title.Trim(),
+                FieldName = fieldName,
+                Weight = s.Weight
+            });
+
+            if (list.Count >= 4)
+                break;
+        }
+
+        return list;
     }
 
     public async Task DeleteSettingsAsync(int syncTypeId)

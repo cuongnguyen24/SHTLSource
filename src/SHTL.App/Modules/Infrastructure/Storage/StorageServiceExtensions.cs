@@ -1,6 +1,4 @@
 using SHTL.Modules.Core.Domain.Contracts;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace SHTL.Modules.Infrastructure.Storage;
 

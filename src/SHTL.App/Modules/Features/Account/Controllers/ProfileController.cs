@@ -1,6 +1,6 @@
-using SHTL.Modules.Core.Domain.Contracts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SHTL.Modules.Core.Domain.Contracts;
 using SHTL.Modules.Shared.Contracts.Dtos;
 
 namespace SHTL.Modules.Features.Account.Controllers;

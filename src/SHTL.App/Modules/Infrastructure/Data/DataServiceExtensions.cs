@@ -1,7 +1,5 @@
 using Dapper;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using SHTL.Modules.Core.Domain.Contracts;
 using SHTL.Modules.Infrastructure.Data.Repositories.Acc;
 using SHTL.Modules.Infrastructure.Data.Repositories.Cnf;

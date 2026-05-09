@@ -42,8 +42,14 @@
                 </div>
             </div>
             <div class="d-flex flex-wrap align-items-center" style="gap:8px;">
-                <a asp-area="sohoa" asp-controller="Scan" asp-action="CheckScan1List" class="btn-figma btn-figma-outline btn-sm">Kiểm tra scan 1</a>
-                <a asp-area="sohoa" asp-controller="Scan" asp-action="CheckScan2List" class="btn-figma btn-figma-outline btn-sm">Kiểm tra scan 2</a>
+                @if (ViewBag.ShowCheckFirstScan is not false)
+                {
+                    <a asp-area="sohoa" asp-controller="Scan" asp-action="CheckScan1List" class="btn-figma btn-figma-outline btn-sm">Kiểm tra scan 1</a>
+                }
+                @if (ViewBag.ShowCheckSecondScan is not false)
+                {
+                    <a asp-area="sohoa" asp-controller="Scan" asp-action="CheckScan2List" class="btn-figma btn-figma-outline btn-sm">Kiểm tra scan 2</a>
+                }
                 <a asp-area="sohoa" asp-controller="SyncUpload" asp-action="Index" class="btn-figma btn-figma-primary btn-sm"><i class="fas fa-cloud-upload-alt mr-1"></i>Đồng bộ</a>
             </div>
         </div>

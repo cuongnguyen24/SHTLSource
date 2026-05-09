@@ -12,18 +12,19 @@
     --shadow-strong: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
     --gradient-primary: linear-gradient(135deg, #1b4f8a 0%, #2563eb 100%);
     --gradient-accent: linear-gradient(90deg, #0d7a55, #1b4f8a);
+    --login-background-image: url('../asset/login-bg-custom.png');
 }
 
 .login-page {
     min-height: 100vh;
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-end;
     margin: 0;
-    padding: 20px;
+    padding: 20px clamp(24px, 8vw, 140px) 20px 20px;
     /* 35% dark overlay + optimized background */
     background: linear-gradient(rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.35)),
-        url('../asset/background-dn.jpg') no-repeat center center fixed;
+        var(--login-background-image) no-repeat center center fixed;
     background-size: cover;
     font-family: 'Inter', 'Source Sans Pro', -apple-system, system-ui, sans-serif;
     position: relative;
@@ -291,6 +292,11 @@
 
 /* Responsive adjustments */
 @media (max-width: 576px) {
+    .login-page {
+        justify-content: center;
+        padding: 20px;
+    }
+
     .login-box {
         width: 100%;
         padding: 0 15px;

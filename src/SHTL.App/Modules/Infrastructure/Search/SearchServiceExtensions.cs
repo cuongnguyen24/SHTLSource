@@ -1,6 +1,3 @@
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-
 namespace SHTL.Modules.Infrastructure.Search;
 
 public static class SearchServiceExtensions

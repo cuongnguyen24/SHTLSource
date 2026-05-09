@@ -2,7 +2,6 @@ using SHTL.Modules.Core.Domain.Contracts;
 using SHTL.Modules.Core.Domain.Entities.Acc;
 using SHTL.Modules.Infrastructure.Data.Repositories.Acc;
 using SHTL.Modules.Infrastructure.Identity;
-using Microsoft.Extensions.Logging;
 using SHTL.Modules.Shared.Contracts;
 using SHTL.Modules.Shared.Contracts.Dtos;
 

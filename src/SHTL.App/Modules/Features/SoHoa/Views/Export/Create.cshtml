@@ -1,0 +1,34 @@
+@model SHTL.Modules.Features.SoHoa.Models.CreateExportJobForm
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Tạo xuất dữ liệu";
+}
+@section Breadcrumb {
+    <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="Home" asp-action="Index">Tổng quan</a></li>
+    <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="Export" asp-action="Index">Danh sách xuất</a></li>
+    <li class="breadcrumb-item active">Tạo mới</li>
+}
+
+<div class="layout-expanded">
+    <div class="frame-figma mb-3">
+        <div class="frame-header">
+            <h6 class="mb-0 font-weight-bold" style="color:var(--primary);">Tạo xuất dữ liệu</h6>
+            <a asp-area="sohoa" asp-controller="Export" asp-action="Index" class="btn btn-sm btn-outline-secondary">Quay lại</a>
+        </div>
+    </div>
+    <div class="frame-figma p-4">
+        <form asp-area="sohoa" asp-controller="Export" asp-action="Create" method="post" id="exportJobForm"
+              data-sync-api="@Url.Action("SyncTypeFields", "Export", new { area = "sohoa" })">
+            @Html.AntiForgeryToken()
+            <partial name="_ExportJobFormFields" model="Model" />
+            <button type="submit" class="btn-figma btn-figma-primary">Xong</button>
+        </form>
+    </div>
+</div>
+
+<script type="application/json" id="exportJobFolderInitial">@Html.Raw(JsonSerializer.Serialize(Model.FolderFields ?? new List<string>()))</script>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/sohoa-export-job-form.js" asp-append-version="true"></script>
+}

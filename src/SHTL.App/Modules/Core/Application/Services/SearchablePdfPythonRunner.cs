@@ -1,8 +1,6 @@
-using System.Diagnostics;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SHTL.Modules.Core.Application.Options;
+using System.Diagnostics;
 
 namespace SHTL.Modules.Core.Application.Services;
 
