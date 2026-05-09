@@ -1,10 +1,10 @@
-using System.Diagnostics;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using SHTL.Modules.Features.Account.Logging;
 using SHTL.Modules.Features.Account.Models;
+using System.Diagnostics;
 
 namespace SHTL.Modules.Features.Account.Controllers;
 

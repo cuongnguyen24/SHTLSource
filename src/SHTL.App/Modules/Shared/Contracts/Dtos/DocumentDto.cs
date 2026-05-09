@@ -1,5 +1,4 @@
 using SHTL.Modules.Core.Domain.Enums;
-using SHTL.Modules.Shared.Contracts;
 
 namespace SHTL.Modules.Shared.Contracts.Dtos;
 

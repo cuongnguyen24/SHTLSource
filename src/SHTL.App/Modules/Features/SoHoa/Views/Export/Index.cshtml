@@ -1,0 +1,218 @@
+@model IReadOnlyList<ExportJobListRow>
+@using SHTL.Modules.Core.Domain.Enums
+@using SHTL.Modules.Features.SoHoa.Models
+@{
+    ViewData["Title"] = "Danh sách xuất dữ liệu";
+    var q = ViewBag.Search as string ?? "";
+    var from = ViewBag.From as string;
+    var to = ViewBag.To as string;
+    var exportTypeId = ViewBag.ExportTypeId as int?;
+    var exportTypes = ViewBag.ExportTypes as IEnumerable<SHTL.Modules.Core.Domain.Entities.Stg.ExportType> ?? Array.Empty<SHTL.Modules.Core.Domain.Entities.Stg.ExportType>();
+}
+@section Breadcrumb {
+    <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="Home" asp-action="Index">Tổng quan</a></li>
+    <li class="breadcrumb-item active">Danh sách xuất dữ liệu</li>
+}
+@section Styles {
+    <style>
+        .export-job-table thead th { background: #e8f4fc; color: #0d47a1; font-weight: 600; font-size: 0.85rem; white-space: nowrap; }
+        .export-job-table tbody td { vertical-align: middle; font-size: 0.875rem; }
+        .export-job-table .action-btn { padding: 4px 8px; margin: 0 2px; font-size: 12px; }
+        .export-job-table .action-btn i { margin-right: 0; }
+        .export-job-table .badge-status-error { cursor: help; text-decoration: underline dotted; }
+    </style>
+}
+
+<div class="layout-expanded">
+    <div class="frame-figma mb-3">
+        <div class="frame-header">
+            <div class="d-flex align-items-center">
+                <div class="mr-3 d-flex align-items-center justify-content-center" style="width:32px;height:32px;background:var(--primary-light);color:var(--primary);border-radius:6px;"><i class="fas fa-file-export"></i></div>
+                <h6 class="mb-0 font-weight-bold" style="color:var(--primary);">Danh sách xuất dữ liệu</h6>
+            </div>
+            <a asp-area="sohoa" asp-controller="Export" asp-action="Create" class="btn-figma btn-figma-primary btn-sm"><i class="fas fa-plus mr-1"></i>Tạo mới lượt xuất</a>
+        </div>
+    </div>
+    <div class="frame-figma frame-figma-combined">
+        <div class="frame-filter">
+            <form method="get" class="d-flex align-items-end flex-wrap" style="gap:10px;">
+                <div class="search-input-figma" style="min-width:200px;">
+                    <input type="text" name="q" value="@q" placeholder="Tìm kiếm nhanh" />
+                    <i class="fas fa-search search-icon"></i>
+                </div>
+                <div>
+                    <label class="small text-muted mb-0 d-block">Từ ngày</label>
+                    <input type="date" name="from" value="@from" class="form-control form-control-sm input-figma" />
+                </div>
+                <div>
+                    <label class="small text-muted mb-0 d-block">Đến ngày</label>
+                    <input type="date" name="to" value="@to" class="form-control form-control-sm input-figma" />
+                </div>
+                <div style="min-width:180px;">
+                    <label class="small text-muted mb-0 d-block">Loại xuất</label>
+                    <select name="exportTypeId" class="form-control form-control-sm input-figma">
+                        <option value="">— Tất cả —</option>
+                        @foreach (var et in exportTypes)
+                        {
+                            if (exportTypeId == et.Id)
+                            {
+                                <option value="@et.Id" selected="selected">@et.Name</option>
+                            }
+                            else
+                            {
+                                <option value="@et.Id">@et.Name</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <button type="submit" class="btn-figma btn-figma-primary"><i class="fas fa-search mr-1"></i>Tìm kiếm</button>
+            </form>
+        </div>
+        <div class="p-3">
+            @if (Model.Count == 0)
+            {
+                <div class="alert alert-light border mb-0">Chưa có lượt xuất nào.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm table-hover export-job-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>STT</th>
+                                <th>Tên</th>
+                                <th>Loại xuất</th>
+                                <th>Ngày xuất</th>
+                                <th>Người tạo</th>
+                                <th>Phòng ban</th>
+                                <th class="text-center">Xuất file vật lý</th>
+                                <th>Trạng thái</th>
+                                <th class="text-right">Tổng</th>
+                                <th class="text-right">Đã chạy</th>
+                                <th>Đường dẫn tải về</th>
+                                <th style="min-width:120px;">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{ var stt = 1; }
+                            @foreach (var item in Model)
+                            {
+                                var canMutate = item.Status != QueueStatus.Processing;
+                                <tr>
+                                    <td class="text-center">@stt</td>
+                                    <td><strong>@(string.IsNullOrWhiteSpace(item.Name) ? "—" : item.Name)</strong></td>
+                                    <td>@(item.ExportTypeName ?? "—")</td>
+                                    <td>@item.CreatedAt.ToLocalTime().ToString("dd-MM-yyyy HH:mm:ss")</td>
+                                    <td>@(item.RequestedByUserName ?? ("#" + item.RequestedBy))</td>
+                                    <td>@(item.DeptName ?? "—")</td>
+                                    <td class="text-center">
+                                        @if (item.IsExportFile)
+                                        { <i class="fas fa-check text-success" title="Có"></i> }
+                                        else
+                                        { <i class="fas fa-minus text-muted" title="Không"></i> }
+                                    </td>
+                                    <td>
+                                        @{
+                                            string statusTitle;
+                                            if (item.Status == QueueStatus.Error)
+                                            {
+                                                statusTitle = string.IsNullOrWhiteSpace(item.Message)
+                                                    ? "Không có chi tiết trong CSDL. Xem file log: AppData/export-errors trên máy chạy Service.Export."
+                                                    : item.Message!;
+                                            }
+                                            else if (!string.IsNullOrWhiteSpace(item.Message))
+                                                statusTitle = item.Message!;
+                                            else
+                                                statusTitle = ExportJobStatusUi.Label(item.Status);
+                                            statusTitle = statusTitle.Replace("\r", " ").Replace("\n", " ");
+                                            var errClass = item.Status == QueueStatus.Error ? " badge-status-error" : "";
+                                        }
+                                        <span class="badge @ExportJobStatusUi.BadgeClass(item.Status)@errClass" title="@statusTitle">@ExportJobStatusUi.Label(item.Status)</span>
+                                    </td>
+                                    <td class="text-right">@item.Total</td>
+                                    <td class="text-right">@item.Processed</td>
+                                    <td>
+                                        @if (!string.IsNullOrWhiteSpace(item.DownloadPath) && item.Status == QueueStatus.Done)
+                                        {
+                                            <a asp-area="sohoa" asp-controller="Export" asp-action="Download" asp-route-id="@item.Id" class="btn btn-sm btn-link p-0"><i class="fas fa-download mr-1"></i>Tải về</a>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">—</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (canMutate)
+                                        {
+                                            <button type="button" class="btn btn-sm btn-outline-info action-btn rerun-btn" data-id="@item.Id" title="Chạy lại"><i class="fas fa-sync-alt"></i></button>
+                                        }
+                                        else
+                                        {
+                                            <button type="button" class="btn btn-sm btn-outline-secondary action-btn" disabled title="Đang xử lý"><i class="fas fa-sync-alt"></i></button>
+                                        }
+                                        @if (canMutate)
+                                        {
+                                            <a asp-area="sohoa" asp-controller="Export" asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary action-btn" title="Chỉnh sửa"><i class="fas fa-edit"></i></a>
+                                        }
+                                        else
+                                        {
+                                            <button type="button" class="btn btn-sm btn-outline-secondary action-btn" disabled title="Đang xử lý"><i class="fas fa-edit"></i></button>
+                                        }
+                                        @if (canMutate)
+                                        {
+                                            <button type="button" class="btn btn-sm btn-outline-danger action-btn delete-btn" data-id="@item.Id" title="Xóa"><i class="fas fa-trash"></i></button>
+                                        }
+                                        else
+                                        {
+                                            <button type="button" class="btn btn-sm btn-outline-secondary action-btn" disabled title="Đang xử lý"><i class="fas fa-trash"></i></button>
+                                        }
+                                    </td>
+                                </tr>
+                                stt++;
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<form id="exportJobAntiForgery" class="d-none">@Html.AntiForgeryToken()</form>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            function token() {
+                var i = document.querySelector('#exportJobAntiForgery input[name="__RequestVerificationToken"]');
+                return i ? i.value : '';
+            }
+            function postAction(url, id, okMsg) {
+                var fd = new FormData();
+                fd.append('id', id);
+                fd.append('__RequestVerificationToken', token());
+                fetch(url, { method: 'POST', body: fd, credentials: 'same-origin' })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        if (data.success) { alert(data.message || okMsg); location.reload(); }
+                        else { alert(data.message || 'Thất bại'); }
+                    })
+                    .catch(function (e) { alert(e.message); });
+            }
+            document.querySelectorAll('.delete-btn').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var id = this.getAttribute('data-id');
+                    if (!confirm('Xóa lượt xuất này?')) return;
+                    postAction('@Url.Action("Delete", "Export", new { area = "sohoa" })', id, 'Đã xóa');
+                });
+            });
+            document.querySelectorAll('.rerun-btn').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var id = this.getAttribute('data-id');
+                    if (!confirm('Chạy lại lượt xuất này?')) return;
+                    postAction('@Url.Action("Rerun", "Export", new { area = "sohoa" })', id, 'Đã đưa vào hàng đợi');
+                });
+            });
+        });
+    </script>
+}

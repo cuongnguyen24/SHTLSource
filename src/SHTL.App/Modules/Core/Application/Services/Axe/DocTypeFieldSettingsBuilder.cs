@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Http;
 using SHTL.Modules.Shared.Contracts.Dtos;
 
 namespace SHTL.Modules.Core.Application.Services.Axe;
@@ -24,7 +23,7 @@ public static class DocTypeFieldSettingsBuilder
     {
         if (string.IsNullOrEmpty(inputType))
             return 1; // Default to "text"
-        
+
         return InputTypeMap.TryGetValue(inputType.ToLower(), out var id) ? id : 1;
     }
     public static List<StgDocFieldSettingDto> Build(

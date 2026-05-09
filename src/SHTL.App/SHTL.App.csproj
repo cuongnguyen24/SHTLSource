@@ -4,10 +4,15 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <RazorLangVersion>Latest</RazorLangVersion>
     <RootNamespace>SHTL</RootNamespace>
     <AssemblyName>SHTL.App</AssemblyName>
     <NoDefaultLaunchSettingsFile>false</NoDefaultLaunchSettingsFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SHTL.Library.Export\SHTL.Library.Export.csproj" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />

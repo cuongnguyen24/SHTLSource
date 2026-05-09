@@ -1,5 +1,5 @@
-using Nest;
 using Microsoft.Extensions.Options;
+using Nest;
 
 namespace SHTL.Modules.Infrastructure.Search;
 

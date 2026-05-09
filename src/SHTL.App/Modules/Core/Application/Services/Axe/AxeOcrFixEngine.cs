@@ -1,6 +1,5 @@
-using System.Globalization;
-using System.Text;
 using SHTL.Modules.Shared.Contracts.Dtos;
+using System.Globalization;
 
 namespace SHTL.Modules.Core.Application.Services.Axe;
 

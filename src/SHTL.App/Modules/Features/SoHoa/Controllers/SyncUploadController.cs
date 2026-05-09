@@ -1,10 +1,10 @@
-using System.Text.Json;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using SHTL.Modules.Core.Application.Services;
 using SHTL.Modules.Core.Domain.Enums;
 using SHTL.Modules.Infrastructure.Identity;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
 using SHTL.Modules.Shared.Contracts.Dtos;
+using System.Text.Json;
 
 namespace SHTL.Modules.Features.SoHoa.Controllers;
 

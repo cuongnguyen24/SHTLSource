@@ -1,5 +1,3 @@
-using System.Linq;
-
 namespace SHTL.Modules.Core.Application.Services.Axe;
 
 /// <summary>

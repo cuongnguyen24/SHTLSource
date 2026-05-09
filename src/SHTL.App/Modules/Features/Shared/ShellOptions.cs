@@ -29,7 +29,7 @@ public class ShellOptions
     /// </summary>
     public string? PublicPathBase { get; set; }
 
-    public string UploaderUrl { get; set; } = "/uploader";
+    public string UploaderUrl { get; set; } = "/sohoa/dong-bo-upload";
     public string AccountUrl { get; set; } = "/account";
 
     public string ProfilePath { get; set; } = "/Profile";

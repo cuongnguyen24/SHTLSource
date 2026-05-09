@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using SHTL.Modules.Core.Domain.Entities.Acc;
-using SHTL.Modules.Infrastructure.Persistence;
 
 namespace SHTL.Modules.Infrastructure.Data.Repositories.Acc;
 

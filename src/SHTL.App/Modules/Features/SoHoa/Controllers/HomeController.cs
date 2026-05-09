@@ -1,6 +1,6 @@
-using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using SHTL.Modules.Features.SoHoa.Models;
+using System.Diagnostics;
 
 namespace SHTL.Modules.Features.SoHoa.Controllers;
 

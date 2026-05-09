@@ -1,7 +1,6 @@
 using Dapper;
 using SHTL.Modules.Core.Domain.Entities.Stg;
 using SHTL.Modules.Core.Domain.Enums;
-using SHTL.Modules.Infrastructure.Persistence;
 
 namespace SHTL.Modules.Infrastructure.Data.Repositories.Stg;
 

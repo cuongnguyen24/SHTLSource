@@ -1,18 +1,20 @@
-using SHTL.Modules.Core.Application.Services;
-using SHTL.Modules.Core.Domain.Contracts;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SHTL.Modules.Features.Export.Services;
-using SHTL.Modules.Shared.Contracts.Dtos;
-using SHTL.Modules.Features.Shared;
+using SHTL.Modules.Core.Domain.Contracts;
+using SHTL.Modules.Core.Domain.Entities.Stg;
+using SHTL.Modules.Core.Domain.Enums;
 using SHTL.Modules.Features.Admin.Models;
+using SHTL.Modules.Features.Shared;
+using SHTL.Modules.Features.SoHoa.Services;
+using SHTL.Modules.Infrastructure.Identity;
 
-namespace SHTL.Modules.Features.Admin.Controllers;
+namespace SHTL.Modules.Features.SoHoa.Controllers;
 
-/// <summary>
-/// Controller quản lý loại xuất dữ liệu (ExportType)
-/// Port từ AXE: ExportTypeController
-/// </summary>
-public class ExportTypeController : BaseAdminController
+/// <summary>Quản lý loại xuất + upload Excel → JsonConfig (AXE: ExportType trong SoHoa).</summary>
+[Authorize]
+[AuthorizeModule(ModuleCode.ExportConfig)]
+[Route("sohoa/loai-xuat")]
+public class ExportTypeController : BaseController
 {
     private readonly IExportTypeRepository _exportTypeRepo;
     private readonly IStorageService _storage;
@@ -31,7 +33,20 @@ public class ExportTypeController : BaseAdminController
         _logger = logger;
     }
 
-    [HttpGet]
+    private void SetLoaiXuatHeader(string title, string icon, params BreadcrumbItem[] crumbs)
+    {
+        ViewData["Title"] = title;
+        ViewData["PageTitle"] = title;
+        ViewData["PageIcon"] = icon;
+        ViewData["Breadcrumbs"] = crumbs.Length > 0
+            ? crumbs.ToList()
+            : new List<BreadcrumbItem>
+            {
+                new() { Text = "Tổng quan", Url = Url.Action("Index", "Home", new { area = "sohoa" }) }
+            };
+    }
+
+    [HttpGet("")]
     public async Task<IActionResult> Index(string? search)
     {
         var exportTypes = string.IsNullOrEmpty(search)
@@ -39,54 +54,54 @@ public class ExportTypeController : BaseAdminController
             : await _exportTypeRepo.SearchAsync(search ?? "");
 
         ViewBag.Search = search;
-        SetPageHeader("Loại xuất dữ liệu", "file-export",
-            new BreadcrumbItem { Text = "Tổng quan", Url = Url.Action("Index", "Home") },
-            new BreadcrumbItem { Text = "Cấu hình" },
-            new BreadcrumbItem { Text = "Loại xuất dữ liệu" });
+        SetLoaiXuatHeader("Loại xuất dữ liệu", "file-export",
+            new BreadcrumbItem { Text = "Tổng quan", Url = Url.Action("Index", "Home", new { area = "sohoa" }) },
+            new BreadcrumbItem { Text = "Cấu hình loại xuất" });
         ViewData["SearchQuery"] = search;
         ViewData["SearchPlaceholder"] = "Tìm theo tên, mã...";
         ViewData["PrimaryButtonText"] = "Tạo mới";
-        ViewData["PrimaryButtonUrl"] = Url.Action("Create", "ExportType");
-        
+        ViewData["PrimaryButtonUrl"] = Url.Action("Create", "ExportType", new { area = "sohoa" });
+
         return View(exportTypes);
     }
 
-    [HttpGet]
+    [HttpGet("create")]
     public IActionResult Create()
     {
-        SetPageHeader("Tạo loại xuất", "plus-circle",
-            new BreadcrumbItem { Text = "Tổng quan", Url = Url.Action("Index", "Home") },
-            new BreadcrumbItem { Text = "Loại xuất dữ liệu", Url = Url.Action("Index", "ExportType") },
+        SetLoaiXuatHeader("Tạo loại xuất", "plus-circle",
+            new BreadcrumbItem { Text = "Tổng quan", Url = Url.Action("Index", "Home", new { area = "sohoa" }) },
+            new BreadcrumbItem { Text = "Loại xuất", Url = Url.Action("Index", "ExportType", new { area = "sohoa" }) },
             new BreadcrumbItem { Text = "Tạo mới" });
-        
+
         return View(new CreateExportTypeRequest());
     }
 
-    [HttpPost]
+    [HttpPost("create")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(CreateExportTypeRequest model, IFormFile? excelFile)
     {
+        void headerError()
+        {
+            SetLoaiXuatHeader("Tạo loại xuất", "plus-circle",
+                new BreadcrumbItem { Text = "Tổng quan", Url = Url.Action("Index", "Home", new { area = "sohoa" }) },
+                new BreadcrumbItem { Text = "Loại xuất", Url = Url.Action("Index", "ExportType", new { area = "sohoa" }) },
+                new BreadcrumbItem { Text = "Tạo mới" });
+        }
+
         if (!ModelState.IsValid)
         {
-            SetPageHeader("Tạo loại xuất", "plus-circle",
-                new BreadcrumbItem { Text = "Tổng quan", Url = Url.Action("Index", "Home") },
-                new BreadcrumbItem { Text = "Loại xuất dữ liệu", Url = Url.Action("Index", "ExportType") },
-                new BreadcrumbItem { Text = "Tạo mới" });
+            headerError();
             return View(model);
         }
 
-        // Kiểm tra Code đã tồn tại
         if (await _exportTypeRepo.IsCodeExistsAsync(model.Code))
         {
             SetError("Mã loại xuất đã tồn tại");
-            SetPageHeader("Tạo loại xuất", "plus-circle",
-                new BreadcrumbItem { Text = "Tổng quan", Url = Url.Action("Index", "Home") },
-                new BreadcrumbItem { Text = "Loại xuất dữ liệu", Url = Url.Action("Index", "ExportType") },
-                new BreadcrumbItem { Text = "Tạo mới" });
+            headerError();
             return View(model);
         }
 
-        var exportType = new SHTL.Modules.Core.Domain.Entities.Stg.ExportType
+        var exportType = new ExportType
         {
             Name = model.Name,
             Code = model.Code,
@@ -97,43 +112,37 @@ public class ExportTypeController : BaseAdminController
             SearchMeta = $"{model.Name} {model.Code} {model.Description}".ToLower()
         };
 
-        // Upload Excel file nếu có
         if (excelFile != null && excelFile.Length > 0)
         {
             var ext = Path.GetExtension(excelFile.FileName).ToLower();
             if (ext != ".xlsx" && ext != ".xls")
             {
                 SetError("Chỉ chấp nhận file Excel (.xlsx, .xls)");
-                SetPageHeader("Tạo loại xuất", "plus-circle",
-                    new BreadcrumbItem { Text = "Tổng quan", Url = Url.Action("Index", "Home") },
-                    new BreadcrumbItem { Text = "Loại xuất dữ liệu", Url = Url.Action("Index", "ExportType") },
-                    new BreadcrumbItem { Text = "Tạo mới" });
+                headerError();
                 return View(model);
             }
 
             try
             {
-                // Save file
                 var subPath = "export-configs";
                 var fileName = $"{model.Code}_{DateTime.UtcNow:yyyyMMddHHmmss}{ext}";
-                
-                using var stream = excelFile.OpenReadStream();
-                var filePath = await _storage.SaveFileAsync(stream, fileName, subPath);
-                
-                exportType.ExcelFilePath = filePath;
+
+                await using (var stream = excelFile.OpenReadStream())
+                {
+                    var filePath = await _storage.SaveFileAsync(stream, fileName, subPath);
+                    exportType.ExcelFilePath = filePath;
+                }
+
                 exportType.ExcelFileName = excelFile.FileName;
 
-                // Convert Excel to JSON
-                // Save to temp location first
                 var tempPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}{ext}");
-                using (var fileStream = System.IO.File.Create(tempPath))
+                await using (var fileStream = System.IO.File.Create(tempPath))
                 {
                     await excelFile.CopyToAsync(fileStream);
                 }
-                
+
                 exportType.JsonConfig = await _excelConverter.ConvertAsync(tempPath, model.Code);
-                
-                // Clean up temp file
+
                 if (System.IO.File.Exists(tempPath))
                     System.IO.File.Delete(tempPath);
             }
@@ -141,10 +150,7 @@ public class ExportTypeController : BaseAdminController
             {
                 _logger.LogError(ex, "Failed to process Excel file");
                 SetError($"Lỗi xử lý file Excel: {ex.Message}");
-                SetPageHeader("Tạo loại xuất", "plus-circle",
-                    new BreadcrumbItem { Text = "Tổng quan", Url = Url.Action("Index", "Home") },
-                    new BreadcrumbItem { Text = "Loại xuất dữ liệu", Url = Url.Action("Index", "ExportType") },
-                    new BreadcrumbItem { Text = "Tạo mới" });
+                headerError();
                 return View(model);
             }
         }
@@ -157,14 +163,11 @@ public class ExportTypeController : BaseAdminController
         }
 
         SetError("Tạo loại xuất dữ liệu thất bại");
-        SetPageHeader("Tạo loại xuất", "plus-circle",
-            new BreadcrumbItem { Text = "Tổng quan", Url = Url.Action("Index", "Home") },
-            new BreadcrumbItem { Text = "Loại xuất dữ liệu", Url = Url.Action("Index", "ExportType") },
-            new BreadcrumbItem { Text = "Tạo mới" });
+        headerError();
         return View(model);
     }
 
-    [HttpGet]
+    [HttpGet("edit")]
     public async Task<IActionResult> Edit(int id)
     {
         var exportType = await _exportTypeRepo.GetByIdAsync(id);
@@ -174,9 +177,9 @@ public class ExportTypeController : BaseAdminController
             return RedirectToAction(nameof(Index));
         }
 
-        SetPageHeader("Sửa loại xuất", "edit",
-            new BreadcrumbItem { Text = "Tổng quan", Url = Url.Action("Index", "Home") },
-            new BreadcrumbItem { Text = "Loại xuất dữ liệu", Url = Url.Action("Index", "ExportType") },
+        SetLoaiXuatHeader("Sửa loại xuất", "edit",
+            new BreadcrumbItem { Text = "Tổng quan", Url = Url.Action("Index", "Home", new { area = "sohoa" }) },
+            new BreadcrumbItem { Text = "Loại xuất", Url = Url.Action("Index", "ExportType", new { area = "sohoa" }) },
             new BreadcrumbItem { Text = "Sửa" });
 
         var model = new UpdateExportTypeRequest
@@ -193,16 +196,21 @@ public class ExportTypeController : BaseAdminController
         return View(model);
     }
 
-    [HttpPost]
+    [HttpPost("edit")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(UpdateExportTypeRequest model, IFormFile? excelFile)
     {
+        void headerEdit()
+        {
+            SetLoaiXuatHeader("Sửa loại xuất", "edit",
+                new BreadcrumbItem { Text = "Tổng quan", Url = Url.Action("Index", "Home", new { area = "sohoa" }) },
+                new BreadcrumbItem { Text = "Loại xuất", Url = Url.Action("Index", "ExportType", new { area = "sohoa" }) },
+                new BreadcrumbItem { Text = "Sửa" });
+        }
+
         if (!ModelState.IsValid)
         {
-            SetPageHeader("Sửa loại xuất", "edit",
-                new BreadcrumbItem { Text = "Tổng quan", Url = Url.Action("Index", "Home") },
-                new BreadcrumbItem { Text = "Loại xuất dữ liệu", Url = Url.Action("Index", "ExportType") },
-                new BreadcrumbItem { Text = "Sửa" });
+            headerEdit();
             return View(model);
         }
 
@@ -213,14 +221,10 @@ public class ExportTypeController : BaseAdminController
             return RedirectToAction(nameof(Index));
         }
 
-        // Kiểm tra Code đã tồn tại (trừ chính nó)
         if (await _exportTypeRepo.IsCodeExistsAsync(model.Code, model.Id))
         {
             SetError("Mã loại xuất đã tồn tại");
-            SetPageHeader("Sửa loại xuất", "edit",
-                new BreadcrumbItem { Text = "Tổng quan", Url = Url.Action("Index", "Home") },
-                new BreadcrumbItem { Text = "Loại xuất dữ liệu", Url = Url.Action("Index", "ExportType") },
-                new BreadcrumbItem { Text = "Sửa" });
+            headerEdit();
             return View(model);
         }
 
@@ -232,17 +236,13 @@ public class ExportTypeController : BaseAdminController
         exportType.UpdatedBy = CurrentUser.Id;
         exportType.SearchMeta = $"{model.Name} {model.Code} {model.Description}".ToLower();
 
-        // Upload Excel file mới nếu có
         if (excelFile != null && excelFile.Length > 0)
         {
             var ext = Path.GetExtension(excelFile.FileName).ToLower();
             if (ext != ".xlsx" && ext != ".xls")
             {
                 SetError("Chỉ chấp nhận file Excel (.xlsx, .xls)");
-                SetPageHeader("Sửa loại xuất", "edit",
-                    new BreadcrumbItem { Text = "Tổng quan", Url = Url.Action("Index", "Home") },
-                    new BreadcrumbItem { Text = "Loại xuất dữ liệu", Url = Url.Action("Index", "ExportType") },
-                    new BreadcrumbItem { Text = "Sửa" });
+                headerEdit();
                 return View(model);
             }
 
@@ -250,23 +250,23 @@ public class ExportTypeController : BaseAdminController
             {
                 var subPath = "export-configs";
                 var fileName = $"{model.Code}_{DateTime.UtcNow:yyyyMMddHHmmss}{ext}";
-                
-                using var stream = excelFile.OpenReadStream();
-                var filePath = await _storage.SaveFileAsync(stream, fileName, subPath);
-                
-                exportType.ExcelFilePath = filePath;
+
+                await using (var stream = excelFile.OpenReadStream())
+                {
+                    var filePath = await _storage.SaveFileAsync(stream, fileName, subPath);
+                    exportType.ExcelFilePath = filePath;
+                }
+
                 exportType.ExcelFileName = excelFile.FileName;
 
-                // Convert Excel to JSON
                 var tempPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}{ext}");
-                using (var fileStream = System.IO.File.Create(tempPath))
+                await using (var fileStream = System.IO.File.Create(tempPath))
                 {
                     await excelFile.CopyToAsync(fileStream);
                 }
-                
+
                 exportType.JsonConfig = await _excelConverter.ConvertAsync(tempPath, model.Code);
-                
-                // Clean up temp file
+
                 if (System.IO.File.Exists(tempPath))
                     System.IO.File.Delete(tempPath);
             }
@@ -274,10 +274,7 @@ public class ExportTypeController : BaseAdminController
             {
                 _logger.LogError(ex, "Failed to process Excel file");
                 SetError($"Lỗi xử lý file Excel: {ex.Message}");
-                SetPageHeader("Sửa loại xuất", "edit",
-                    new BreadcrumbItem { Text = "Tổng quan", Url = Url.Action("Index", "Home") },
-                    new BreadcrumbItem { Text = "Loại xuất dữ liệu", Url = Url.Action("Index", "ExportType") },
-                    new BreadcrumbItem { Text = "Sửa" });
+                headerEdit();
                 return View(model);
             }
         }
@@ -290,28 +287,21 @@ public class ExportTypeController : BaseAdminController
         }
 
         SetError("Cập nhật loại xuất dữ liệu thất bại");
-        SetPageHeader("Sửa loại xuất", "edit",
-            new BreadcrumbItem { Text = "Tổng quan", Url = Url.Action("Index", "Home") },
-            new BreadcrumbItem { Text = "Loại xuất dữ liệu", Url = Url.Action("Index", "ExportType") },
-            new BreadcrumbItem { Text = "Sửa" });
+        headerEdit();
         return View(model);
     }
 
-    [HttpPost]
+    [HttpPost("delete")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(int id)
     {
         var exportType = await _exportTypeRepo.GetByIdAsync(id);
         if (exportType == null)
-        {
             return Json(new { success = false, message = "Không tìm thấy loại xuất dữ liệu" });
-        }
 
         var result = await _exportTypeRepo.DeleteAsync(id);
         if (result > 0)
-        {
             return Json(new { success = true, message = "Xóa loại xuất dữ liệu thành công" });
-        }
 
         return Json(new { success = false, message = "Xóa loại xuất dữ liệu thất bại" });
     }

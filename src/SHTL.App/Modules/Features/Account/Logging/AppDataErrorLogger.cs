@@ -1,5 +1,4 @@
 using System.Text;
-using Microsoft.AspNetCore.Hosting;
 
 namespace SHTL.Modules.Features.Account.Logging;
 

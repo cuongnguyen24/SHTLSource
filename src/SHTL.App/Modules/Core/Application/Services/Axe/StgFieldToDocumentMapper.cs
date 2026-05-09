@@ -52,7 +52,7 @@ public static class StgFieldToDocumentMapper
     public static Dictionary<string, string?> ExtractValues(Document doc)
     {
         var values = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
-        
+
         // Core fields
         // dc_title always reflects physical file name (stg_documents.file_name)
         values["dc_title"] = string.IsNullOrWhiteSpace(doc.FileName) ? doc.Name : doc.FileName;
@@ -78,7 +78,7 @@ public static class StgFieldToDocumentMapper
         values["signer"] = doc.Signer;
         values["summary"] = doc.Summary;
         values["describe"] = doc.Describe;
-        
+
         // Extended fields (Field1-25)
         values["field1"] = doc.Field1;
         values["field2"] = doc.Field2;
@@ -143,10 +143,10 @@ public static class StgFieldToDocumentMapper
         values["ho_so_so"] = FirstNotEmpty(doc.RecordNo, doc.RecordTitle);
         values["hop_so"] = FirstNotEmpty(doc.BoxNo, doc.SymbolNo);
         values["dot_so"] = FirstNotEmpty(doc.LevelNo, doc.RecordNo);
-        
+
         return values;
     }
-    
+
     /// <summary>
     /// Apply giá trị từ form vào Document entity dựa trên field name
     /// </summary>
@@ -367,7 +367,7 @@ public static class StgFieldToDocumentMapper
                 break;
         }
     }
-    
+
     /// <summary>
     /// Parse form collection và apply vào Document
     /// </summary>
@@ -380,7 +380,7 @@ public static class StgFieldToDocumentMapper
             ApplyValue(doc, fieldName, value);
         }
     }
-    
+
     /// <summary>
     /// Get field name mapping cho các trường cố định (backward compatibility)
     /// </summary>

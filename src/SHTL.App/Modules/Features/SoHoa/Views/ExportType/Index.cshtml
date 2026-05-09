@@ -1,0 +1,161 @@
+@model IEnumerable<ExportType>
+@{
+    ViewData["Title"] = "Loại xuất dữ liệu";
+    var search = ViewBag.Search as string ?? "";
+}
+@section Breadcrumb {
+    <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="Home" asp-action="Index">Tổng quan</a></li>
+    <li class="breadcrumb-item active">Loại xuất dữ liệu</li>
+}
+@section Styles {
+    <style>
+        .exporttype-table tbody tr:hover {
+            background-color: #f9f9f9;
+        }
+        .exporttype-table .action-btn {
+            padding: 4px 8px;
+            margin: 0 2px;
+            font-size: 12px;
+        }
+        .exporttype-table .action-btn i {
+            margin-right: 0;
+        }
+    </style>
+}
+
+<div class="layout-expanded">
+    <div class="frame-figma mb-3">
+        <div class="frame-header">
+            <div class="d-flex align-items-center">
+                <div class="mr-3 d-flex align-items-center justify-content-center" style="width:32px;height:32px;background:var(--primary-light);color:var(--primary);border-radius:6px;"><i class="fas fa-file-export"></i></div>
+                <div>
+                    <h6 class="mb-0 font-weight-bold" style="color:var(--primary);">Loại xuất dữ liệu</h6>
+                    <div class="text-muted small">Cấu hình mẫu xuất &amp; chuyển Excel → JSON</div>
+                </div>
+            </div>
+            <a asp-area="sohoa" asp-controller="ExportType" asp-action="Create" class="btn-figma btn-figma-primary btn-sm"><i class="fas fa-plus mr-1"></i>Tạo mới</a>
+        </div>
+    </div>
+    <div class="frame-figma frame-figma-combined">
+        <div class="frame-filter">
+            <form method="get" class="d-flex align-items-center flex-wrap" style="gap:8px;">
+                <div class="search-input-figma" style="min-width:260px;">
+                    <input type="text" name="search" value="@search" placeholder="Tìm kiếm theo tên, mã" />
+                    <i class="fas fa-search search-icon"></i>
+                </div>
+                <button type="submit" class="btn-figma btn-figma-primary">Tìm kiếm</button>
+            </form>
+        </div>
+        <div class="p-3">
+            @if (!Model.Any())
+            {
+                <div class="alert alert-light border mb-0">Không có bản ghi.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover exporttype-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 48px;">STT</th>
+                                <th style="width: 40px;"><input type="checkbox" id="selectAll" title="Chọn tất cả" /></th>
+                                <th>Tên</th>
+                                <th style="width: 140px;">Mã</th>
+                                <th>Mô tả</th>
+                                <th style="width: 200px;">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{
+                                var stt = 1;
+                                foreach (var item in Model)
+                                {
+                                    <tr>
+                                        <td class="text-center">@stt</td>
+                                        <td class="text-center">
+                                            <input type="checkbox" class="row-checkbox" value="@item.Id" />
+                                        </td>
+                                        <td>
+                                            <a asp-area="sohoa" asp-controller="ExportType" asp-action="Edit" asp-route-id="@item.Id" class="font-weight-bold">@item.Name</a>
+                                        </td>
+                                        <td><code class="small">@item.Code</code></td>
+                                        <td>
+                                            <small class="text-muted">@(string.IsNullOrWhiteSpace(item.Description) ? "—" : item.Description)</small>
+                                        </td>
+                                        <td>
+                                            <a asp-area="sohoa" asp-controller="ExportType" asp-action="Edit" asp-route-id="@item.Id"
+                                               class="btn btn-sm btn-outline-primary action-btn" title="Chỉnh sửa">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            @if (!string.IsNullOrWhiteSpace(item.ExcelFilePath))
+                                            {
+                                                <a asp-area="sohoa" asp-controller="ExportType" asp-action="DownloadExcel" asp-route-id="@item.Id"
+                                                   class="btn btn-sm btn-outline-success action-btn" title="Tải file Excel">
+                                                    <i class="fas fa-download"></i>
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <button type="button" class="btn btn-sm btn-outline-secondary action-btn" disabled title="Chưa có file Excel">
+                                                    <i class="fas fa-download"></i>
+                                                </button>
+                                            }
+                                            <button type="button" class="btn btn-sm btn-outline-danger action-btn delete-btn" data-id="@item.Id" title="Xóa">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    stt++;
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<form id="exportTypeAntiForgery" class="d-none">@Html.AntiForgeryToken()</form>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var selectAll = document.getElementById('selectAll');
+            if (selectAll) {
+                selectAll.addEventListener('change', function () {
+                    document.querySelectorAll('.row-checkbox').forEach(function (cb) { cb.checked = selectAll.checked; });
+                });
+            }
+
+            document.querySelectorAll('.delete-btn').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var id = this.getAttribute('data-id');
+                    if (!confirm('Bạn có chắc muốn xóa loại xuất này?')) return;
+
+                    var tokenInput = document.querySelector('#exportTypeAntiForgery input[name="__RequestVerificationToken"]');
+                    var token = tokenInput ? tokenInput.value : '';
+                    var fd = new FormData();
+                    fd.append('id', id);
+                    fd.append('__RequestVerificationToken', token);
+
+                    fetch('@Url.Action("Delete", "ExportType", new { area = "sohoa" })', {
+                        method: 'POST',
+                        body: fd,
+                        credentials: 'same-origin'
+                    })
+                        .then(function (r) { return r.json(); })
+                        .then(function (data) {
+                            if (data.success) {
+                                alert(data.message || 'Đã xóa thành công');
+                                location.reload();
+                            } else {
+                                alert(data.message || 'Không xóa được');
+                            }
+                        })
+                        .catch(function (err) { alert('Lỗi: ' + err.message); });
+                });
+            });
+        });
+    </script>
+}

@@ -1,5 +1,4 @@
 using SHTL.Modules.Core.Domain.Entities.Stg;
-using SHTL.Modules.Infrastructure.Persistence;
 
 namespace SHTL.Modules.Infrastructure.Data.Repositories.Stg;
 

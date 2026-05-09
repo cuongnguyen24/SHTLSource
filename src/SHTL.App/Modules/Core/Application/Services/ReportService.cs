@@ -1,7 +1,5 @@
 using Dapper;
 using SHTL.Modules.Core.Domain.Enums;
-using SHTL.Modules.Infrastructure.Persistence;
-using Microsoft.Extensions.Logging;
 
 namespace SHTL.Modules.Core.Application.Services;
 

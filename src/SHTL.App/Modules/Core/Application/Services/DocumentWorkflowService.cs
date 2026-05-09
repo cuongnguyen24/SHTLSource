@@ -1,12 +1,11 @@
+using SHTL.Modules.Core.Application.Services.Axe;
 using SHTL.Modules.Core.Domain.Contracts;
 using SHTL.Modules.Core.Domain.Entities.Log;
 using SHTL.Modules.Core.Domain.Entities.Stg;
 using SHTL.Modules.Core.Domain.Enums;
-using SHTL.Modules.Infrastructure.Data.Repositories.Log;
 using SHTL.Modules.Infrastructure.Data.Repositories.Cnf;
+using SHTL.Modules.Infrastructure.Data.Repositories.Log;
 using SHTL.Modules.Infrastructure.Data.Repositories.Stg;
-using Microsoft.Extensions.Logging;
-using SHTL.Modules.Core.Application.Services.Axe;
 using SHTL.Modules.Shared.Contracts;
 using SHTL.Modules.Shared.Contracts.Dtos;
 using StgExportType = SHTL.Modules.Core.Domain.Entities.Stg.ExportType;
@@ -272,7 +271,7 @@ public class DocumentWorkflowService : IDocumentWorkflowService
         // Lookup ExportType by code
         var exportTypes = await _exportTypeRepo.GetAllAsync();
         var exportTypeEntity = exportTypes.FirstOrDefault(x => x.Code == exportType);
-        
+
         if (exportTypeEntity is null)
             return ApiResult.Fail($"Loại export '{exportType}' không tồn tại");
 

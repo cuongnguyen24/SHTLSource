@@ -1,8 +1,4 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Razor;
 using Microsoft.Extensions.Options;
@@ -11,11 +7,15 @@ using SHTL.Modules.Core.Application;
 using SHTL.Modules.Features.Account.Models;
 using SHTL.Modules.Features.Shared;
 using SHTL.Modules.Features.SoHoa.Filters;
+using SHTL.Modules.Features.SoHoa.Services;
 using SHTL.Modules.Infrastructure.Data;
 using SHTL.Modules.Infrastructure.Identity;
 using SHTL.Modules.Infrastructure.Search;
 using SHTL.Modules.Infrastructure.Storage;
 using SHTL.Routing;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 
 namespace SHTL;
 
@@ -127,8 +127,7 @@ public static class DependencyInjection
         services.AddInfrastructureSearch(configuration);
         services.AddCoreApplication(configuration);
 
-        // ExportWorker depends on scoped repositories; register a scope-safe adapter when enabling the queue:
-        // services.AddHostedService<ExportWorkerHostedService>();
+        services.AddScoped<ExcelToJsonConverter>();
 
         return services;
     }

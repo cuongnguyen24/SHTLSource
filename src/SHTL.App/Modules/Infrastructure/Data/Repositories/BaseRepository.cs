@@ -1,6 +1,5 @@
-using System.Data;
 using Dapper;
-using SHTL.Modules.Infrastructure.Persistence;
+using System.Data;
 
 namespace SHTL.Modules.Infrastructure.Data.Repositories;
 

@@ -2,7 +2,6 @@ using SHTL.Modules.Core.Domain.Entities.Stg;
 using SHTL.Modules.Infrastructure.Data.Repositories.Acc;
 using SHTL.Modules.Infrastructure.Data.Repositories.Cnf;
 using SHTL.Modules.Infrastructure.Data.Repositories.Stg;
-using SHTL.Modules.Core.Domain.Enums;
 using SHTL.Modules.Shared.Contracts.Dtos;
 using SHTL.Modules.Shared.Contracts.ViewModels;
 
@@ -41,7 +40,7 @@ public class DocumentFormViewModelBuilder : IDocumentFormViewModelBuilder
         var categories = await _docTypeRepo.GetCategoryTypesAsync();
         var patterns = await _docTypeRepo.GetPatternTypesAsync();
 
-        return BuildViewModel(docType, null, settings, allFields, groups, categories, patterns, 
+        return BuildViewModel(docType, null, settings, allFields, groups, categories, patterns,
             Enumerable.Empty<FormCell>(), new Dictionary<int, string>());
     }
 
@@ -253,7 +252,7 @@ public class DocumentFormViewModelBuilder : IDocumentFormViewModelBuilder
             .Where(x => x > 0)
             .Distinct()
             .ToList();
-        
+
         var names = new Dictionary<int, string>();
         foreach (var uid in userIds)
         {

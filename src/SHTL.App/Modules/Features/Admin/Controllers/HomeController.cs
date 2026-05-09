@@ -1,5 +1,5 @@
-using SHTL.Modules.Core.Application.Services;
 using Microsoft.AspNetCore.Mvc;
+using SHTL.Modules.Core.Application.Services;
 using SHTL.Modules.Features.Shared;
 
 namespace SHTL.Modules.Features.Admin.Controllers;

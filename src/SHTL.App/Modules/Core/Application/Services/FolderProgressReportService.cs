@@ -1,7 +1,6 @@
 using Dapper;
 using Microsoft.Extensions.Options;
 using SHTL.Modules.Core.Application.Options;
-using SHTL.Modules.Infrastructure.Persistence;
 using SHTL.Modules.Shared.Contracts.ViewModels;
 
 namespace SHTL.Modules.Core.Application.Services;

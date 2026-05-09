@@ -1,6 +1,6 @@
 @model UpdateExportTypeRequest
 @{ ViewData["Title"] = "Sửa loại xuất"; }
-@section Breadcrumb { <li class="breadcrumb-item"><a asp-action="Index">Loại xuất</a></li><li class="breadcrumb-item active">Sửa</li> }
+@section Breadcrumb { <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="ExportType" asp-action="Index">Loại xuất</a></li><li class="breadcrumb-item active">Sửa</li> }
 <div class="layout-expanded">
     <div class="frame-figma mb-3">
         <div class="frame-header">
@@ -16,7 +16,7 @@
     <div class="card-figma">
         <div class="card-content-figma">
             <div asp-validation-summary="All" class="text-danger mb-3"></div>
-            <form asp-action="Edit" method="post" enctype="multipart/form-data">
+            <form asp-area="sohoa" asp-controller="ExportType" asp-action="Edit" method="post" enctype="multipart/form-data">
                 @Html.AntiForgeryToken()
                 <input type="hidden" asp-for="Id" />
                 <div class="form-group-figma">
@@ -45,7 +45,7 @@
                 }
                 <div class="d-flex flex-wrap" style="gap:8px;">
                     <button type="submit" class="btn-figma btn-figma-primary">Cập nhật</button>
-                    <a asp-action="Index" class="btn-figma btn-figma-outline">Quay lại</a>
+                    <a asp-area="sohoa" asp-controller="ExportType" asp-action="Index" class="btn-figma btn-figma-outline">Quay lại</a>
                 </div>
             </form>
         </div>

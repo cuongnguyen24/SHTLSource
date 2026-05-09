@@ -1,11 +1,10 @@
-using System.IO;
-using System.Text.Json;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.Options;
 using SHTL;
 using SHTL.Modules.Features.Shared;
 using SHTL.Modules.Infrastructure.Identity;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
