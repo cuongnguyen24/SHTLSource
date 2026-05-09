@@ -32,6 +32,7 @@ public class DocumentFilterParams
 {
     public string? Search { get; set; }
     public WorkflowStep? Step { get; set; }
+    public CheckQueueListScope CheckQueueListScope { get; set; }
     public bool IncludeExtractedInCheck1 { get; set; }
     public DocumentStatus? Status { get; set; }
     public int? DocTypeId { get; set; }
@@ -242,8 +243,11 @@ public class DocumentRepository : BaseRepository, IDocumentRepository
     {
         var conn = await OpenConnectionAsync();
         var (where, param) = BuildWhere(filter);
+        var orderBy = filter.CheckQueueListScope != CheckQueueListScope.None
+            ? "updated DESC, id DESC"
+            : "id DESC";
         var sql = WithPaging(
-            $"SELECT * FROM dbo.stg_documents {where} ORDER BY id DESC",
+            $"SELECT * FROM dbo.stg_documents {where} ORDER BY {orderBy}",
             pageIndex, pageSize);
         return await QueryAsync<Document>(conn, sql, param);
     }
@@ -407,7 +411,29 @@ WHERE ocr_status = @Processing
             conditions.Add("(search_meta LIKE @Search OR name LIKE @Search)");
             p.Add("Search", $"%{f.Search}%");
         }
-        if (f.Step.HasValue)
+        if (f.CheckQueueListScope == CheckQueueListScope.Check1Board)
+        {
+            conditions.Add(@"(
+                current_step = @Q1_Chk1
+                OR (current_step = @Q1_Ext AND NULLIF(LTRIM(RTRIM(ISNULL(checked1return_reason, N''))), N'') IS NOT NULL)
+                OR (is_checked1 = 1 AND current_step = @Q1_Chk2)
+            )");
+            p.Add("Q1_Chk1", (byte)WorkflowStep.Check1);
+            p.Add("Q1_Ext", (byte)WorkflowStep.Extract);
+            p.Add("Q1_Chk2", (byte)WorkflowStep.Check2);
+        }
+        else if (f.CheckQueueListScope == CheckQueueListScope.Check2Board)
+        {
+            conditions.Add(@"(
+                current_step = @Q2_Chk2
+                OR (current_step = @Q2_Chk1 AND NULLIF(LTRIM(RTRIM(ISNULL(checked2return_reason, N''))), N'') IS NOT NULL)
+                OR (is_checked2 = 1 AND current_step = @Q2_ChkF)
+            )");
+            p.Add("Q2_Chk2", (byte)WorkflowStep.Check2);
+            p.Add("Q2_Chk1", (byte)WorkflowStep.Check1);
+            p.Add("Q2_ChkF", (byte)WorkflowStep.CheckFinal);
+        }
+        else if (f.Step.HasValue)
         {
             if (f.IncludeExtractedInCheck1 && f.Step.Value == WorkflowStep.Extract)
             {

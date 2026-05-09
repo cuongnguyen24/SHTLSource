@@ -1,42 +1,124 @@
-@model IEnumerable<DeptDto>
-@using System.Text.Json
+@model IReadOnlyList<DeptDto>
 @{
     ViewData["Title"] = "Phòng ban";
-    var rows = Model.Select(d => new Dictionary<string, object?> { ["id"] = d.Id, ["name"] = d.Name, ["code"] = d.Code ?? "", ["parent"] = d.ParentId?.ToString() ?? "" }).ToList();
-    var json = JsonSerializer.Serialize(rows);
+    var search = ViewBag.Search as string ?? "";
 }
 @section Breadcrumb {
     <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home">Tổng quan</a></li>
     <li class="breadcrumb-item active">Phòng ban</li>
 }
-@section Styles { <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable@14.1.0/dist/handsontable.full.min.css" /> }
+@section Styles {
+    <style>
+        .action-btn {
+            padding: 4px 8px;
+            margin: 0 2px;
+            font-size: 12px;
+        }
+        .action-btn i {
+            margin-right: 0;
+        }
+    </style>
+}
+
 <div class="layout-expanded">
     <div class="frame-figma mb-3">
         <div class="frame-header">
-            <h6 class="mb-0 font-weight-bold" style="color:var(--primary);">Phòng ban</h6>
-            <a asp-action="Create" class="btn-figma btn-figma-primary btn-sm"><i class="fas fa-plus mr-1"></i>Thêm</a>
+            <div class="d-flex align-items-center">
+                <div class="mr-3 d-flex align-items-center justify-content-center" style="width:32px;height:32px;background:var(--primary-light);color:var(--primary);border-radius:6px;"><i class="fas fa-sitemap"></i></div>
+                <div>
+                    <h6 class="mb-0 font-weight-bold" style="color:var(--primary);">Phòng ban</h6>
+                    <div class="text-muted small">Cơ cấu tổ chức — tìm theo tên, mã, mô tả</div>
+                </div>
+            </div>
+            <a asp-action="Create" class="btn-figma btn-figma-primary btn-sm"><i class="fas fa-plus mr-1"></i>Tạo mới</a>
         </div>
     </div>
-    <div class="frame-figma p-3">
-        <p id="ld" class="text-muted small"><i class="fas fa-spinner fa-spin mr-1"></i>Đang tải...</p>
-        <div id="em" class="alert alert-light border d-none">Không có dữ liệu.</div>
-        <div id="ht" class="d-none"></div>
+    <div class="frame-figma frame-figma-combined">
+        <div class="frame-filter">
+            <form method="get" class="d-flex align-items-center flex-wrap" style="gap:8px;">
+                <div class="search-input-figma" style="min-width:260px;">
+                    <input type="text" name="q" value="@search" placeholder="Tìm theo tên, mã, mô tả…" />
+                    <i class="fas fa-search search-icon"></i>
+                </div>
+                <button type="submit" class="btn-figma btn-figma-primary">Tìm kiếm</button>
+            </form>
+        </div>
+        <div class="p-3">
+            @Html.AntiForgeryToken()
+            @if (Model.Count == 0)
+            {
+                <div class="alert alert-light border mb-0">Chưa có phòng ban hoặc không khớp bộ lọc.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:48px;">STT</th>
+                                <th>Tên</th>
+                                <th style="width:120px;">Mã</th>
+                                <th>Thuộc</th>
+                                <th>Mô tả</th>
+                                <th style="width:120px;">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{
+                                var stt = 1;
+                                foreach (var item in Model)
+                                {
+                                    <tr>
+                                        <td class="text-center">@stt</td>
+                                        <td><strong>@item.Name</strong></td>
+                                        <td><small class="text-muted">@(string.IsNullOrWhiteSpace(item.Code) ? "—" : item.Code)</small></td>
+                                        <td><small class="text-muted">@(item.ParentName ?? "—")</small></td>
+                                        <td><small class="text-muted">@(item.Describe ?? "—")</small></td>
+                                        <td>
+                                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary action-btn" title="Sửa"><i class="fas fa-edit"></i></a>
+                                            <button type="button" class="btn btn-sm btn-outline-danger action-btn delete-dept-btn" data-id="@item.Id" title="Xóa"><i class="fas fa-trash"></i></button>
+                                        </td>
+                                    </tr>
+                                    stt++;
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
     </div>
 </div>
+
 @section Scripts {
-    <script src="https://cdn.jsdelivr.net/npm/handsontable@14.1.0/dist/handsontable.full.min.js"></script>
-    <script src="~/js/shtl-handsontable.js" asp-append-version="true"></script>
     <script>
         (function () {
-            var data = @Html.Raw(json);
-            var cols = [
-                { data: 'id', title: 'ID', type: 'numeric', readOnly: true },
-                { data: 'name', title: 'Tên', readOnly: true },
-                { data: 'code', title: 'Mã', readOnly: true },
-                { data: 'parent', title: 'Parent', readOnly: true }
-            ];
-            var hot = window.ShtlHot.initReadOnly('ht', document.getElementById('ld'), document.getElementById('em'), cols, data, { height: 360 });
-            if (hot) hot.addHook('afterOnCellDblClick', function (_e, c) { if (c && c.row >= 0) location.href = '@Url.Action("Edit", "Dept")?id=' + hot.getDataAtRowProp(c.row, 'id'); });
+            var deleteUrl = @Json.Serialize(Url.Action("Delete", "Dept"));
+            document.querySelectorAll('.delete-dept-btn').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var id = this.getAttribute('data-id');
+                    if (!id || !confirm('Xóa phòng ban này? (Không xóa được nếu còn đơn vị con.)')) return;
+                    var tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+                    var token = tokenInput ? tokenInput.value : '';
+                    var body = new URLSearchParams();
+                    body.set('__RequestVerificationToken', token);
+                    body.set('id', id);
+                    fetch(deleteUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'RequestVerificationToken': token },
+                        body: body.toString()
+                    })
+                        .then(function (r) { return r.json(); })
+                        .then(function (data) {
+                            if (data.success) {
+                                window.location.reload();
+                            } else {
+                                alert(data.message || 'Không xóa được.');
+                            }
+                        })
+                        .catch(function (err) { alert('Lỗi: ' + err.message); });
+                });
+            });
         })();
     </script>
 }

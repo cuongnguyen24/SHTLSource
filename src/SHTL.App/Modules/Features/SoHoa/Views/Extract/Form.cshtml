@@ -5,7 +5,9 @@
 @using SHTL.Modules.Shared.Contracts.ViewModels
 @{
     var doc = Model.Document!;
-    ViewData["Title"] = "Nhập liệu — " + doc.Name;
+    var extractReadOnlyAfterCheck1Pass = doc.IsChecked1 || doc.Checked1Result == StepResult.Pass;
+    ViewData["ExtractFormReadOnly"] = extractReadOnlyAfterCheck1Pass;
+    ViewData["Title"] = extractReadOnlyAfterCheck1Pass ? ("Xem nhập liệu — " + doc.Name) : ("Nhập liệu — " + doc.Name);
     var submitUrl = Url.Action("Submit", "Extract", new { area = "sohoa" })!;
     var previewUrl = Url.Content("~/scan/preview/" + doc.Id);
     var indexUrl = Url.Action("Index", "Extract", new { area = "sohoa" })!;
@@ -63,12 +65,16 @@
     var requireCheckFirstScan = (bool?)ViewBag.RequireCheckFirstScan ?? true;
     var requireCheckSecondScan = (bool?)ViewBag.RequireCheckSecondScan ?? true;
     var scanOkForExtract = (!requireCheckFirstScan || doc.IsCheckedScan1) && (!requireCheckSecondScan || doc.IsCheckedScan2);
-    // Đã nhập liệu nhưng chưa duyệt Check1 (hoặc bị trả về) — cho phép sửa/lưu lại không cần chặn scan.
-    var canReEditExtractBeforeCheck1 = doc.IsExtracted && !doc.IsChecked1;
-    var canSubmitExtract = scanOkForExtract || canReEditExtractBeforeCheck1;
-    var extractBlockedReason = canSubmitExtract
-        ? string.Empty
-        : $"Tài liệu chưa đủ điều kiện nhập liệu: {(requireCheckFirstScan && !doc.IsCheckedScan1 ? "Check scan 1" : string.Empty)}{(requireCheckFirstScan && !doc.IsCheckedScan1 && requireCheckSecondScan && !doc.IsCheckedScan2 ? ", " : string.Empty)}{(requireCheckSecondScan && !doc.IsCheckedScan2 ? "Check scan 2" : string.Empty)} chưa hoàn thành.";
+    // Đã nhập nhưng chưa đạt check 1 (hoặc bị trả về) mới được sửa/lưu lại.
+    var canReEditExtractBeforeCheck1 = doc.IsExtracted && !extractReadOnlyAfterCheck1Pass;
+    var canSubmitExtract = !extractReadOnlyAfterCheck1Pass && (scanOkForExtract || canReEditExtractBeforeCheck1);
+    string extractBlockedReason;
+    if (extractReadOnlyAfterCheck1Pass)
+        extractBlockedReason = "Đã đạt kiểm tra lần 1 — chỉ xem, không lưu nhập liệu.";
+    else if (!canSubmitExtract)
+        extractBlockedReason = $"Tài liệu chưa đủ điều kiện nhập liệu: {(requireCheckFirstScan && !doc.IsCheckedScan1 ? "Check scan 1" : string.Empty)}{(requireCheckFirstScan && !doc.IsCheckedScan1 && requireCheckSecondScan && !doc.IsCheckedScan2 ? ", " : string.Empty)}{(requireCheckSecondScan && !doc.IsCheckedScan2 ? "Check scan 2" : string.Empty)} chưa hoàn thành.";
+    else
+        extractBlockedReason = string.Empty;
 }
 @section Breadcrumb {
     <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="Extract" asp-action="Index">Nhập liệu</a></li>
@@ -141,17 +147,40 @@
                 <a href="@previewUrl" class="btn-figma btn-figma-secondary btn-sm" target="_blank" rel="noopener"><i class="fas fa-file-pdf mr-1"></i>Xem PDF</a>
                 <a href="@indexUrl" class="btn-figma btn-figma-secondary btn-sm">Danh sách</a>
                 <button type="button"
-                        class="btn-figma btn-figma-primary btn-sm"
+                        class="btn-figma btn-sm @(extractReadOnlyAfterCheck1Pass ? "btn-figma-secondary" : "btn-figma-primary")"
                         id="btnExtractSubmit"
                         data-can-submit="@(canSubmitExtract ? "true" : "false")"
                         data-block-reason="@extractBlockedReason"
                         title="@(canSubmitExtract ? "Lưu dữ liệu nhập liệu" : extractBlockedReason)"
                         @(canSubmitExtract ? null : "disabled")>
-                    <i class="fas fa-save mr-1"></i>Lưu &amp; hoàn thành nhập liệu
+                    @if (extractReadOnlyAfterCheck1Pass)
+                    {
+                        <i class="fas fa-lock mr-1"></i><text>Chỉ xem (đã đạt check 1)</text>
+                    }
+                    else
+                    {
+                        <i class="fas fa-save mr-1"></i><text>Lưu &amp; hoàn thành nhập liệu</text>
+                    }
                 </button>
             </div>
         </div>
     </div>
+
+    @if (extractReadOnlyAfterCheck1Pass)
+    {
+        <div class="alert alert-info border mb-3" role="alert">
+            <div class="font-weight-bold mb-1"><i class="fas fa-info-circle mr-1"></i>Chế độ chỉ xem</div>
+            <div class="mb-0 small">Kết quả kiểm tra lần 1 là <strong>Đạt</strong> — không thể chỉnh sửa hoặc lưu nhập liệu từ màn này.</div>
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(doc.Checked1ReturnReason))
+    {
+        <div class="alert alert-warning border mb-3" role="alert">
+            <div class="font-weight-bold mb-1"><i class="fas fa-exclamation-triangle mr-1"></i>Kiểm tra lần 1 đã từ chối — vui lòng cập nhật nhập liệu theo phản hồi</div>
+            <div class="mb-0 small">@doc.Checked1ReturnReason</div>
+        </div>
+    }
 
     <p id="extract-submit-hint" class="text-muted small d-none"><i class="fas fa-spinner fa-spin mr-1"></i>Đang gửi…</p>
 
@@ -263,7 +292,7 @@
                                                 <td>@c.Page</td>
                                                 <td class="small text-muted text-truncate" style="max-width:180px;" title="@showVal">@showVal</td>
                                                 <td style="min-width:200px;">
-                                                    <input type="text" class="form-control form-control-sm ext-cell" data-cell-id="@c.Id" value="@c.ExtractedValue" placeholder="@c.Value" />
+                                                    <input type="text" class="form-control form-control-sm ext-cell" data-cell-id="@c.Id" value="@c.ExtractedValue" placeholder="@c.Value" @(extractReadOnlyAfterCheck1Pass ? "readonly" : null) />
                                                 </td>
                                             </tr>
                                         }

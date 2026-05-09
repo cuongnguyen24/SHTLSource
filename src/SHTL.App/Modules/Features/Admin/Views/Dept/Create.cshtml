@@ -1,6 +1,13 @@
 @model CreateDeptRequest
-@{ ViewData["Title"] = "Tạo phòng ban"; }
-@section Breadcrumb { <li class="breadcrumb-item"><a asp-action="Index">Phòng ban</a></li><li class="breadcrumb-item active">Tạo</li> }
+@{
+    ViewData["Title"] = "Tạo phòng ban";
+    var parentOptions = ViewBag.ParentOptions as IReadOnlyList<DeptSelectOption> ?? Array.Empty<DeptSelectOption>();
+}
+@section Breadcrumb {
+    <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home">Tổng quan</a></li>
+    <li class="breadcrumb-item"><a asp-action="Index">Phòng ban</a></li>
+    <li class="breadcrumb-item active">Tạo mới</li>
+}
 <div class="layout-expanded">
     <div class="frame-figma mb-3">
         <div class="frame-header">
@@ -8,7 +15,7 @@
                 <div class="mr-3 d-flex align-items-center justify-content-center" style="width:36px;height:36px;background:var(--primary-light);color:var(--primary);border-radius:8px;"><i class="fas fa-sitemap"></i></div>
                 <div>
                     <h6 class="mb-0 font-weight-bold" style="color:var(--primary);">Tạo phòng ban</h6>
-                    <div class="text-muted small">Nhập mã, tên và phòng ban cha (nếu có).</div>
+                    <div class="text-muted small">Tên, mã, mô tả và phòng ban cha (nếu có).</div>
                 </div>
             </div>
         </div>
@@ -20,7 +27,8 @@
                 @Html.AntiForgeryToken()
                 <div class="form-group-figma">
                     <label asp-for="Name" class="label-figma"></label>
-                    <input asp-for="Name" class="form-control" />
+                    <input asp-for="Name" class="form-control" autocomplete="organization" />
+                    <span asp-validation-for="Name" class="text-danger small"></span>
                 </div>
                 <div class="form-group-figma">
                     <label asp-for="Code" class="label-figma"></label>
@@ -28,7 +36,17 @@
                 </div>
                 <div class="form-group-figma">
                     <label asp-for="ParentId" class="label-figma"></label>
-                    <input asp-for="ParentId" class="form-control" />
+                    <select asp-for="ParentId" class="form-control">
+                        <option value="">— Không có (cấp gốc) —</option>
+                        @foreach (var o in parentOptions)
+                        {
+                            <option value="@o.Id">@o.Label</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group-figma">
+                    <label asp-for="Describe" class="label-figma"></label>
+                    <textarea asp-for="Describe" class="form-control" rows="3"></textarea>
                 </div>
                 <div class="d-flex flex-wrap" style="gap:8px;">
                     <button type="submit" class="btn-figma btn-figma-primary">Lưu</button>
@@ -38,4 +56,6 @@
         </div>
     </div>
 </div>
-@section Scripts { <partial name="_ValidationScriptsPartial" /> }
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

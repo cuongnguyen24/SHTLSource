@@ -141,6 +141,9 @@ public class DocumentWorkflowService : IDocumentWorkflowService
         var doc = await _docRepo.GetByIdAsync(req.DocumentId);
         if (doc is null) return ApiResult.Fail("Tài liệu không tồn tại");
 
+        if (doc.IsChecked1 || doc.Checked1Result == StepResult.Pass)
+            return ApiResult.Fail("Tài liệu đã đạt kiểm tra lần 1 — không thể lưu nhập liệu. Chỉ được xem trên màn hình nhập liệu.");
+
         var (requireFirstScan, requireSecondScan) = await LoadScanCheckConfigAsync();
         // Đã extract nhưng chưa duyệt Check1: cho phép cập nhật lại metadata (đồng bộ với form Extract).
         var canUpdateExtractWithoutScanGate = doc.IsExtracted && !doc.IsChecked1;

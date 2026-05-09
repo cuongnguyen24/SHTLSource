@@ -1,0 +1,200 @@
+@model PaginatedResult<DocumentDto>
+@using SHTL.Modules.Core.Domain.Enums
+@using SHTL.Modules.Shared.Contracts
+@{
+    ViewData["Title"] = "Kiểm tra lần 1";
+    var req = ViewBag.Request as DocumentFilterRequest ?? new DocumentFilterRequest { Step = WorkflowStep.Check1 };
+    var docTypes = Model.Items
+        .Where(x => x.DocTypeId > 0)
+        .GroupBy(x => new { x.DocTypeId, Name = x.DocTypeName ?? $"Loại {x.DocTypeId}" })
+        .Select(g => g.Key)
+        .OrderBy(x => x.Name)
+        .ToList();
+}
+@section Breadcrumb {
+    <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="Home" asp-action="Index">Tổng quan</a></li>
+    <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="Extract" asp-action="Index">Nhập liệu</a></li>
+    <li class="breadcrumb-item active">Kiểm tra lần 1</li>
+}
+@section Styles {
+    <style>
+        .check-table tbody tr:hover { background-color: #f9f9f9; cursor: pointer; }
+        .check-table tbody tr.is-selected { background-color: #eef6ff; }
+        .status-pill {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            white-space: nowrap;
+        }
+        .status-pill-wait { background: #e7f1ff; color: #0d47a1; }
+        .status-pill-reject { background: #dc3545; color: #fff; }
+        .status-pill-done { background: #28a745; color: #fff; }
+        .status-pill-muted { background: #6c757d; color: #fff; }
+    </style>
+}
+
+<div class="layout-expanded">
+    <div class="frame-figma mb-3">
+        <div class="frame-header">
+            <div class="d-flex align-items-center">
+                <div class="mr-3 d-flex align-items-center justify-content-center" style="width:32px;height:32px;background:var(--primary-light);color:var(--primary);border-radius:6px;"><i class="fas fa-check-double"></i></div>
+                <div>
+                    <h6 class="mb-0 font-weight-bold" style="color:var(--primary);">Bảng kiểm tra lần 1</h6>
+                    <div class="text-muted small">Gồm <strong>chờ duyệt</strong>, bản <strong>từ chối</strong> (trả nhập liệu), và bản <strong>đã kiểm tra</strong> (đang ở bước 2). Mở đúng form theo trạng thái.</div>
+                </div>
+            </div>
+            <div class="d-flex flex-wrap" style="gap:8px;">
+                <button type="button" class="btn-figma btn-figma-primary btn-sm" id="btnOpenCheck1Form" disabled><i class="fas fa-clipboard-check mr-1"></i>Mở kiểm tra</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="frame-figma frame-figma-combined">
+        <div class="frame-filter">
+            <form method="get" class="d-flex align-items-end flex-wrap" style="gap:10px;" asp-area="sohoa" asp-controller="Check" asp-action="Check1">
+                <div class="search-input-figma" style="min-width:200px;">
+                    <label class="small text-muted mb-1 d-block">Từ khóa</label>
+                    <input type="text" name="q" value="@req.Search" placeholder="Tên, số…" />
+                    <i class="fas fa-search search-icon"></i>
+                </div>
+                <div>
+                    <label class="small text-muted mb-1 d-block">Từ ngày</label>
+                    <input type="date" name="from" class="form-control form-control-sm" value="@(req.StartDate?.ToString("yyyy-MM-dd"))" style="min-width:140px;" />
+                </div>
+                <div>
+                    <label class="small text-muted mb-1 d-block">Đến ngày</label>
+                    <input type="date" name="to" class="form-control form-control-sm" value="@(req.EndDate?.ToString("yyyy-MM-dd"))" style="min-width:140px;" />
+                </div>
+                <div>
+                    <label class="small text-muted mb-1 d-block">Loại tài liệu</label>
+                    <select name="docTypeId" class="form-control form-control-sm" style="min-width:170px;">
+                        <option value="">Tất cả</option>
+                        @foreach (var dt in docTypes)
+                        {
+                            <option value="@dt.DocTypeId" selected="@(req.DocTypeId == dt.DocTypeId)">@dt.Name</option>
+                        }
+                    </select>
+                </div>
+                <input type="hidden" name="size" value="@Model.PageSize" />
+                <button type="submit" class="btn-figma btn-figma-primary">Lọc</button>
+            </form>
+        </div>
+        <div class="p-3">
+            @if (!Model.Items.Any())
+            {
+                <div class="alert alert-light border mb-0">Không có tài liệu trong bảng kiểm tra lần 1.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover check-table mb-0" id="check1Table">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:40px;">STT</th>
+                                <th style="min-width:220px;">Đường dẫn</th>
+                                <th>Tên</th>
+                                <th>Loại tài liệu</th>
+                                <th style="width:160px;">Trạng thái</th>
+                                <th style="width:140px;">Ngày nhập liệu</th>
+                                <th style="width:120px;">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{
+                                var stt = ((Model.PageIndex - 1) * Model.PageSize) + 1;
+                                foreach (var d in Model.Items)
+                                {
+                                    string statusText, statusClass, openUrl, openTitle, openIcon;
+                                    if (d.CurrentStep == WorkflowStep.Extract && !string.IsNullOrWhiteSpace(d.Checked1ReturnReason))
+                                    {
+                                        statusText = "Từ chối";
+                                        statusClass = "status-pill status-pill-reject";
+                                        openUrl = Url.Action("Form", "Extract", new { area = "sohoa", id = d.Id })!;
+                                        openTitle = "Nhập liệu (sửa theo phản hồi)";
+                                        openIcon = "fa-edit";
+                                    }
+                                    else if (d.IsChecked1 && d.CurrentStep == WorkflowStep.Check2)
+                                    {
+                                        statusText = "Đã kiểm tra";
+                                        statusClass = "status-pill status-pill-done";
+                                        openUrl = Url.Action("Check2Form", "Check", new { area = "sohoa", id = d.Id })!;
+                                        openTitle = "Kiểm tra lần 2";
+                                        openIcon = "fa-arrow-right";
+                                    }
+                                    else if (d.CurrentStep == WorkflowStep.Check1)
+                                    {
+                                        statusText = d.IsExtracted ? "Chờ duyệt" : "Chưa nhập liệu";
+                                        statusClass = d.IsExtracted ? "status-pill status-pill-wait" : "status-pill status-pill-muted";
+                                        openUrl = Url.Action("Check1Form", "Check", new { area = "sohoa", id = d.Id })!;
+                                        openTitle = "Kiểm tra lần 1";
+                                        openIcon = "fa-clipboard-check";
+                                    }
+                                    else
+                                    {
+                                        statusText = d.CurrentStep.ToString();
+                                        statusClass = "status-pill status-pill-wait";
+                                        openUrl = Url.Action("Check1Form", "Check", new { area = "sohoa", id = d.Id })!;
+                                        openTitle = "Mở";
+                                        openIcon = "fa-folder-open";
+                                    }
+                                    <tr data-id="@d.Id" data-open-url="@openUrl">
+                                        <td class="text-center">@stt</td>
+                                        <td><small>@(string.IsNullOrWhiteSpace(d.FilePath) ? "—" : d.FilePath)</small></td>
+                                        <td>
+                                            <div><strong>@d.Name</strong></div>
+                                            <small class="text-muted">@((d.FileName ?? "—"))</small>
+                                        </td>
+                                        <td><small>@(d.DocTypeName ?? "—")</small></td>
+                                        <td><span class="@statusClass">@statusText</span></td>
+                                        <td><small>@(d.ExtractedAt?.ToString("dd/MM/yyyy HH:mm") ?? "—")</small></td>
+                                        <td>
+                                            <a href="@openUrl" class="btn btn-sm btn-outline-primary" title="@openTitle">
+                                                <i class="fas @openIcon"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    stt++;
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <partial name="_Pager" model="Model" />
+                <p class="text-muted small mt-2 mb-0">Chọn dòng rồi bấm <strong>Mở kiểm tra</strong> hoặc double-click — hệ thống mở đúng màn (nhập liệu / check 1 / check 2) theo trạng thái.</p>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            var selId = null;
+            var selOpenUrl = null;
+            var table = document.getElementById('check1Table');
+            function syncBtn() {
+                var b = document.getElementById('btnOpenCheck1Form');
+                if (b) b.disabled = !(selOpenUrl);
+            }
+            if (table) {
+                table.querySelectorAll('tbody tr[data-id]').forEach(function (row) {
+                    row.addEventListener('click', function () {
+                        table.querySelectorAll('tbody tr.is-selected').forEach(function (s) { s.classList.remove('is-selected'); });
+                        row.classList.add('is-selected');
+                        var id = parseInt(row.getAttribute('data-id'), 10);
+                        selId = id > 0 ? id : null;
+                        selOpenUrl = row.getAttribute('data-open-url');
+                        syncBtn();
+                    });
+                    row.addEventListener('dblclick', function () {
+                        var u = row.getAttribute('data-open-url');
+                        if (u) window.location.href = u;
+                    });
+                });
+            }
+            var ob = document.getElementById('btnOpenCheck1Form');
+            if (ob) ob.onclick = function () { if (selOpenUrl) window.location.href = selOpenUrl; };
+        })();
+    </script>
+}

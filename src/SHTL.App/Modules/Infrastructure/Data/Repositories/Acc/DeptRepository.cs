@@ -32,10 +32,11 @@ public class DeptRepository : BaseRepository, IDeptRepository
     public async Task<long> InsertAsync(Dept dept)
     {
         var conn = await OpenConnectionAsync();
+        // updated_by là NOT NULL trong migration — bản ghi mới: chưa cập nhật, dùng 0 (khớp default entity).
         return await ExecuteScalarAsync<long>(conn, @"
-            INSERT INTO dbo.acc_depts (name, code, [describe], parent, parents, weight, created, created_by)
+            INSERT INTO dbo.acc_depts (name, code, [describe], parent, parent_id, parents, weight, created, created_by, updated, updated_by)
             OUTPUT INSERTED.id
-            VALUES (@Name, @Code, @Describe, @Parent, @Parents, @Weight, @Created, @CreatedBy)", dept);
+            VALUES (@Name, @Code, @Describe, @Parent, @ParentId, @Parents, @Weight, @Created, @CreatedBy, @Updated, @UpdatedBy)", dept);
     }
 
     public async Task<int> UpdateAsync(Dept dept)
@@ -43,7 +44,7 @@ public class DeptRepository : BaseRepository, IDeptRepository
         var conn = await OpenConnectionAsync();
         return await ExecuteAsync(conn, @"
             UPDATE dbo.acc_depts SET name = @Name, code = @Code, [describe] = @Describe,
-                parent = @Parent, parents = @Parents, weight = @Weight,
+                parent = @Parent, parent_id = @ParentId, parents = @Parents, weight = @Weight,
                 updated = @Updated, updated_by = @UpdatedBy
             WHERE id = @Id", dept);
     }

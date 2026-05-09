@@ -129,11 +129,19 @@
             <div class="d-flex flex-wrap" style="gap:8px;">
                 <a href="@previewUrl" class="btn-figma btn-figma-secondary btn-sm" target="_blank" rel="noopener"><i class="fas fa-file-pdf mr-1"></i>Xem PDF</a>
                 <a href="@indexUrl" class="btn-figma btn-figma-secondary btn-sm">Danh sách</a>
-                <button type="button" class="btn-figma btn-figma-warning btn-sm" id="btnCheck1Return"><i class="fas fa-undo mr-1"></i>Trả về nhập liệu</button>
-                <button type="button" class="btn-figma btn-figma-primary btn-sm" id="btnCheck1Pass"><i class="fas fa-check mr-1"></i>Duyệt check 1</button>
+                <button type="button" class="btn-figma btn-figma-warning btn-sm" id="btnCheck1Return"><i class="fas fa-times mr-1"></i>Từ chối</button>
+                <button type="button" class="btn-figma btn-figma-primary btn-sm" id="btnCheck1Pass"><i class="fas fa-check mr-1"></i>Đồng ý</button>
             </div>
         </div>
     </div>
+
+    @if (!string.IsNullOrWhiteSpace(doc.Checked2ReturnReason))
+    {
+        <div class="alert alert-info border mb-3" role="alert">
+            <div class="font-weight-bold mb-1"><i class="fas fa-info-circle mr-1"></i>Kiểm tra lần 2 từ chối — cần xử lý lại trước khi duyệt</div>
+            <div class="mb-0 small">@doc.Checked2ReturnReason</div>
+        </div>
+    }
 
     <p id="check1-submit-hint" class="text-muted small d-none"><i class="fas fa-spinner fa-spin mr-1"></i>Đang gửi…</p>
 
@@ -178,8 +186,8 @@
                                 <textarea id="check1-note" class="form-control" rows="2" placeholder="Ghi chú chung cho lần kiểm tra này"></textarea>
                             </div>
                             <div class="form-group mb-0">
-                                <label class="small text-muted mb-1 d-block">Lý do trả lại (khi trả về nhập liệu)</label>
-                                <textarea id="check1-return-reason" class="form-control" rows="2" placeholder="Nhập lý do trả về"></textarea>
+                                <label class="small text-muted mb-1 d-block">Lý do từ chối (bắt buộc khi từ chối — hiển thị cho nhập liệu)</label>
+                                <textarea id="check1-return-reason" class="form-control" rows="2" placeholder="Nhập lý do để người nhập liệu biết cần sửa gì"></textarea>
                             </div>
                         </div>
                     </div>
@@ -381,7 +389,7 @@
                 });
                 var returnReason = (document.getElementById('check1-return-reason').value || '').trim();
                 if (resultCode === 3 && !returnReason) {
-                    alert('Vui lòng nhập lý do trả lại.');
+                    alert('Vui lòng nhập lý do từ chối.');
                     return;
                 }
                 var body = {

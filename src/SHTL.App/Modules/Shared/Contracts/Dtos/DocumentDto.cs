@@ -118,6 +118,8 @@ public class DocumentUpdateRequest : DocumentCreateRequest
 public class DocumentFilterRequest : PageRequest
 {
     public WorkflowStep? Step { get; set; }
+    /// <summary>Khi khác <see cref="CheckQueueListScope.None"/>, bỏ lọc <c>current_step = Step</c> tĩnh và dùng điều kiện bảng kiểm tra.</summary>
+    public CheckQueueListScope CheckQueueListScope { get; set; }
     public bool IncludeExtractedInCheck1 { get; set; }
     public int? DocTypeId { get; set; }
     public int? CreatedBy { get; set; }

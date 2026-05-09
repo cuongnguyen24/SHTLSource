@@ -34,6 +34,7 @@ public class DocumentService : IDocumentService
         {
             Search = req.Search,
             Step = req.Step,
+            CheckQueueListScope = req.CheckQueueListScope,
             IncludeExtractedInCheck1 = req.IncludeExtractedInCheck1,
             DocTypeId = req.DocTypeId,
             CreatedBy = req.CreatedBy,
