@@ -7,6 +7,9 @@ public sealed class ExportJobContext
     public int ExportTypeId { get; init; }
     public string? ExportInputJson { get; init; }
     public int FieldFolderExport { get; init; }
+
+    /// <summary>Có sao chép file gốc (PDF/ảnh…) vào gói tải về (thường nén ZIP).</summary>
+    public bool IsExportFile { get; init; }
 }
 
 /// <summary>Snapshot loại xuất từ DB.</summary>

@@ -11,6 +11,7 @@ internal sealed class ExportJobRow
     public int ExportTypeId { get; set; }
     public string? ExportInputJson { get; set; }
     public int FieldFolderExport { get; set; }
+    public bool IsExportFile { get; set; }
 }
 
 internal sealed class ExportTypeRow
@@ -34,7 +35,7 @@ internal sealed class ExportQueueRepository
     {
         const string sql = """
             SELECT id, export_type_id AS ExportTypeId, export_input_json AS ExportInputJson,
-                   field_folder_export AS FieldFolderExport
+                   field_folder_export AS FieldFolderExport, is_export_file AS IsExportFile
             FROM dbo.stg_export_jobs
             WHERE status = 0
             ORDER BY id ASC
@@ -97,7 +98,8 @@ internal sealed class ExportQueueRepository
         Id = r.Id,
         ExportTypeId = r.ExportTypeId,
         ExportInputJson = r.ExportInputJson,
-        FieldFolderExport = r.FieldFolderExport
+        FieldFolderExport = r.FieldFolderExport,
+        IsExportFile = r.IsExportFile
     };
 
     public static ExportTypeContext ToContext(ExportTypeRow r) => new()

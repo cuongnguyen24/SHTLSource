@@ -381,7 +381,10 @@ public class ExportController : BaseController
         }
 
         var name = Path.GetFileName(path);
-        return PhysicalFile(path, "application/octet-stream", name);
+        var mime = path.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)
+            ? "application/zip"
+            : "application/octet-stream";
+        return PhysicalFile(path, mime, name);
     }
 
     [HttpPost]

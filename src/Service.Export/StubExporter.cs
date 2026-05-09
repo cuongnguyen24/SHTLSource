@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.IO.Compression;
 using ClosedXML.Excel;
 using Dapper;
 using Microsoft.Extensions.Configuration;
@@ -80,11 +81,34 @@ internal sealed class StubExporter : BaseExporterDemo
             var filePath = Path.Combine(TargetPath, fileName);
             SaveToExcel(filePath, tables);
 
+            var downloadPath = filePath;
+            if (Queue.IsExportFile)
+            {
+                var copied = CopyPhysicalFilesFromDocuments(docs, TargetPath, SourcePath);
+                _logger.LogInformation(
+                    "StubExporter: IsExportFile — đã copy {Copied}/{Total} file giữ cấu trúc thư mục storage vào {Dir}",
+                    copied,
+                    docs.Count,
+                    TargetPath);
+
+                var zipName = $"{ExportType.Code}_{Queue.Id}.zip";
+                var zipFullPath = Path.Combine(SourcePath, "EXPORT", zipName);
+                Directory.CreateDirectory(Path.GetDirectoryName(zipFullPath)!);
+                if (File.Exists(zipFullPath))
+                    File.Delete(zipFullPath);
+
+                ZipFile.CreateFromDirectory(TargetPath, zipFullPath, CompressionLevel.Optimal, includeBaseDirectory: false);
+                downloadPath = zipFullPath;
+                _logger.LogInformation("StubExporter: đã tạo ZIP tải về {Zip}", zipFullPath);
+            }
+
             return new ExportResult
             {
                 Success = true,
-                Message = $"Export thành công {tables[0].Rows.Count} dòng",
-                DownloadPath = filePath,
+                Message = Queue.IsExportFile
+                    ? $"Export thành công {tables[0].Rows.Count} dòng (kèm file vật lý trong ZIP)"
+                    : $"Export thành công {tables[0].Rows.Count} dòng",
+                DownloadPath = downloadPath,
                 Total = docs.Count,
                 Processed = tables[0].Rows.Count,
                 SuccessCount = tables[0].Rows.Count,
@@ -159,6 +183,109 @@ internal sealed class StubExporter : BaseExporterDemo
         }
 
         return rows;
+    }
+
+    /// <summary>
+    /// Sao chép file gốc vào <paramref name="targetRoot"/> giữ đúng cấu trúc thư mục con so với <paramref name="sourceRoot"/> (storage),
+    /// ví dụ <c>CSDL_SOHOA_KBNN\Đợt 3\0001\0003\0000001.pdf</c>.
+    /// </summary>
+    private int CopyPhysicalFilesFromDocuments(IReadOnlyList<object> docs, string targetRoot, string sourceRoot)
+    {
+        var rootFull = Path.GetFullPath(sourceRoot);
+        var copiedDests = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var n = 0;
+        foreach (var doc in docs)
+        {
+            var rel = GetFieldValue(doc, "file_path")
+                      ?? GetFieldValue(doc, "FilePath")
+                      ?? GetFieldValue(doc, "path_original")
+                      ?? GetFieldValue(doc, "PathOriginal");
+            var abs = ResolveUnderSourceRoot(sourceRoot, rel);
+            if (abs == null || !File.Exists(abs))
+                continue;
+
+            var absFull = Path.GetFullPath(abs);
+            var relFromRoot = Path.GetRelativePath(rootFull, absFull);
+            if (relFromRoot.StartsWith("..", StringComparison.Ordinal) || string.IsNullOrEmpty(relFromRoot))
+                continue;
+
+            var safeRel = SanitizeRelativePath(relFromRoot);
+            var dest = Path.GetFullPath(Path.Combine(targetRoot, safeRel));
+            var targetRootFull = Path.GetFullPath(targetRoot);
+            if (!dest.StartsWith(targetRootFull, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            if (copiedDests.Contains(dest))
+                continue;
+
+            try
+            {
+                var parent = Path.GetDirectoryName(dest);
+                if (!string.IsNullOrEmpty(parent))
+                    Directory.CreateDirectory(parent);
+                File.Copy(absFull, dest, overwrite: false);
+                copiedDests.Add(dest);
+                n++;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "StubExporter: không copy {Src} -> {Dest}", abs, dest);
+            }
+        }
+
+        return n;
+    }
+
+    private static string SanitizeRelativePath(string relativePath)
+    {
+        var parts = relativePath.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0)
+            return "file";
+
+        var segments = new List<string>(parts.Length);
+        foreach (var p in parts)
+        {
+            if (p == "." || p == "..")
+                continue;
+            var s = SanitizeFileName(p);
+            if (!string.IsNullOrWhiteSpace(s))
+                segments.Add(s);
+        }
+
+        return segments.Count == 0 ? "file" : Path.Combine(segments.ToArray());
+    }
+
+    private static string? ResolveUnderSourceRoot(string sourceRoot, string? relativeOrAbsolute)
+    {
+        if (string.IsNullOrWhiteSpace(relativeOrAbsolute))
+            return null;
+
+        var t = relativeOrAbsolute.Trim().Replace('\\', '/');
+        if (t.Contains("..", StringComparison.Ordinal))
+            return null;
+
+        var root = Path.GetFullPath(sourceRoot);
+        string full;
+        if (Path.IsPathRooted(t))
+        {
+            full = Path.GetFullPath(t);
+        }
+        else
+        {
+            full = Path.GetFullPath(Path.Combine(sourceRoot, t.TrimStart('/')));
+        }
+
+        if (!full.StartsWith(root, StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        return full;
+    }
+
+    private static string SanitizeFileName(string name)
+    {
+        foreach (var c in Path.GetInvalidFileNameChars())
+            name = name.Replace(c, '_');
+        return string.IsNullOrWhiteSpace(name) ? "file" : name;
     }
 
     private static void SaveToExcel(string path, IEnumerable<System.Data.DataTable> tables)
