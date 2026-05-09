@@ -30,3 +30,11 @@ public sealed class ExportJobListRow
     public string? RequestedByUserName { get; set; }
     public string? DeptName { get; set; }
 }
+
+/// <summary>Một cấp thư mục export theo cấu hình loại đồng bộ (AXE: Field_Title_IOS — Field = stg_doc_fields.name).</summary>
+public sealed class ExportSyncFolderFieldInfo
+{
+    public string Title { get; init; } = string.Empty;
+    public string FieldName { get; init; } = string.Empty;
+    public int Weight { get; init; }
+}

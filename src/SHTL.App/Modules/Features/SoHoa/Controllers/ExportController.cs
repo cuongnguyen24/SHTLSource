@@ -70,15 +70,23 @@ public class ExportController : BaseController
         return JsonSerializer.Serialize(d, ExportJson.SerializeOptions);
     }
 
-    private static string? BuildExportInputJson(CreateExportJobForm form)
+    /// <summary>
+    /// AXE: <c>FieldFolderN_Field</c> = tên cột trên bản ghi (Field1…), <c>fieldFoldersN</c> = giá trị lọc tùy chọn.
+    /// </summary>
+    private static string? BuildExportInputJson(
+        CreateExportJobForm form,
+        IReadOnlyList<ExportSyncFolderFieldInfo> syncFolderFields)
     {
         var d = new Dictionary<string, object?>();
+        for (var i = 0; i < syncFolderFields.Count && i < 10; i++)
+            d[$"FieldFolder{i + 1}_Field"] = syncFolderFields[i].FieldName;
+
         for (var i = 0; i < form.FolderFields.Count && i < 10; i++)
         {
             var v = form.FolderFields[i]?.Trim();
             if (string.IsNullOrEmpty(v))
                 continue;
-            d[$"FieldFolder{i + 1}_Field"] = v;
+            d[$"fieldFolders{i + 1}"] = new[] { v };
         }
 
         if (form.DocTypeId is > 0)
@@ -100,15 +108,57 @@ public class ExportController : BaseController
         return JsonSerializer.Serialize(d, ExportJson.SerializeOptions);
     }
 
-    private static int CountFolderLevels(CreateExportJobForm form)
+    private static int CountFieldFolderExportLevel(CreateExportJobForm form, int syncFolderLevelCount)
     {
-        var n = 0;
+        var filterFilled = 0;
         for (var i = 0; i < form.FolderFields.Count && i < 10; i++)
         {
             if (!string.IsNullOrWhiteSpace(form.FolderFields[i]))
-                n++;
+                filterFilled++;
         }
-        return n;
+
+        if (syncFolderLevelCount > 0)
+            return Math.Max(syncFolderLevelCount, filterFilled);
+        return filterFilled;
+    }
+
+    private static string? ExtractFirstFieldFolderFilterValue(JsonElement el)
+    {
+        if (el.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var x in el.EnumerateArray())
+            {
+                var s = x.ValueKind == JsonValueKind.String ? x.GetString() : x.ToString();
+                if (!string.IsNullOrWhiteSpace(s))
+                    return s.Trim();
+            }
+
+            return null;
+        }
+
+        if (el.ValueKind == JsonValueKind.String)
+            return el.GetString()?.Trim();
+        return el.ToString();
+    }
+
+    private static List<string> ParseFieldFolderFiltersFromJson(JsonElement root)
+    {
+        var list = new List<string>();
+        for (var i = 1; i <= 10; i++)
+        {
+            if (!root.TryGetProperty($"fieldFolders{i}", out var el))
+            {
+                list.Add("");
+                continue;
+            }
+
+            list.Add(ExtractFirstFieldFolderFilterValue(el) ?? "");
+        }
+
+        while (list.Count > 0 && string.IsNullOrWhiteSpace(list[^1]))
+            list.RemoveAt(list.Count - 1);
+
+        return list;
     }
 
     private static void MapJobToEditForm(ExportJob job, EditExportJobForm form)
@@ -146,15 +196,7 @@ public class ExportController : BaseController
             {
                 using var doc = JsonDocument.Parse(job.ExportInputJson);
                 var root = doc.RootElement;
-                for (var i = 1; i <= 10; i++)
-                {
-                    var key = $"FieldFolder{i}_Field";
-                    if (!root.TryGetProperty(key, out var el))
-                        continue;
-                    var s = el.ValueKind == JsonValueKind.String ? el.GetString() : el.ToString();
-                    if (!string.IsNullOrWhiteSpace(s))
-                        form.FolderFields.Add(s.Trim());
-                }
+                form.FolderFields = ParseFieldFolderFiltersFromJson(root);
 
                 if (root.TryGetProperty("syncTypeId", out var sid) && sid.ValueKind == JsonValueKind.Number &&
                     sid.TryGetInt32(out var st))
@@ -196,19 +238,28 @@ public class ExportController : BaseController
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(CreateExportJobForm form)
     {
+        var syncFolderFields = form.SyncTypeId is > 0
+            ? await _syncTypeRepo.GetExportFolderFieldsForJobAsync(form.SyncTypeId.Value)
+            : Array.Empty<ExportSyncFolderFieldInfo>();
+        if (form.SyncTypeId is > 0 && syncFolderFields.Count == 0)
+        {
+            ModelState.AddModelError(nameof(form.SyncTypeId),
+                "Loại đồng bộ không suy ra được cấp thư mục: Title trong stg_doc_type_sync_settings phải xuất hiện trong Format; id_field phải khớp stg_doc_fields (hoặc 101–125 → Field1–Field25).");
+        }
+
         if (!ModelState.IsValid)
         {
             await LoadFormLookupsAsync();
             return View(form);
         }
 
-        var levels = CountFolderLevels(form);
+        var levels = CountFieldFolderExportLevel(form, syncFolderFields.Count);
         var job = new ExportJob
         {
             ExportTypeId = form.ExportTypeId,
             Name = form.Name.Trim(),
             FilterJson = BuildFilterJson(form),
-            ExportInputJson = BuildExportInputJson(form),
+            ExportInputJson = BuildExportInputJson(form, syncFolderFields),
             FieldFolderExport = levels,
             DocStatus = form.DocStatus,
             IsExportFile = form.IsExportFile,
@@ -264,11 +315,26 @@ public class ExportController : BaseController
             return RedirectToAction(nameof(Index));
         }
 
-        var levels = CountFolderLevels(form);
+        var syncFolderFields = form.SyncTypeId is > 0
+            ? await _syncTypeRepo.GetExportFolderFieldsForJobAsync(form.SyncTypeId.Value)
+            : Array.Empty<ExportSyncFolderFieldInfo>();
+        if (form.SyncTypeId is > 0 && syncFolderFields.Count == 0)
+        {
+            ModelState.AddModelError(nameof(form.SyncTypeId),
+                "Loại đồng bộ không suy ra được cấp thư mục: Title trong stg_doc_type_sync_settings phải xuất hiện trong Format; id_field phải khớp stg_doc_fields (hoặc 101–125 → Field1–Field25).");
+        }
+
+        if (!ModelState.IsValid)
+        {
+            await LoadFormLookupsAsync();
+            return View(form);
+        }
+
+        var levels = CountFieldFolderExportLevel(form, syncFolderFields.Count);
         existing.ExportTypeId = form.ExportTypeId;
         existing.Name = form.Name.Trim();
         existing.FilterJson = BuildFilterJson(form);
-        existing.ExportInputJson = BuildExportInputJson(form);
+        existing.ExportInputJson = BuildExportInputJson(form, syncFolderFields);
         existing.FieldFolderExport = levels;
         existing.DocStatus = form.DocStatus;
         existing.IsExportFile = form.IsExportFile;
@@ -289,11 +355,16 @@ public class ExportController : BaseController
     [HttpGet]
     public async Task<IActionResult> SyncTypeFields(int id)
     {
-        var settings = await _syncTypeRepo.GetSettingsAsync(id);
-        var fields = settings
-            .Select(s => new { title = string.IsNullOrWhiteSpace(s.Title) ? $"Cấp {s.Weight}" : s.Title })
+        var rows = await _syncTypeRepo.GetExportFolderFieldsForJobAsync(id);
+        var fields = rows
+            .Select(r => new
+            {
+                title = string.IsNullOrWhiteSpace(r.Title) ? $"Cấp {r.Weight}" : r.Title,
+                field = r.FieldName,
+                weight = r.Weight
+            })
             .ToList();
-        return Json(new { success = true, fields });
+        return Json(new { success = fields.Count > 0, fields });
     }
 
     [HttpGet]

@@ -31,7 +31,11 @@
             var wrap = document.createElement('div');
             wrap.className = 'form-group';
             var lab = document.createElement('label');
-            lab.textContent = f.title || ('Cấp ' + (idx + 1));
+            var t = f.title || ('Cấp ' + (idx + 1));
+            lab.textContent = f.field ? (t + ' → ' + f.field) : t;
+            lab.title = f.field
+                ? ('Lọc theo giá trị (AXE fieldFolders' + (idx + 1) + '); cột gom nhóm: ' + f.field)
+                : '';
             var inp = document.createElement('input');
             inp.type = 'text';
             inp.className = 'form-control input-figma';

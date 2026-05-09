@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using ClosedXML.Excel;
 using Dapper;
 using Microsoft.Extensions.Configuration;
@@ -130,9 +131,7 @@ internal sealed class StubExporter : BaseExporterDemo
                 var before = rows.Count;
                 rows = rows.Where(x =>
                 {
-                    if (x is not System.Collections.IDictionary d)
-                        return false;
-                    var value = TryGetDictionaryValue(d, "doc_type_id") ?? TryGetDictionaryValue(d, "DocTypeId");
+                    var value = TryGetRowString(x, "doc_type_id", "DocTypeId");
                     return int.TryParse(value, out var id) && typeIds.Contains(id);
                 }).ToList();
                 _logger.LogInformation(
@@ -149,9 +148,7 @@ internal sealed class StubExporter : BaseExporterDemo
             var before = rows.Count;
             rows = rows.Where(x =>
             {
-                if (x is not System.Collections.IDictionary d)
-                    return false;
-                var value = TryGetDictionaryValue(d, "doc_type_id") ?? TryGetDictionaryValue(d, "DocTypeId");
+                var value = TryGetRowString(x, "doc_type_id", "DocTypeId");
                 return int.TryParse(value, out var id) && allow.Contains(id);
             }).ToList();
             _logger.LogInformation(
@@ -173,6 +170,35 @@ internal sealed class StubExporter : BaseExporterDemo
             wb.Worksheets.Add(t, string.IsNullOrWhiteSpace(t.TableName) ? "Sheet1" : t.TableName);
         }
         wb.SaveAs(path);
+    }
+
+    private static string? TryGetRowString(object row, params string[] keys)
+    {
+        if (row is IReadOnlyDictionary<string, object> ro)
+        {
+            foreach (var want in keys)
+            {
+                foreach (var kv in ro)
+                {
+                    if (string.Equals(kv.Key, want, StringComparison.OrdinalIgnoreCase))
+                        return kv.Value?.ToString();
+                }
+            }
+
+            return null;
+        }
+
+        if (row is System.Collections.IDictionary d)
+        {
+            foreach (var want in keys)
+            {
+                var v = TryGetDictionaryValue(d, want);
+                if (v != null)
+                    return v;
+            }
+        }
+
+        return null;
     }
 
     private static string? TryGetDictionaryValue(System.Collections.IDictionary dict, string key)

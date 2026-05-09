@@ -1817,6 +1817,15 @@ public abstract class BaseExporterDemo : BaseExporter
 
         try
         {
+            // DapperRow: IReadOnlyDictionary<string,object> — không triển khai System.Collections.IDictionary
+            if (item is IReadOnlyDictionary<string, object> roDict)
+            {
+                var v = TryGetStringKeyedDictionaryValue(roDict, fieldName)
+                        ?? TryGetStringKeyedDictionaryValue(roDict, ToSnakeCase(fieldName));
+                if (v != null)
+                    return v;
+            }
+
             if (item is System.Collections.IDictionary dict)
             {
                 var direct = TryGetDictionaryValue(dict, fieldName);
@@ -1829,13 +1838,26 @@ public abstract class BaseExporterDemo : BaseExporter
                     return bySnake;
             }
 
-            var prop = item.GetType().GetProperty(fieldName);
+            var prop = item.GetType().GetProperty(
+                fieldName,
+                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.IgnoreCase);
             return prop?.GetValue(item)?.ToString();
         }
         catch
         {
             return null;
         }
+    }
+
+    private static string? TryGetStringKeyedDictionaryValue(IReadOnlyDictionary<string, object> dict, string key)
+    {
+        foreach (var kv in dict)
+        {
+            if (string.Equals(kv.Key, key, StringComparison.OrdinalIgnoreCase))
+                return kv.Value?.ToString();
+        }
+
+        return null;
     }
 
     private static string? TryGetDictionaryValue(System.Collections.IDictionary dict, string key)
