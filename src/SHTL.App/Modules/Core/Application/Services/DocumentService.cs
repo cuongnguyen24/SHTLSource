@@ -1,6 +1,7 @@
 using SHTL.Modules.Core.Domain.Contracts;
 using SHTL.Modules.Core.Domain.Entities.Stg;
 using SHTL.Modules.Core.Domain.Enums;
+using SHTL.Modules.Infrastructure.Data.Repositories.Cnf;
 using SHTL.Modules.Infrastructure.Data.Repositories.Stg;
 using SHTL.Modules.Shared.Contracts;
 using SHTL.Modules.Shared.Contracts.Dtos;
@@ -13,18 +14,28 @@ public interface IDocumentService
     Task<DocumentDto?> GetByIdAsync(long id, ICurrentUser user);
     Task<ApiResult<long>> CreateFromUploadAsync(UploadCallbackRequest req, ICurrentUser user);
     Task<ApiResult> UpdateMetadataAsync(DocumentUpdateRequest req, ICurrentUser user);
+    /// <summary>Id kế trong hàng đợi kiểm tra scan 1 (cùng thứ tự danh sách: id DESC).</summary>
+    Task<long?> GetNextScanCheck1QueueIdAfterAsync(long completedId, string? search);
+    /// <summary>Id kế trong hàng đợi kiểm tra scan 2.</summary>
+    Task<long?> GetNextScanCheck2QueueIdAfterAsync(long completedId, string? search);
 }
 
 public class DocumentService : IDocumentService
 {
     private readonly IDocumentRepository _docRepo;
     private readonly IAxeDocTypeRepository _docTypeRepo;
+    private readonly ICnfRepository _cnfRepo;
     private readonly IStorageService _storage;
 
-    public DocumentService(IDocumentRepository docRepo, IAxeDocTypeRepository docTypeRepo, IStorageService storage)
+    public DocumentService(
+        IDocumentRepository docRepo,
+        IAxeDocTypeRepository docTypeRepo,
+        ICnfRepository cnfRepo,
+        IStorageService storage)
     {
         _docRepo = docRepo;
         _docTypeRepo = docTypeRepo;
+        _cnfRepo = cnfRepo;
         _storage = storage;
     }
 
@@ -34,6 +45,8 @@ public class DocumentService : IDocumentService
         {
             Search = req.Search,
             Step = req.Step,
+            ForScanCheck1Queue = req.ForScanCheck1Queue,
+            ForScanCheck1Board = req.ForScanCheck1Board,
             CheckQueueListScope = req.CheckQueueListScope,
             IncludeExtractedInCheck1 = req.IncludeExtractedInCheck1,
             DocTypeId = req.DocTypeId,
@@ -61,6 +74,26 @@ public class DocumentService : IDocumentService
         };
     }
 
+    public Task<long?> GetNextScanCheck1QueueIdAfterAsync(long completedId, string? search)
+    {
+        var filter = new DocumentFilterParams
+        {
+            ForScanCheck1Queue = true,
+            Search = string.IsNullOrWhiteSpace(search) ? null : search.Trim()
+        };
+        return _docRepo.GetNextQueueIdAfterAsync(filter, completedId);
+    }
+
+    public Task<long?> GetNextScanCheck2QueueIdAfterAsync(long completedId, string? search)
+    {
+        var filter = new DocumentFilterParams
+        {
+            Step = WorkflowStep.CheckScan2,
+            Search = string.IsNullOrWhiteSpace(search) ? null : search.Trim()
+        };
+        return _docRepo.GetNextQueueIdAfterAsync(filter, completedId);
+    }
+
     public async Task<DocumentDto?> GetByIdAsync(long id, ICurrentUser user)
     {
         var doc = await _docRepo.GetByIdAsync(id);
@@ -76,6 +109,7 @@ public class DocumentService : IDocumentService
     {
         var ext = req.Extension ?? Path.GetExtension(req.FileName);
         var queuedSearchable = SearchablePdfDisplay.LooksLikePdf(ext, req.FileName, req.StoredPath);
+        var initialStep = await WorkflowUploadInitialStep.ResolveAsync(_cnfRepo);
         var doc = new Document
         {
             DocTypeId = req.DocTypeId,
@@ -88,7 +122,7 @@ public class DocumentService : IDocumentService
             FileSize = req.FileSize,
             WorkstationName = req.WorkstationName,
             Status = DocumentStatus.Active,
-            CurrentStep = WorkflowStep.Extract,
+            CurrentStep = initialStep,
             IsOcrEnabled = queuedSearchable,
             OcrStatus = queuedSearchable ? OcrStatus.SearchablePdfQueued : OcrStatus.NotRequested,
             Created = DateTime.UtcNow,
@@ -188,6 +222,8 @@ public class DocumentService : IDocumentService
         Checked2At = doc.Checked2At,
         Checked2By = doc.Checked2By,
         IsCheckedScan1 = doc.IsCheckedScan1,
+        CheckedScan1At = doc.CheckedScan1At,
+        CheckedScan1Result = doc.CheckedScan1Result,
         IsCheckedScan2 = doc.IsCheckedScan2,
         IsZoned = doc.IsZoned,
         IsExtracted = doc.IsExtracted,

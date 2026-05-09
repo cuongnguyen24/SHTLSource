@@ -1,9 +1,11 @@
+using System.Globalization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using SHTL.Modules.Core.Application.Services;
 using SHTL.Modules.Core.Domain.Contracts;
 using SHTL.Modules.Core.Domain.Enums;
+using SHTL.Modules.Infrastructure.Data.Repositories.Cnf;
 using SHTL.Modules.Infrastructure.Identity;
 using SHTL.Modules.Infrastructure.Storage;
 using SHTL.Modules.Shared.Contracts.Dtos;
@@ -22,6 +24,7 @@ public class ScanController : BaseController
     private readonly IStorageService _storage;
     private readonly IWebHostEnvironment _env;
     private readonly IOptions<StorageOptions> _storageOpts;
+    private readonly ICnfRepository _cnfRepo;
     private readonly ILogger<ScanController> _logger;
 
     public ScanController(
@@ -30,6 +33,7 @@ public class ScanController : BaseController
         IStorageService storage,
         IWebHostEnvironment env,
         IOptions<StorageOptions> storageOpts,
+        ICnfRepository cnfRepo,
         ILogger<ScanController> logger)
     {
         _docService = docService;
@@ -37,6 +41,7 @@ public class ScanController : BaseController
         _storage = storage;
         _env = env;
         _storageOpts = storageOpts;
+        _cnfRepo = cnfRepo;
         _logger = logger;
     }
 
@@ -71,18 +76,31 @@ public class ScanController : BaseController
         return JsonResult(result);
     }
 
+    /// <summary>Từ danh sách upload: đưa bản ghi đang Extract vào hàng đợi Scan (kiểm tra scan 1).</summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> QueueForCheckScan1([FromForm] long id)
+    {
+        var result = await _workflowService.QueueExtractForScanCheck1Async(id, CurrentUser);
+        return JsonResult(result);
+    }
+
     // GET /scan/check-scan1 - Danh sách chờ kiểm tra scan lần 1
     [HttpGet]
     [AuthorizeModule(ModuleCode.CheckScanFirst)]
     public async Task<IActionResult> CheckScan1List()
     {
+        var pr = GetPageRequest();
+        var search = Request.Query["q"].ToString().Trim();
         var req = new DocumentFilterRequest
         {
-            PageIndex = GetPageRequest().PageIndex,
-            PageSize = GetPageRequest().PageSize,
-            Step = WorkflowStep.CheckScan1
+            PageIndex = pr.PageIndex,
+            PageSize = pr.PageSize,
+            Search = string.IsNullOrEmpty(search) ? null : search,
+            ForScanCheck1Board = true
         };
         var result = await _docService.GetListAsync(req, CurrentUser);
+        ViewBag.Search = search;
         return View("CheckScan1", result);
     }
 
@@ -93,7 +111,11 @@ public class ScanController : BaseController
     public async Task<IActionResult> DoCheckScan1([FromBody] CheckScanRequest req)
     {
         var result = await _workflowService.CheckScan1Async(req, CurrentUser);
-        return JsonResult(result);
+        if (!result.Success)
+            return JsonResult(result);
+        var nextId = await _docService.GetNextScanCheck1QueueIdAfterAsync(req.DocumentId, search: null);
+        var nextPreviewUrl = nextId.HasValue ? Url.Content($"~/scan/preview/{nextId.Value}") : null;
+        return Json(new { success = true, message = result.Message, errors = result.Errors, nextPreviewUrl });
     }
 
     // GET /scan/check-scan2
@@ -101,13 +123,17 @@ public class ScanController : BaseController
     [AuthorizeModule(ModuleCode.CheckScanSecond)]
     public async Task<IActionResult> CheckScan2List()
     {
+        var pr = GetPageRequest();
+        var search = Request.Query["q"].ToString().Trim();
         var req = new DocumentFilterRequest
         {
-            PageIndex = GetPageRequest().PageIndex,
-            PageSize = GetPageRequest().PageSize,
+            PageIndex = pr.PageIndex,
+            PageSize = pr.PageSize,
+            Search = string.IsNullOrEmpty(search) ? null : search,
             Step = WorkflowStep.CheckScan2
         };
         var result = await _docService.GetListAsync(req, CurrentUser);
+        ViewBag.Search = search;
         return View("CheckScan2", result);
     }
 
@@ -118,7 +144,11 @@ public class ScanController : BaseController
     public async Task<IActionResult> DoCheckScan2([FromBody] CheckScanRequest req)
     {
         var result = await _workflowService.CheckScan2Async(req, CurrentUser);
-        return JsonResult(result);
+        if (!result.Success)
+            return JsonResult(result);
+        var nextId = await _docService.GetNextScanCheck2QueueIdAfterAsync(req.DocumentId, search: null);
+        var nextPreviewUrl = nextId.HasValue ? Url.Content($"~/scan/preview/{nextId.Value}") : null;
+        return Json(new { success = true, message = result.Message, errors = result.Errors, nextPreviewUrl });
     }
 
     // GET /scan/detail/{id}
@@ -136,7 +166,36 @@ public class ScanController : BaseController
     {
         var doc = await _docService.GetByIdAsync(id, CurrentUser);
         if (doc is null) return NotFound();
+
+        // Nút Đạt / Từ chối: scan 1 (kể cả Extract khi bật IsCheckFirstScan), scan 2. POST vẫn [AuthorizeModule].
+        var firstScanOn = await WorkflowUploadInitialStep.IsCheckFirstScanEnabledAsync(_cnfRepo, HttpContext.RequestAborted);
+        var kind = 0;
+        if (doc.CurrentStep == WorkflowStep.Scan || doc.CurrentStep == WorkflowStep.CheckScan1
+            || (firstScanOn && doc.CurrentStep == WorkflowStep.Extract))
+            kind = 1;
+        else if (doc.CurrentStep == WorkflowStep.CheckScan2)
+            kind = 2;
+
+        var canAct = kind switch
+        {
+            1 => UserHasModulePermission(CurrentUser, ModuleCode.CheckScanFirst),
+            2 => UserHasModulePermission(CurrentUser, ModuleCode.CheckScanSecond),
+            _ => false
+        };
+
+        ViewData["PreviewCheckScanKind"] = kind;
+        ViewData["PreviewCheckScanCanAct"] = canAct;
+
         return View(doc);
+    }
+
+    /// <summary>Cùng logic claim với <see cref="AuthorizeModuleAttribute"/>.</summary>
+    private static bool UserHasModulePermission(ICurrentUser user, ModuleCode module)
+    {
+        if (user.IsAdmin) return true;
+        var name = module.ToString();
+        var numeric = ((int)module).ToString(CultureInfo.InvariantCulture);
+        return user.HasPermission(name) || user.HasPermission(numeric);
     }
 
     /// <summary>Stream PDF inline (dùng trong iframe). Không đặt tên action là File để tránh trùng Controller.File().</summary>

@@ -29,6 +29,8 @@ public interface IDocumentWorkflowService
     Task<ApiResult> CheckLogicAsync(WorkflowActionRequest req, ICurrentUser user);
     Task<ApiResult> RequestExportAsync(long documentId, string exportType, ICurrentUser user);
     Task<ApiResult> SafeDeleteAsync(long documentId, ICurrentUser user);
+    /// <summary>Đưa tài liệu đang ở <see cref="WorkflowStep.Extract"/> vào hàng đợi <see cref="WorkflowStep.CheckScan1"/> (dữ liệu cũ khi tắt rồi bật lại kiểm tra scan, v.v.).</summary>
+    Task<ApiResult> QueueExtractForScanCheck1Async(long documentId, ICurrentUser user);
 }
 
 public class DocumentWorkflowService : IDocumentWorkflowService
@@ -62,11 +64,35 @@ public class DocumentWorkflowService : IDocumentWorkflowService
         _logger = logger;
     }
 
+    public async Task<ApiResult> QueueExtractForScanCheck1Async(long documentId, ICurrentUser user)
+    {
+        var doc = await _docRepo.GetByIdAsync(documentId);
+        if (doc is null) return ApiResult.Fail("Tài liệu không tồn tại");
+        if (doc.CurrentStep != WorkflowStep.Extract)
+            return ApiResult.Fail($"Chỉ đưa vào kiểm tra scan khi tài liệu đang ở bước Nhập liệu (Extract). Hiện tại: {doc.CurrentStep}.");
+
+        var (requireFirst, _) = await LoadScanCheckConfigAsync();
+        if (!requireFirst)
+            return ApiResult.Fail("Đang tắt kiểm tra scan lần 1 trong cấu hình (IsCheckFirstScan).");
+
+        doc.CurrentStep = WorkflowStep.CheckScan1;
+        doc.Updated = DateTime.UtcNow;
+        doc.UpdatedBy = user.Id;
+
+        await _docRepo.UpdateAsync(doc);
+        await _docRepo.UpdateStepAsync(doc.Id, doc.CurrentStep, user.Id);
+        await LogActionAsync(user, "QUEUE_SCAN_CHECK1", "documents", doc.Id.ToString(), nameof(WorkflowStep.CheckScan1), null);
+        return ApiResult.Ok("Đã đưa tài liệu vào kiểm tra scan lần 1.");
+    }
+
     public async Task<ApiResult> CheckScan1Async(CheckScanRequest req, ICurrentUser user)
     {
         var doc = await _docRepo.GetByIdAsync(req.DocumentId);
         if (doc is null) return ApiResult.Fail("Tài liệu không tồn tại");
-        if (doc.CurrentStep != WorkflowStep.Scan && doc.CurrentStep != WorkflowStep.CheckScan1)
+        var (requireFirst, requireSecondScan) = await LoadScanCheckConfigAsync();
+        var allowedScan1 = doc.CurrentStep is WorkflowStep.Scan or WorkflowStep.CheckScan1
+            || (doc.CurrentStep == WorkflowStep.Extract && requireFirst);
+        if (!allowedScan1)
             return ApiResult.Fail("Tài liệu chưa ở bước kiểm tra scan lần 1");
 
         doc.IsCheckedScan1 = req.Result == StepResult.Pass;
@@ -76,7 +102,22 @@ public class DocumentWorkflowService : IDocumentWorkflowService
         doc.PageCount = req.PageCount > 0 ? req.PageCount : doc.PageCount;
         doc.PageCountA4 = req.PageCountA4;
         doc.PageCountA3 = req.PageCountA3;
-        doc.CurrentStep = req.Result == StepResult.Pass ? WorkflowStep.CheckScan2 : WorkflowStep.Scan;
+        if (req.Result == StepResult.Pass)
+        {
+            if (requireSecondScan)
+                doc.CurrentStep = WorkflowStep.CheckScan2;
+            else
+            {
+                // Tắt kiểm tra scan 2: coi như đã đạt scan 2, vào nhập liệu (bỏ qua khoanh vùng).
+                doc.IsCheckedScan2 = true;
+                doc.CheckedScan2At = DateTime.UtcNow;
+                doc.CheckedScan2By = user.Id;
+                doc.CheckedScan2Result = StepResult.Pass;
+                doc.CurrentStep = WorkflowStep.Extract;
+            }
+        }
+        else
+            doc.CurrentStep = WorkflowStep.Scan;
         doc.Updated = DateTime.UtcNow;
         doc.UpdatedBy = user.Id;
 
@@ -94,6 +135,8 @@ public class DocumentWorkflowService : IDocumentWorkflowService
         if (doc is null) return ApiResult.Fail("Tài liệu không tồn tại");
         if (!doc.IsCheckedScan1)
             return ApiResult.Fail("Chưa thực hiện kiểm tra scan lần 1");
+        if (doc.CurrentStep != WorkflowStep.CheckScan2)
+            return ApiResult.Fail("Tài liệu chưa ở bước kiểm tra scan lần 2");
 
         doc.IsCheckedScan2 = req.Result == StepResult.Pass;
         doc.CheckedScan2At = DateTime.UtcNow;

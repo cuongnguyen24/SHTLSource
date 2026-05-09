@@ -1,10 +1,17 @@
 @model DocumentDto
+@using System.Text.Json
 @using SHTL.Modules.Shared.Contracts
 @{
     ViewData["Title"] = "Xem PDF — " + Model.Name;
     var pdfUrl = Url.Content("~/scan/pdf/" + Model.Id);
     var downloadUrl = Url.Content("~/scan/download/" + Model.Id);
     var sp = Model.SearchablePdfStatusText;
+    var checkKind = Convert.ToInt32(ViewData["PreviewCheckScanKind"] ?? 0);
+    var canActCheckScan = ViewData["PreviewCheckScanCanAct"] is bool cab && cab;
+    var postUrl1 = Url.Action("DoCheckScan1", "Scan", new { area = "sohoa" })!;
+    var postUrl2 = Url.Action("DoCheckScan2", "Scan", new { area = "sohoa" })!;
+    var scan1ListUrl = Url.Action("CheckScan1List", "Scan", new { area = "sohoa" })!;
+    var scan2ListUrl = Url.Action("CheckScan2List", "Scan", new { area = "sohoa" })!;
 }
 @section Breadcrumb {
     <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="Scan" asp-action="Index">Scan</a></li>
@@ -19,7 +26,33 @@
                 <strong class="text-truncate" style="max-width:40vw;">@Model.Name</strong>
                 <span class="text-muted small">#@Model.Id</span>
             </div>
-            <div class="d-flex flex-wrap" style="gap:8px;">
+            <div class="d-flex flex-wrap align-items-center" style="gap:8px;">
+                @if (checkKind == 1)
+                {
+                    if (canActCheckScan)
+                    {
+                        <button type="button" class="btn btn-sm btn-success" id="btnPreviewPass1" title="Đạt — kiểm tra scan lần 1"><i class="fas fa-check mr-1"></i>Đạt</button>
+                        <button type="button" class="btn btn-sm btn-danger" id="btnPreviewReject1" title="Từ chối — kiểm tra scan lần 1"><i class="fas fa-times mr-1"></i>Từ chối</button>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="Bạn không có quyền kiểm tra scan lần 1"><i class="fas fa-check mr-1"></i>Đạt</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="Bạn không có quyền kiểm tra scan lần 1"><i class="fas fa-times mr-1"></i>Từ chối</button>
+                    }
+                }
+                else if (checkKind == 2)
+                {
+                    if (canActCheckScan)
+                    {
+                        <button type="button" class="btn btn-sm btn-success" id="btnPreviewPass2" title="Đạt — kiểm tra scan lần 2"><i class="fas fa-check mr-1"></i>Đạt</button>
+                        <button type="button" class="btn btn-sm btn-danger" id="btnPreviewReject2" title="Từ chối — kiểm tra scan lần 2"><i class="fas fa-times mr-1"></i>Từ chối</button>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="Bạn không có quyền kiểm tra scan lần 2"><i class="fas fa-check mr-1"></i>Đạt</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="Bạn không có quyền kiểm tra scan lần 2"><i class="fas fa-times mr-1"></i>Từ chối</button>
+                    }
+                }
                 <a href="@pdfUrl" class="btn-figma btn-figma-outline btn-sm" target="_blank" rel="noopener"><i class="fas fa-external-link-alt mr-1"></i>Mở tab mới</a>
                 <a href="@downloadUrl" class="btn-figma btn-figma-outline btn-sm"><i class="fas fa-download mr-1"></i>Tải xuống</a>
                 <a asp-area="sohoa" asp-controller="Scan" asp-action="Detail" asp-route-id="@Model.Id" class="btn-figma btn-figma-secondary btn-sm">Chi tiết</a>
@@ -35,3 +68,218 @@
         <iframe src="@pdfUrl" title="PDF" class="w-100 h-100 border-0" style="min-height: calc(100vh - 220px);"></iframe>
     </div>
 </div>
+
+@if (checkKind == 1 && canActCheckScan)
+{
+    <div class="modal fade" id="modalPreviewCheck1" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content" style="border-radius:12px;">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title font-weight-bold"><i class="fas fa-clipboard-check text-primary mr-2"></i>Xác nhận kiểm tra scan lần 1</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="pv-c1-docId" value="@Model.Id" />
+                    <div class="form-group">
+                        <label class="small text-muted">Kết quả</label>
+                        <div class="d-flex flex-wrap" style="gap:16px;">
+                            <div class="custom-control custom-radio">
+                                <input type="radio" class="custom-control-input" name="pv-c1res" id="pv-c1pass" value="1" checked />
+                                <label class="custom-control-label" for="pv-c1pass">Đạt → chuyển scan 2</label>
+                            </div>
+                            <div class="custom-control custom-radio">
+                                <input type="radio" class="custom-control-input" name="pv-c1res" id="pv-c1fail" value="2" />
+                                <label class="custom-control-label" for="pv-c1fail">Không đạt → trả scan</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-4">
+                            <label class="small text-muted">Tổng trang</label>
+                            <input type="number" class="form-control" id="pv-c1page" min="0" value="@Model.PageCount" />
+                        </div>
+                        <div class="form-group col-4">
+                            <label class="small text-muted">Trang A4</label>
+                            <input type="number" class="form-control" id="pv-c1a4" min="0" value="0" />
+                        </div>
+                        <div class="form-group col-4">
+                            <label class="small text-muted">Trang A3</label>
+                            <input type="number" class="form-control" id="pv-c1a3" min="0" value="0" />
+                        </div>
+                    </div>
+                    <div class="form-group mb-0">
+                        <label class="small text-muted">Ghi chú</label>
+                        <textarea class="form-control" id="pv-c1note" rows="2" placeholder="Tùy chọn"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn-figma btn-figma-secondary" data-dismiss="modal">Đóng</button>
+                    <button type="button" class="btn btn-success" id="pv-c1submit"><i class="fas fa-check mr-1"></i>Ghi nhận &amp; chuyển bước</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else if (checkKind == 2 && canActCheckScan)
+{
+    <div class="modal fade" id="modalPreviewCheck2" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content" style="border-radius:12px;">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title font-weight-bold"><i class="fas fa-clipboard-check text-primary mr-2"></i>Xác nhận kiểm tra scan lần 2</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="pv-c2-docId" value="@Model.Id" />
+                    <p class="small text-muted mb-3">Số trang đã ghi nhận ở scan 1: <strong>@Model.PageCount</strong></p>
+                    <div class="form-group">
+                        <label class="small text-muted">Kết quả</label>
+                        <div class="d-flex flex-wrap" style="gap:16px;">
+                            <div class="custom-control custom-radio">
+                                <input type="radio" class="custom-control-input" name="pv-c2res" id="pv-c2pass" value="1" checked />
+                                <label class="custom-control-label" for="pv-c2pass">Đạt → Khoanh vùng</label>
+                            </div>
+                            <div class="custom-control custom-radio">
+                                <input type="radio" class="custom-control-input" name="pv-c2res" id="pv-c2fail" value="2" />
+                                <label class="custom-control-label" for="pv-c2fail">Không đạt → Trả scan 1</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group mb-0">
+                        <label class="small text-muted">Ghi chú</label>
+                        <textarea class="form-control" id="pv-c2note" rows="2" placeholder="Tùy chọn"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn-figma btn-figma-secondary" data-dismiss="modal">Đóng</button>
+                    <button type="button" class="btn btn-success" id="pv-c2submit"><i class="fas fa-check mr-1"></i>Ghi nhận &amp; chuyển bước</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (checkKind != 0 && canActCheckScan)
+{
+    <form id="antiPreviewCheck" class="d-none">@Html.AntiForgeryToken()</form>
+}
+
+@section Scripts {
+    @if (checkKind == 1 && canActCheckScan)
+    {
+        <script>
+            (function () {
+                var postUrl = @Html.Raw(JsonSerializer.Serialize(postUrl1));
+                var scan1List = @Html.Raw(JsonSerializer.Serialize(scan1ListUrl));
+                function token() {
+                    var i = document.querySelector('#antiPreviewCheck input[name="__RequestVerificationToken"]');
+                    return i ? i.value : '';
+                }
+                function openModal1(passed) {
+                    document.getElementById('pv-c1page').value = @Model.PageCount;
+                    document.getElementById('pv-c1a4').value = 0;
+                    document.getElementById('pv-c1a3').value = 0;
+                    document.getElementById('pv-c1note').value = '';
+                    if (passed) {
+                        document.getElementById('pv-c1pass').checked = true;
+                    } else {
+                        document.getElementById('pv-c1fail').checked = true;
+                    }
+                    $('#modalPreviewCheck1').modal('show');
+                }
+                var bp1 = document.getElementById('btnPreviewPass1');
+                if (bp1) bp1.addEventListener('click', function () { openModal1(true); });
+                var br1 = document.getElementById('btnPreviewReject1');
+                if (br1) br1.addEventListener('click', function () { openModal1(false); });
+                document.getElementById('pv-c1submit').onclick = function () {
+                    var id = parseInt(document.getElementById('pv-c1-docId').value, 10);
+                    if (!id) return;
+                    var body = {
+                        documentId: id,
+                        result: parseInt(document.querySelector('input[name="pv-c1res"]:checked').value, 10),
+                        note: document.getElementById('pv-c1note').value || null,
+                        pageCount: parseInt(document.getElementById('pv-c1page').value, 10) || 0,
+                        pageCountA4: parseInt(document.getElementById('pv-c1a4').value, 10) || 0,
+                        pageCountA3: parseInt(document.getElementById('pv-c1a3').value, 10) || 0
+                    };
+                    fetch(postUrl, {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': token()
+                        },
+                        body: JSON.stringify(body)
+                    }).then(function (r) { return r.json(); }).then(function (j) {
+                        if (j.success) {
+                            if (typeof toastr !== 'undefined') toastr.success(j.message || 'Đã lưu');
+                            $('#modalPreviewCheck1').modal('hide');
+                            if (j.nextPreviewUrl) window.location.href = j.nextPreviewUrl;
+                            else window.location.href = scan1List;
+                        } else {
+                            if (typeof toastr !== 'undefined') toastr.error(j.message || 'Lỗi');
+                            else alert(j.message);
+                        }
+                    }).catch(function () { if (typeof toastr !== 'undefined') toastr.error('Lỗi mạng'); });
+                };
+            })();
+        </script>
+    }
+    else if (checkKind == 2 && canActCheckScan)
+    {
+        <script>
+            (function () {
+                var postUrl = @Html.Raw(JsonSerializer.Serialize(postUrl2));
+                var scan2List = @Html.Raw(JsonSerializer.Serialize(scan2ListUrl));
+                function token() {
+                    var i = document.querySelector('#antiPreviewCheck input[name="__RequestVerificationToken"]');
+                    return i ? i.value : '';
+                }
+                function openModal2(passed) {
+                    document.getElementById('pv-c2note').value = '';
+                    if (passed) {
+                        document.getElementById('pv-c2pass').checked = true;
+                    } else {
+                        document.getElementById('pv-c2fail').checked = true;
+                    }
+                    $('#modalPreviewCheck2').modal('show');
+                }
+                var bp2 = document.getElementById('btnPreviewPass2');
+                if (bp2) bp2.addEventListener('click', function () { openModal2(true); });
+                var br2 = document.getElementById('btnPreviewReject2');
+                if (br2) br2.addEventListener('click', function () { openModal2(false); });
+                document.getElementById('pv-c2submit').onclick = function () {
+                    var id = parseInt(document.getElementById('pv-c2-docId').value, 10);
+                    if (!id) return;
+                    var body = {
+                        documentId: id,
+                        result: parseInt(document.querySelector('input[name="pv-c2res"]:checked').value, 10),
+                        note: document.getElementById('pv-c2note').value || null,
+                        pageCount: 0,
+                        pageCountA4: 0,
+                        pageCountA3: 0
+                    };
+                    fetch(postUrl, {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': token()
+                        },
+                        body: JSON.stringify(body)
+                    }).then(function (r) { return r.json(); }).then(function (j) {
+                        if (j.success) {
+                            if (typeof toastr !== 'undefined') toastr.success(j.message || 'Đã lưu');
+                            $('#modalPreviewCheck2').modal('hide');
+                            if (j.nextPreviewUrl) window.location.href = j.nextPreviewUrl;
+                            else window.location.href = scan2List;
+                        } else {
+                            if (typeof toastr !== 'undefined') toastr.error(j.message || 'Lỗi');
+                            else alert(j.message);
+                        }
+                    }).catch(function () { if (typeof toastr !== 'undefined') toastr.error('Lỗi mạng'); });
+                };
+            })();
+        </script>
+    }
+}
