@@ -85,6 +85,7 @@
                                 <th>Loại tài liệu</th>
                                 <th style="width:140px;">Trạng thái nhập</th>
                                 <th style="width:100px;">Số lần trả về</th>
+                                <th style="min-width:200px;">Lý do từ chối (check 1)</th>
                                 <th style="width:180px;">Đánh giá kết quả thực hiện</th>
                                 <th style="width:140px;">Ngày nhập</th>
                                 <th style="width:120px;">Thao tác</th>
@@ -108,7 +109,12 @@
                                     var rowClass = inputStatus == "Chưa đủ điều kiện" ? "status-pill text-white bg-secondary" :
                                                    inputStatus == "Đã nhập" ? "status-pill text-white bg-success" :
                                                    "status-pill";
-                                    <tr data-id="@d.Id">
+                                    var hasReject = !string.IsNullOrWhiteSpace(d.Checked1ReturnReason);
+                                    var reasonShort = hasReject && d.Checked1ReturnReason!.Length > 120
+                                        ? d.Checked1ReturnReason[..120] + "…"
+                                        : d.Checked1ReturnReason;
+                                    var check1PassedViewOnly = d.IsChecked1 || d.Checked1Result == StepResult.Pass;
+                                    <tr data-id="@d.Id" class="@(hasReject ? "table-warning" : null)">
                                         <td class="text-center">@stt</td>
                                         <td><small>@(string.IsNullOrWhiteSpace(d.FilePath) ? "—" : d.FilePath)</small></td>
                                         <td>
@@ -118,13 +124,33 @@
                                         <td><small>@(d.DocTypeName ?? "—")</small></td>
                                         <td><span class="@rowClass">@inputStatus</span></td>
                                         <td class="text-center">@d.Checked1ReturnCount</td>
+                                        <td>
+                                            @if (hasReject)
+                                            {
+                                                <small class="text-dark font-weight-bold" title="@d.Checked1ReturnReason">@reasonShort</small>
+                                            }
+                                            else
+                                            {
+                                                <small class="text-muted">—</small>
+                                            }
+                                        </td>
                                         <td><small>@checkEval</small></td>
                                         <td><small>@(d.ExtractedAt?.ToString("dd/MM/yyyy HH:mm") ?? "—")</small></td>
                                         <td>
-                                            <a asp-area="sohoa" asp-controller="Extract" asp-action="Form" asp-route-id="@d.Id"
-                                               class="btn btn-sm btn-outline-primary">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
+                                            @if (check1PassedViewOnly)
+                                            {
+                                                <a asp-area="sohoa" asp-controller="Extract" asp-action="Form" asp-route-id="@d.Id"
+                                                   class="btn btn-sm btn-outline-secondary" title="Chỉ xem (đã đạt kiểm tra lần 1)">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <a asp-area="sohoa" asp-controller="Extract" asp-action="Form" asp-route-id="@d.Id"
+                                                   class="btn btn-sm btn-outline-primary" title="Nhập / sửa liệu">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                            }
                                         </td>
                                     </tr>
                                     stt++;

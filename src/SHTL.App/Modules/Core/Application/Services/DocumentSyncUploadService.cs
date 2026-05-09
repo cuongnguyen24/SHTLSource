@@ -3,6 +3,7 @@ using SHTL.Modules.Core.Application.Services.Axe;
 using SHTL.Modules.Core.Domain.Contracts;
 using SHTL.Modules.Core.Domain.Entities.Stg;
 using SHTL.Modules.Core.Domain.Enums;
+using SHTL.Modules.Infrastructure.Data.Repositories.Cnf;
 using SHTL.Modules.Infrastructure.Data.Repositories.Stg;
 using SHTL.Modules.Infrastructure.Storage;
 using SHTL.Modules.Shared.Contracts;
@@ -39,6 +40,7 @@ public sealed class DocumentSyncUploadService : IDocumentSyncUploadService
 {
     private readonly IAxeSyncTypeRepository _syncRepo;
     private readonly IAxeDocTypeRepository _fieldRepo;
+    private readonly ICnfRepository _cnfRepo;
     private readonly IDocumentRepository _documents;
     private readonly IDocumentPageRepository _documentPages;
     private readonly IStorageService _storage;
@@ -47,6 +49,7 @@ public sealed class DocumentSyncUploadService : IDocumentSyncUploadService
     public DocumentSyncUploadService(
         IAxeSyncTypeRepository syncRepo,
         IAxeDocTypeRepository fieldRepo,
+        ICnfRepository cnfRepo,
         IDocumentRepository documents,
         IDocumentPageRepository documentPages,
         IStorageService storage,
@@ -54,6 +57,7 @@ public sealed class DocumentSyncUploadService : IDocumentSyncUploadService
     {
         _syncRepo = syncRepo;
         _fieldRepo = fieldRepo;
+        _cnfRepo = cnfRepo;
         _documents = documents;
         _documentPages = documentPages;
         _storage = storage;
@@ -157,6 +161,7 @@ public sealed class DocumentSyncUploadService : IDocumentSyncUploadService
             settingsBySyncTypeId[st.Id] = (await _syncRepo.GetSettingsAsync(st.Id)).ToList();
 
         var allFields = (await _fieldRepo.GetAllFieldsAsync()).ToDictionary(x => x.Id);
+        var uploadInitialStep = await WorkflowUploadInitialStep.ResolveAsync(_cnfRepo, cancellationToken);
 
         foreach (var item in files)
         {
@@ -237,7 +242,7 @@ public sealed class DocumentSyncUploadService : IDocumentSyncUploadService
                     Extension = ext,
                     FileSize = item.File.Length,
                     Status = DocumentStatus.Active,
-                    CurrentStep = WorkflowStep.Extract,
+                    CurrentStep = uploadInitialStep,
                     IsOcrEnabled = SearchablePdfDisplay.LooksLikePdf(ext, fileName, null),
                     OcrStatus = SearchablePdfDisplay.LooksLikePdf(ext, fileName, null)
                         ? OcrStatus.SearchablePdfQueued

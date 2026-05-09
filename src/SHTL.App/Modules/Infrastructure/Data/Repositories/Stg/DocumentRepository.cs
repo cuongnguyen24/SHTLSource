@@ -26,12 +26,20 @@ public interface IDocumentRepository
 
     /// <summary>Tìm các tài liệu cùng bộ theo danh sách key cấu hình (SetRecordInfo).</summary>
     Task<IEnumerable<Document>> GetSameRecordDocumentsAsync(long documentId, IReadOnlyList<string> recordKeys, int limit = 200);
+
+    /// <summary>Tài liệu kế tiếp trong cùng hàng đợi (ORDER BY id DESC), có id nhỏ hơn bản ghi vừa xử lý.</summary>
+    Task<long?> GetNextQueueIdAfterAsync(DocumentFilterParams filter, long completedId);
 }
 
 public class DocumentFilterParams
 {
     public string? Search { get; set; }
     public WorkflowStep? Step { get; set; }
+    /// <summary>Hàng đợi «Kiểm tra scan lần 1» chỉ bản chờ: <c>Scan</c> ∪ <c>CheckScan1</c>.</summary>
+    public bool ForScanCheck1Queue { get; set; }
+    /// <summary>Màn Kiểm tra scan 1: chờ + bản đã đạt scan 1 (CheckScan2 hoặc Extract ngay sau khi bỏ qua scan 2).</summary>
+    public bool ForScanCheck1Board { get; set; }
+    public CheckQueueListScope CheckQueueListScope { get; set; }
     public bool IncludeExtractedInCheck1 { get; set; }
     public DocumentStatus? Status { get; set; }
     public int? DocTypeId { get; set; }
@@ -242,8 +250,13 @@ public class DocumentRepository : BaseRepository, IDocumentRepository
     {
         var conn = await OpenConnectionAsync();
         var (where, param) = BuildWhere(filter);
+        var orderBy = filter.ForScanCheck1Board
+            ? $"CASE WHEN current_step IN ({(byte)WorkflowStep.Scan}, {(byte)WorkflowStep.CheckScan1}) THEN 0 ELSE 1 END, id DESC"
+            : filter.CheckQueueListScope != CheckQueueListScope.None
+            ? "updated DESC, id DESC"
+            : "id DESC";
         var sql = WithPaging(
-            $"SELECT * FROM dbo.stg_documents {where} ORDER BY id DESC",
+            $"SELECT * FROM dbo.stg_documents {where} ORDER BY {orderBy}",
             pageIndex, pageSize);
         return await QueryAsync<Document>(conn, sql, param);
     }
@@ -254,6 +267,16 @@ public class DocumentRepository : BaseRepository, IDocumentRepository
         var (where, param) = BuildWhere(filter);
         return await ExecuteScalarAsync<long>(conn,
             $"SELECT COUNT(1) FROM dbo.stg_documents {where}", param);
+    }
+
+    public async Task<long?> GetNextQueueIdAfterAsync(DocumentFilterParams filter, long completedId)
+    {
+        var conn = await OpenConnectionAsync();
+        var (where, param) = BuildWhere(filter);
+        var p = new DynamicParameters(param);
+        p.Add("CompletedId", completedId);
+        var sql = $"SELECT TOP 1 id FROM dbo.stg_documents {where} AND id < @CompletedId ORDER BY id DESC";
+        return await QueryFirstOrDefaultAsync<long?>(conn, sql, p);
     }
 
     public async Task<IEnumerable<Document>> GetByFolderAsync(long folderId, int pageIndex, int pageSize)
@@ -407,7 +430,54 @@ WHERE ocr_status = @Processing
             conditions.Add("(search_meta LIKE @Search OR name LIKE @Search)");
             p.Add("Search", $"%{f.Search}%");
         }
-        if (f.Step.HasValue)
+        if (f.ForScanCheck1Board)
+        {
+            conditions.Add(@"(
+                (current_step = @B_Scan OR current_step = @B_Chk1)
+                OR (is_checked_scan1 = 1 AND current_step = @B_Chk2)
+                OR (
+                    current_step = @B_Extract
+                    AND is_checked_scan1 = 1
+                    AND is_checked_scan2 = 1
+                    AND checked_scan1at IS NOT NULL
+                    AND checked_scan2at IS NOT NULL
+                    AND ABS(DATEDIFF(second, checked_scan1at, checked_scan2at)) <= 10
+                )
+            )");
+            p.Add("B_Scan", (byte)WorkflowStep.Scan);
+            p.Add("B_Chk1", (byte)WorkflowStep.CheckScan1);
+            p.Add("B_Chk2", (byte)WorkflowStep.CheckScan2);
+            p.Add("B_Extract", (byte)WorkflowStep.Extract);
+        }
+        else if (f.ForScanCheck1Queue)
+        {
+            conditions.Add("(current_step = @S_Scan OR current_step = @S_ChkScan1)");
+            p.Add("S_Scan", (byte)WorkflowStep.Scan);
+            p.Add("S_ChkScan1", (byte)WorkflowStep.CheckScan1);
+        }
+        else if (f.CheckQueueListScope == CheckQueueListScope.Check1Board)
+        {
+            conditions.Add(@"(
+                current_step = @Q1_Chk1
+                OR (current_step = @Q1_Ext AND NULLIF(LTRIM(RTRIM(ISNULL(checked1return_reason, N''))), N'') IS NOT NULL)
+                OR (is_checked1 = 1 AND current_step = @Q1_Chk2)
+            )");
+            p.Add("Q1_Chk1", (byte)WorkflowStep.Check1);
+            p.Add("Q1_Ext", (byte)WorkflowStep.Extract);
+            p.Add("Q1_Chk2", (byte)WorkflowStep.Check2);
+        }
+        else if (f.CheckQueueListScope == CheckQueueListScope.Check2Board)
+        {
+            conditions.Add(@"(
+                current_step = @Q2_Chk2
+                OR (current_step = @Q2_Chk1 AND NULLIF(LTRIM(RTRIM(ISNULL(checked2return_reason, N''))), N'') IS NOT NULL)
+                OR (is_checked2 = 1 AND current_step = @Q2_ChkF)
+            )");
+            p.Add("Q2_Chk2", (byte)WorkflowStep.Check2);
+            p.Add("Q2_Chk1", (byte)WorkflowStep.Check1);
+            p.Add("Q2_ChkF", (byte)WorkflowStep.CheckFinal);
+        }
+        else if (f.Step.HasValue)
         {
             if (f.IncludeExtractedInCheck1 && f.Step.Value == WorkflowStep.Extract)
             {

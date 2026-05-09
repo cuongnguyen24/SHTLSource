@@ -24,21 +24,46 @@ public class DeptDto
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Code { get; set; } = string.Empty;
+    public string? Describe { get; set; }
     public int? ParentId { get; set; }
+    /// <summary>Tên phòng ban cha (hiển thị danh sách).</summary>
+    public string? ParentName { get; set; }
 }
+
+/// <summary>Một dòng cho &lt;select&gt; phòng ban cha (có thụt lề theo cấp).</summary>
+public record DeptSelectOption(int Id, string Label);
 
 public class CreateDeptRequest
 {
-    [Required] public string Name { get; set; } = string.Empty;
+    [Required(ErrorMessage = "Tên phòng ban là bắt buộc")]
+    [Display(Name = "Tên phòng ban")]
+    public string Name { get; set; } = string.Empty;
+
+    [Display(Name = "Mã phòng ban")]
     public string? Code { get; set; }
+
+    [Display(Name = "Mô tả")]
+    public string? Describe { get; set; }
+
+    [Display(Name = "Thuộc phòng ban cha")]
     public int? ParentId { get; set; }
 }
 
 public class UpdateDeptRequest
 {
     public int Id { get; set; }
-    [Required] public string Name { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Tên phòng ban là bắt buộc")]
+    [Display(Name = "Tên phòng ban")]
+    public string Name { get; set; } = string.Empty;
+
+    [Display(Name = "Mã phòng ban")]
     public string? Code { get; set; }
+
+    [Display(Name = "Mô tả")]
+    public string? Describe { get; set; }
+
+    [Display(Name = "Thuộc phòng ban cha")]
     public int? ParentId { get; set; }
 }
 

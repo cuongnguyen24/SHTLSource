@@ -129,8 +129,8 @@
             <div class="d-flex flex-wrap" style="gap:8px;">
                 <a href="@previewUrl" class="btn-figma btn-figma-secondary btn-sm" target="_blank" rel="noopener"><i class="fas fa-file-pdf mr-1"></i>Xem PDF</a>
                 <a href="@indexUrl" class="btn-figma btn-figma-secondary btn-sm">Danh sách</a>
-                <button type="button" class="btn-figma btn-figma-warning btn-sm" id="btnCheck2Return"><i class="fas fa-undo mr-1"></i>Trả về check 1</button>
-                <button type="button" class="btn-figma btn-figma-primary btn-sm" id="btnCheck2Pass"><i class="fas fa-check mr-1"></i>Duyệt check 2</button>
+                <button type="button" class="btn-figma btn-figma-warning btn-sm" id="btnCheck2Return"><i class="fas fa-times mr-1"></i>Từ chối</button>
+                <button type="button" class="btn-figma btn-figma-primary btn-sm" id="btnCheck2Pass"><i class="fas fa-check mr-1"></i>Đồng ý</button>
             </div>
         </div>
     </div>
@@ -178,8 +178,8 @@
                                 <textarea id="check2-note" class="form-control" rows="2" placeholder="Ghi chú chung cho lần kiểm tra này"></textarea>
                             </div>
                             <div class="form-group mb-0">
-                                <label class="small text-muted mb-1 d-block">Lý do trả lại (khi trả về check 1)</label>
-                                <textarea id="check2-return-reason" class="form-control" rows="2" placeholder="Nhập lý do trả lại"></textarea>
+                                <label class="small text-muted mb-1 d-block">Lý do từ chối (bắt buộc — trả về kiểm tra lần 1)</label>
+                                <textarea id="check2-return-reason" class="form-control" rows="2" placeholder="Nhập lý do để người kiểm tra lần 1 biết cần xử lý gì"></textarea>
                             </div>
                         </div>
                     </div>
@@ -381,7 +381,7 @@
                 });
                 var returnReason = (document.getElementById('check2-return-reason').value || '').trim();
                 if (resultCode === 3 && !returnReason) {
-                    alert('Vui lòng nhập lý do trả lại.');
+                    alert('Vui lòng nhập lý do từ chối.');
                     return;
                 }
                 var body = {

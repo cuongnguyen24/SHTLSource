@@ -52,6 +52,8 @@ public class DocumentDto
 
     // Workflow flags
     public bool IsCheckedScan1 { get; set; }
+    public DateTime? CheckedScan1At { get; set; }
+    public StepResult CheckedScan1Result { get; set; }
     public bool IsCheckedScan2 { get; set; }
     public bool IsZoned { get; set; }
     public bool IsExtracted { get; set; }
@@ -118,6 +120,12 @@ public class DocumentUpdateRequest : DocumentCreateRequest
 public class DocumentFilterRequest : PageRequest
 {
     public WorkflowStep? Step { get; set; }
+    /// <summary>Chỉ bản chờ kiểm tra scan 1 (Scan ∪ CheckScan1).</summary>
+    public bool ForScanCheck1Queue { get; set; }
+    /// <summary>Màn Kiểm tra scan 1 đầy đủ: chờ + đã đạt scan 1 (sang scan 2 hoặc nhập liệu khi tắt scan 2).</summary>
+    public bool ForScanCheck1Board { get; set; }
+    /// <summary>Khi khác <see cref="CheckQueueListScope.None"/>, bỏ lọc <c>current_step = Step</c> tĩnh và dùng điều kiện bảng kiểm tra.</summary>
+    public CheckQueueListScope CheckQueueListScope { get; set; }
     public bool IncludeExtractedInCheck1 { get; set; }
     public int? DocTypeId { get; set; }
     public int? CreatedBy { get; set; }

@@ -57,7 +57,8 @@ public class CheckController : BaseController
     public async Task<IActionResult> Check1()
     {
         SetPageHeader("Kiểm tra lần 1", "check1");
-        var req = new DocumentFilterRequest { Step = WorkflowStep.Check1, PageIndex = GetPageRequest().PageIndex, PageSize = GetPageRequest().PageSize };
+        var req = BuildStepListFilter(WorkflowStep.Check1);
+        ViewBag.Request = req;
         return View(await _docService.GetListAsync(req, CurrentUser));
     }
 
@@ -90,7 +91,8 @@ public class CheckController : BaseController
     public async Task<IActionResult> Check2()
     {
         SetPageHeader("Kiểm tra lần 2", "check2");
-        var req = new DocumentFilterRequest { Step = WorkflowStep.Check2, PageIndex = GetPageRequest().PageIndex, PageSize = GetPageRequest().PageSize };
+        var req = BuildStepListFilter(WorkflowStep.Check2);
+        ViewBag.Request = req;
         return View(await _docService.GetListAsync(req, CurrentUser));
     }
 
@@ -147,4 +149,29 @@ public class CheckController : BaseController
     [AuthorizeModule(ModuleCode.CheckLogic)]
     public async Task<IActionResult> DoCheckLogic([FromBody] WorkflowActionRequest req)
         => JsonResult(await _workflowService.CheckLogicAsync(req, CurrentUser));
+
+    private DocumentFilterRequest BuildStepListFilter(WorkflowStep step)
+    {
+        var pr = GetPageRequest();
+        int? docTypeId = null;
+        if (int.TryParse(Request.Query["docTypeId"], out var dt) && dt > 0)
+            docTypeId = dt;
+
+        return new DocumentFilterRequest
+        {
+            Step = step,
+            CheckQueueListScope = step == WorkflowStep.Check1
+                ? CheckQueueListScope.Check1Board
+                : CheckQueueListScope.Check2Board,
+            PageIndex = pr.PageIndex,
+            PageSize = pr.PageSize,
+            Search = Request.Query["q"],
+            StartDate = ParseDate(Request.Query["from"]),
+            EndDate = ParseDate(Request.Query["to"]),
+            DocTypeId = docTypeId
+        };
+    }
+
+    private static DateTime? ParseDate(string? s)
+        => DateTime.TryParse(s, out var d) ? d : null;
 }

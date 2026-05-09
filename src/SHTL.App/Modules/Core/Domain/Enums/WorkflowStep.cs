@@ -39,6 +39,18 @@ public enum StepResult : byte
     Return = 3
 }
 
+/// <summary>
+/// Mở rộng danh sách Check1/Check2: gồm chờ duyệt, bản bị từ chối (trả bước trước), và bản đã duyệt (bước kế).
+/// </summary>
+public enum CheckQueueListScope : byte
+{
+    None = 0,
+    /// <summary>Check1: Check1 chờ duyệt, Extract có lý do trả từ check1, Check2 đã qua check1.</summary>
+    Check1Board = 1,
+    /// <summary>Check2: Check2 chờ duyệt, Check1 có lý do trả từ check2, CheckFinal đã qua check2.</summary>
+    Check2Board = 2
+}
+
 public enum QueueStatus : byte
 {
     Pending = 0,

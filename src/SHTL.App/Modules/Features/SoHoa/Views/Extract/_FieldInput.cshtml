@@ -7,16 +7,37 @@
     var id = "ext_" + safe;
     var name = f.FieldName;
     var isTitleField = f.FieldId == 1 || string.Equals(name, "dc_title", StringComparison.OrdinalIgnoreCase);
+    var formReadOnly = ViewData["ExtractFormReadOnly"] as bool? == true;
     var isReadOnlyField = f.IsReadOnly || isTitleField;
     var it = (f.InputType ?? "text").ToLowerInvariant();
     var isNum = it == "number" || (f.Datatype?.Contains("number", StringComparison.OrdinalIgnoreCase) ?? false);
     var isDate = it == "date" || (f.Datatype?.Contains("date", StringComparison.OrdinalIgnoreCase) ?? false) || (f.Datatype?.Contains("time", StringComparison.OrdinalIgnoreCase) ?? false);
+    var rowsTa = Math.Max(2, f.Row > 0 ? f.Row : 3);
 }
 <div class="form-group">
     <label class="small text-muted mb-1 d-block" for="@id">
         @f.Title @if (f.IsRequired) { <span class="text-danger">*</span> }
     </label>
-    @if (isReadOnlyField)
+    @if (formReadOnly)
+    {
+        @if (it == "textarea")
+        {
+            <textarea class="form-control bg-light" id="@id" data-stg-field="@postKey" rows="@rowsTa" readonly>@val</textarea>
+        }
+        else if (isNum)
+        {
+            <input type="number" class="form-control bg-light" id="@id" data-stg-field="@postKey" value="@val" readonly />
+        }
+        else if (isDate)
+        {
+            <input type="date" class="form-control bg-light" id="@id" data-stg-field="@postKey" value="@val" readonly />
+        }
+        else
+        {
+            <input type="text" class="form-control bg-light" id="@id" data-stg-field="@postKey" value="@val" readonly @(f.MaxLen > 0 ? $"maxlength=\"{f.MaxLen}\"" : null) />
+        }
+    }
+    else if (isReadOnlyField)
     {
         <input type="text" class="form-control bg-light" id="@id" value="@val" readonly data-stg-field="@postKey" />
     }

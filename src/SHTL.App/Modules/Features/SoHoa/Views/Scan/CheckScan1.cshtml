@@ -1,18 +1,24 @@
 @model PaginatedResult<DocumentDto>
-@using System.Text.Json
+@using SHTL.Modules.Core.Domain.Enums
 @{
     ViewData["Title"] = "Kiểm tra scan lần 1";
-    var hotData = Model.Items.Select(d => new Dictionary<string, object?>
+    var search = ViewBag.Search as string ?? "";
+    string StepVi(WorkflowStep s) => s switch
     {
-        ["id"] = d.Id,
-        ["name"] = d.Name,
-        ["docType"] = d.DocTypeName ?? "",
-        ["step"] = d.CurrentStep.ToString(),
-        ["pageCount"] = d.PageCount,
-        ["created"] = d.Created.ToString("yyyy-MM-dd HH:mm")
-    }).ToList();
-    var json = JsonSerializer.Serialize(hotData);
-    var postUrl = Url.Action("DoCheckScan1", "Scan", new { area = "sohoa" })!;
+        WorkflowStep.Scan => "Upload / Scan",
+        WorkflowStep.CheckScan1 => "Chờ kiểm tra lần 1",
+        WorkflowStep.CheckScan2 => "Chờ kiểm tra lần 2",
+        WorkflowStep.Extract => "Nhập liệu",
+        WorkflowStep.Zone => "Khoanh vùng",
+        _ => s.ToString()
+    };
+    string TrangThaiScan1(DocumentDto d)
+    {
+        if (d.CurrentStep is WorkflowStep.Scan or WorkflowStep.CheckScan1)
+            return "Chờ kiểm tra";
+        return "Đã kiểm tra";
+    }
+    var sttBase = (Model.PageIndex - 1) * Model.PageSize;
 }
 @section Breadcrumb {
     <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="Home" asp-action="Index">Tổng quan</a></li>
@@ -20,7 +26,10 @@
     <li class="breadcrumb-item active">Kiểm tra scan 1</li>
 }
 @section Styles {
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable@14.1.0/dist/handsontable.full.min.css" />
+    <style>
+        .action-btn { padding: 4px 8px; margin: 0 2px; font-size: 12px; }
+        .action-btn i { margin-right: 0; }
+    </style>
 }
 
 <div class="layout-expanded">
@@ -30,7 +39,7 @@
                 <div class="mr-3 d-flex align-items-center justify-content-center" style="width:32px;height:32px;background:var(--primary-light);color:var(--primary);border-radius:6px;"><i class="fas fa-check"></i></div>
                 <div>
                     <h6 class="mb-0 font-weight-bold" style="color:var(--primary);">Kiểm tra scan lần 1</h6>
-                    <div class="text-muted small">Chọn một dòng, nhập kết quả và số trang nếu cần.</div>
+                    <div class="text-muted small">Mở <strong class="text-dark">Xem PDF</strong> từ cột thao tác, đối chiếu file rồi bấm <strong class="text-dark">Đạt / Từ chối</strong> trên trang PDF. Bản <strong>đã kiểm tra scan 1</strong> vẫn hiển thị (cột Trạng thái). <span class="text-success">Đạt</span> chuyển bước kế; <span class="text-danger">Từ chối</span> trả về bước scan.</div>
                 </div>
             </div>
             <a asp-area="sohoa" asp-controller="Scan" asp-action="Index" class="btn-figma btn-figma-secondary btn-sm">Danh sách upload</a>
@@ -38,143 +47,79 @@
     </div>
 
     <div class="frame-figma frame-figma-combined">
-        <div class="p-3 border-bottom">
-            <button type="button" class="btn-figma btn-figma-primary btn-sm" id="btnOpenCheck" disabled data-toggle="modal" data-target="#modalCheck1"><i class="fas fa-clipboard-check mr-1"></i>Ghi nhận kiểm tra</button>
+        <div class="frame-filter">
+            <form method="get" class="d-flex align-items-center flex-wrap" style="gap:8px;">
+                <div class="search-input-figma" style="min-width:260px;">
+                    <input type="text" name="q" value="@search" placeholder="Tìm theo tên, ký hiệu, số hồ sơ…" />
+                    <i class="fas fa-search search-icon"></i>
+                </div>
+                <input type="hidden" name="size" value="@Model.PageSize" />
+                <button type="submit" class="btn-figma btn-figma-primary">Tìm kiếm</button>
+            </form>
         </div>
         <div class="p-3">
-            <p id="c1-hot-loading" class="text-muted small mb-2"><i class="fas fa-spinner fa-spin mr-1"></i>Đang tải…</p>
-            <div id="c1-hot-empty" class="alert alert-light border d-none mb-0">Không có tài liệu chờ kiểm tra.</div>
-            <div id="c1-hot" class="d-none"></div>
+            @if (!Model.Items.Any())
+            {
+                <div class="alert alert-light border mb-0">
+                    <p class="mb-2"><strong>Chưa có tài liệu trong hàng đợi kiểm tra lần 1.</strong> Hàng đợi gồm bản ghi đang ở bước <em>Scan / Upload</em> (vừa tải lên) hoặc bước <em>Kiểm tra scan 1</em> (ví dụ trả từ scan 2).</p>
+                    <p class="mb-2 small text-muted">Sau khi upload/đồng bộ, nếu <code>IsCheckFirstScan</code> bật (mặc định bật), hệ thống đặt bước <strong>Kiểm tra scan 1</strong> luôn. Nếu tắt kiểm tra scan, tài liệu vào thẳng bước nhập liệu và sẽ <strong>không</strong> hiện ở đây.</p>
+                    <p class="mb-0 small text-muted">Khi đã có hàng đợi: mở biểu tượng PDF từng dòng và xác nhận trên trang xem file.</p>
+                    <p class="mb-0 mt-2"><a asp-area="sohoa" asp-controller="Scan" asp-action="Index" class="btn-figma btn-figma-outline btn-sm">Mở danh sách upload</a></p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:48px;">STT</th>
+                                <th style="width:72px;">ID</th>
+                                <th>Tên / file</th>
+                                <th style="min-width:120px;">Loại TL</th>
+                                <th style="width:130px;">Trạng thái</th>
+                                <th style="width:140px;">Bước</th>
+                                <th style="width:72px;" class="text-center">Trang</th>
+                                <th style="width:130px;">Tạo</th>
+                                <th style="width:110px;">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{
+                                var i = 0;
+                                foreach (var d in Model.Items)
+                                {
+                                    i++;
+                                    var stt = sttBase + i;
+                                    <tr>
+                                        <td class="text-center">@stt</td>
+                                        <td><small class="text-muted">@d.Id</small></td>
+                                        <td><strong>@(string.IsNullOrWhiteSpace(d.Name) ? "—" : d.Name)</strong></td>
+                                        <td><small class="text-muted">@(d.DocTypeName ?? "—")</small></td>
+                                        <td>
+                                            @if (TrangThaiScan1(d) == "Đã kiểm tra")
+                                            {
+                                                <span class="badge badge-success" style="font-weight:500;">Đã kiểm tra</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge badge-warning text-dark" style="font-weight:500;">Chờ kiểm tra</span>
+                                            }
+                                        </td>
+                                        <td><small>@StepVi(d.CurrentStep)</small></td>
+                                        <td class="text-center">@d.PageCount</td>
+                                        <td><small class="text-muted">@d.Created.ToString("dd/MM/yyyy HH:mm")</small></td>
+                                        <td>
+                                            <a asp-area="sohoa" asp-controller="Scan" asp-action="Preview" asp-route-id="@d.Id" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary action-btn" title="Xem PDF — xác nhận kiểm tra trên trang này"><i class="fas fa-file-pdf"></i></a>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
             <partial name="_Pager" model="Model" />
         </div>
     </div>
 </div>
-
-<div class="modal fade" id="modalCheck1" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" role="document">
-        <div class="modal-content" style="border-radius:12px;">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title font-weight-bold">Kết quả kiểm tra scan 1</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-            </div>
-            <div class="modal-body">
-                <input type="hidden" id="c1-docId" value="" />
-                <div class="form-group">
-                    <label class="small text-muted">Kết quả</label>
-                    <div class="d-flex" style="gap:16px;">
-                        <div class="custom-control custom-radio">
-                            <input type="radio" class="custom-control-input" name="c1res" id="c1pass" value="1" checked />
-                            <label class="custom-control-label" for="c1pass">Đạt</label>
-                        </div>
-                        <div class="custom-control custom-radio">
-                            <input type="radio" class="custom-control-input" name="c1res" id="c1fail" value="2" />
-                            <label class="custom-control-label" for="c1fail">Không đạt</label>
-                        </div>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group col-4">
-                        <label class="small text-muted">Tổng trang</label>
-                        <input type="number" class="form-control" id="c1page" min="0" value="0" />
-                    </div>
-                    <div class="form-group col-4">
-                        <label class="small text-muted">Trang A4</label>
-                        <input type="number" class="form-control" id="c1a4" min="0" value="0" />
-                    </div>
-                    <div class="form-group col-4">
-                        <label class="small text-muted">Trang A3</label>
-                        <input type="number" class="form-control" id="c1a3" min="0" value="0" />
-                    </div>
-                </div>
-                <div class="form-group mb-0">
-                    <label class="small text-muted">Ghi chú</label>
-                    <textarea class="form-control" id="c1note" rows="2" placeholder="Tùy chọn"></textarea>
-                </div>
-            </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn-figma btn-figma-secondary" data-dismiss="modal">Đóng</button>
-                <button type="button" class="btn-figma btn-figma-primary" id="c1submit"><i class="fas fa-save mr-1"></i>Lưu</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<form id="antiC1" class="d-none">@Html.AntiForgeryToken()</form>
-
-@section Scripts {
-    <script src="https://cdn.jsdelivr.net/npm/handsontable@14.1.0/dist/handsontable.full.min.js"></script>
-    <script src="~/js/shtl-handsontable.js" asp-append-version="true"></script>
-    <script>
-        (function () {
-            var postUrl = @Html.Raw(JsonSerializer.Serialize(postUrl));
-            var data = @Html.Raw(json);
-            var selRow = -1;
-            var hot;
-
-            function token() {
-                var i = document.querySelector('#antiC1 input[name="__RequestVerificationToken"]');
-                return i ? i.value : '';
-            }
-
-            var cols = [
-                { data: 'id', title: 'ID', type: 'numeric', readOnly: true },
-                { data: 'name', title: 'Tên', readOnly: true },
-                { data: 'docType', title: 'Loại TL', readOnly: true },
-                { data: 'step', title: 'Bước', readOnly: true },
-                { data: 'pageCount', title: 'Số trang', readOnly: true },
-                { data: 'created', title: 'Tạo', readOnly: true }
-            ];
-            hot = window.ShtlHot.initReadOnly('c1-hot', document.getElementById('c1-hot-loading'), document.getElementById('c1-hot-empty'), cols, data, { height: 420 });
-            if (hot) {
-                hot.addHook('afterSelectionEnd', function (r1) {
-                    if (r1 < 0) return;
-                    selRow = r1;
-                    document.getElementById('btnOpenCheck').disabled = false;
-                });
-            }
-
-            $('#modalCheck1').on('show.bs.modal', function () {
-                if (!hot || selRow < 0) return;
-                var id = hot.getDataAtRowProp(selRow, 'id');
-                var pc = hot.getDataAtRowProp(selRow, 'pageCount') || 0;
-                document.getElementById('c1-docId').value = id;
-                document.getElementById('c1page').value = pc;
-                document.getElementById('c1a4').value = 0;
-                document.getElementById('c1a3').value = 0;
-                document.getElementById('c1note').value = '';
-                document.getElementById('c1pass').checked = true;
-            });
-
-            document.getElementById('c1submit').onclick = function () {
-                var id = parseInt(document.getElementById('c1-docId').value, 10);
-                if (!id) return;
-                var body = {
-                    documentId: id,
-                    result: parseInt(document.querySelector('input[name="c1res"]:checked').value, 10),
-                    note: document.getElementById('c1note').value || null,
-                    pageCount: parseInt(document.getElementById('c1page').value, 10) || 0,
-                    pageCountA4: parseInt(document.getElementById('c1a4').value, 10) || 0,
-                    pageCountA3: parseInt(document.getElementById('c1a3').value, 10) || 0
-                };
-                fetch(postUrl, {
-                    method: 'POST',
-                    credentials: 'same-origin',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'RequestVerificationToken': token()
-                    },
-                    body: JSON.stringify(body)
-                }).then(function (r) { return r.json(); }).then(function (j) {
-                    if (j.success) {
-                        if (typeof toastr !== 'undefined') toastr.success(j.message || 'Đã lưu');
-                        $('#modalCheck1').modal('hide');
-                        window.location.reload();
-                    } else {
-                        if (typeof toastr !== 'undefined') toastr.error(j.message || 'Lỗi');
-                        else alert(j.message);
-                    }
-                }).catch(function () { if (typeof toastr !== 'undefined') toastr.error('Lỗi mạng'); });
-            };
-        })();
-    </script>
-}
