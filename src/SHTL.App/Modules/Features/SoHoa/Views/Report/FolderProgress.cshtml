@@ -2,10 +2,22 @@
 @{
     ViewData["Title"] = "Tiến độ theo thư mục";
     var st = Model.ServiceStatus;
+    var currentArea = (ViewContext.RouteData.Values["area"] as string ?? "sohoa").ToLowerInvariant();
+    var currentController = ViewContext.RouteData.Values["controller"] as string ?? "Report";
+    var isDashboardArea = string.Equals(currentArea, "dashboard", StringComparison.OrdinalIgnoreCase);
 }
 @section Breadcrumb {
-    <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="Home" asp-action="Index">Tổng quan</a></li>
-    <li class="breadcrumb-item active">Tiến độ theo thư mục</li>
+    @if (isDashboardArea)
+    {
+        <li class="breadcrumb-item"><a asp-area="dashboard" asp-controller="Home" asp-action="Index">Trang chủ</a></li>
+        <li class="breadcrumb-item">Tiến độ thi công</li>
+        <li class="breadcrumb-item active">Theo thư mục tài liệu</li>
+    }
+    else
+    {
+        <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="Home" asp-action="Index">Tổng quan</a></li>
+        <li class="breadcrumb-item active">Tiến độ theo thư mục</li>
+    }
 }
 @section Styles {
     <style>
@@ -17,6 +29,9 @@
         .metric .v { font-size:20px; font-weight:700; color:#0b7285; line-height:1.1; }
         .btn-purge-folder { line-height: 1; opacity: 0.75; }
         .btn-purge-folder:hover { opacity: 1; }
+        .btn-retry-ocr { line-height: 1; opacity: 0.75; padding: 0 4px; }
+        .btn-retry-ocr:hover { opacity: 1; }
+        .cell-with-action { display: inline-flex; align-items: center; gap: 4px; }
     </style>
 }
 
@@ -34,7 +49,7 @@
                     <i class="fas fa-search search-icon"></i>
                 </div>
                 <button type="submit" class="btn-figma btn-figma-primary">Lọc</button>
-                <a href="@Url.Action("FolderProgress", "Report", new { area = "sohoa" })" class="btn-figma btn-figma-outline">Làm mới</a>
+                <a href="@Url.Action("FolderProgress", currentController, new { area = currentArea })" class="btn-figma btn-figma-outline">Làm mới</a>
             </form>
         </div>
     </div>
@@ -150,7 +165,21 @@
                                 <td class="text-center text-secondary">@r.PdfQueued</td>
                                 <td class="text-center text-primary">@r.PdfProcessing</td>
                                 <td class="text-center text-success">@r.PdfReady</td>
-                                <td class="text-center text-danger">@r.PdfFailed</td>
+                                <td class="text-center text-danger">
+                                    <span class="cell-with-action">
+                                        <span>@r.PdfFailed</span>
+                                        @if (r.PdfFailed > 0)
+                                        {
+                                            <button type="button"
+                                                    class="btn btn-link btn-sm text-primary btn-retry-ocr"
+                                                    title="Chạy lại OCR cho @r.PdfFailed tài liệu lỗi trong thư mục"
+                                                    data-folder="@r.Folder"
+                                                    data-count="@r.PdfFailed">
+                                                <i class="fas fa-redo-alt"></i>
+                                            </button>
+                                        }
+                                    </span>
+                                </td>
                                 <td class="text-center">@r.ExtractedDone</td>
                                 <td class="text-center">@r.Check1Done</td>
                                 <td class="text-center">@r.Check2Done</td>
@@ -170,10 +199,17 @@
     <input type="hidden" name="folder" id="folderPurgeFolderInput" value="" />
 </form>
 
+<form id="folderOcrRetryForm" method="post" class="d-none">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="folder" id="folderOcrRetryFolderInput" value="" />
+</form>
+
 @section Scripts {
     <script>
         (function () {
-            var postUrl = '@Url.Action("PurgeFolderDocuments", "Report", new { area = "sohoa", q = Model.Filter })';
+            var purgeUrl = '@Url.Action("PurgeFolderDocuments", currentController, new { area = currentArea, q = Model.Filter })';
+            var retryOcrUrl = '@Url.Action("RequeueFailedOcr", currentController, new { area = currentArea, q = Model.Filter })';
+
             document.querySelectorAll('.btn-purge-folder').forEach(function (btn) {
                 btn.addEventListener('click', function () {
                     var folder = this.getAttribute('data-folder') || '';
@@ -187,7 +223,21 @@
                     if (!confirm(msg)) return;
                     var f = document.getElementById('folderPurgeForm');
                     document.getElementById('folderPurgeFolderInput').value = folder;
-                    f.action = postUrl;
+                    f.action = purgeUrl;
+                    f.submit();
+                });
+            });
+
+            document.querySelectorAll('.btn-retry-ocr').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var folder = this.getAttribute('data-folder') || '';
+                    var n = this.getAttribute('data-count') || '0';
+                    if (!folder) return;
+                    var msg = 'Đưa ' + n + ' tài liệu OCR-lỗi trong thư mục «' + folder + '» về hàng đợi để chạy lại OCR?';
+                    if (!confirm(msg)) return;
+                    var f = document.getElementById('folderOcrRetryForm');
+                    document.getElementById('folderOcrRetryFolderInput').value = folder;
+                    f.action = retryOcrUrl;
                     f.submit();
                 });
             });

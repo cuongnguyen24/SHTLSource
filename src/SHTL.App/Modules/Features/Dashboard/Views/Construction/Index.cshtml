@@ -1,0 +1,35 @@
+@{
+    ViewData["Title"] = "Tiến độ thi công";
+}
+@section Breadcrumb {
+    <li class="breadcrumb-item"><a asp-area="dashboard" asp-controller="Home" asp-action="Index">Trang chủ</a></li>
+    <li class="breadcrumb-item active">Tiến độ thi công</li>
+}
+
+<div class="layout-expanded">
+    <div class="frame-figma mb-3">
+        <div class="frame-header">
+            <div class="d-flex align-items-center">
+                <div class="mr-3 d-flex align-items-center justify-content-center"
+                     style="width:32px;height:32px;background:var(--primary-light);color:var(--primary);border-radius:6px;">
+                    <i class="fas fa-tasks"></i>
+                </div>
+                <div>
+                    <h6 class="mb-0 font-weight-bold" style="color:var(--primary);">Tiến độ thi công</h6>
+                    <div class="text-muted small">Các báo cáo theo dõi khối lượng và tiến độ số hoá tài liệu.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4 col-sm-6 mb-3">
+            <a class="card card-body shadow-sm h-100 text-decoration-none frame-figma"
+               asp-area="dashboard" asp-controller="Construction" asp-action="FolderProgress">
+                <i class="fas fa-folder-open text-primary mb-2"></i>
+                <div class="font-weight-bold text-dark">Tiến độ thi công theo thư mục tài liệu</div>
+                <small class="text-muted">Tiến độ OCR / nhập liệu / kiểm tra theo từng thư mục.</small>
+            </a>
+        </div>
+    </div>
+</div>
