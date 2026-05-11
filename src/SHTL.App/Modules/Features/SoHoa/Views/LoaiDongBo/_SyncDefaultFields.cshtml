@@ -1,5 +1,5 @@
 @model SyncTypeEditPageDto
-@* Trường mặc định (Hiển thị) — các trường chuẩn như Tên, Mô tả, Số ký hiệu, v.v. *@
+@* Trường mặc định (Hiển thị) — không cần cấu hình chi tiết ở Loại đồng bộ. *@
 
 @{
     string GetInputTypeString(int inputTypeId)
@@ -11,21 +11,35 @@
             3 => "number",
             4 => "date",
             5 => "select",
-            6 => "radio",
-            7 => "checkbox",
             _ => "text"
         };
     }
-    var groupOptions = Model.FieldGroups
-        .Where(g => g.Name == "Thông tin hồ sơ" || g.Name == "Thông tin tài liệu")
-        .OrderBy(g => g.Name == "Thông tin hồ sơ" ? 1 : 2)
-        .ToList();
+    string GetDbStorageColumn(int fieldId, string fallback)
+    {
+        return fieldId switch
+        {
+            1 => "file_name",
+            2 => "symbol_no",
+            3 => "issued_by",
+            4 => "receiver",
+            5 => "subject",
+            6 => "level_no",
+            7 => "box_no",
+            8 => "record_no",
+            9 => "record_title",
+            10 => "poster",
+            11 => "signer",
+            12 => "slot_no",
+            13 => "shelf_no",
+            14 => "noted",
+            _ => fallback
+        };
+    }
 }
 
 <div class="default-fields-container">
     <div class="row">
         @{
-            // Danh sách trường mặc định chuẩn
             var defaultFields = new List<(int id, string name, string title)>
             {
                 (1, "title", "Tên"),
@@ -49,25 +63,23 @@
             var rightFields = defaultFields.Skip(midPoint).ToList();
         }
 
-        <!-- Cột trái -->
-        <div class="col-md-6">
-            <div class="table-container-figma mb-0" style="max-height: 500px; overflow-y: auto;">
-                <table class="table table-sm table-figma mb-0">
-                    <thead>
-                        <tr>
-                            <th style="width: 48px;">Dùng</th>
-                            <th>Tên trường</th>
-                            <th style="width: 60px;">Cấu hình</th>
-                        </tr>
-                    </thead>
-                    <tbody id="defaultFieldsBodyLeft">
-                        @{
-                            var stt = 1;
-                            foreach (var field in leftFields)
+        @foreach (var group in new[] { ("defaultFieldsBodyLeft", leftFields), ("defaultFieldsBodyRight", rightFields) })
+        {
+            <div class="col-md-6">
+                <div class="table-container-figma mb-0" style="max-height: 500px; overflow-y: auto;">
+                    <table class="table table-sm table-figma mb-0">
+                        <thead>
+                            <tr>
+                                <th style="width: 48px;">Dùng</th>
+                                <th>Tên trường hiển thị / Lưu DB</th>
+                            </tr>
+                        </thead>
+                        <tbody id="@group.Item1">
+                            @foreach (var field in group.Item2)
                             {
                                 var st = Model.Settings.FirstOrDefault(s => s.IdField == field.id && !s.IsCatalog);
                                 var isEnabled = st != null;
-                                var weight = st?.Weight ?? (stt * 10);
+                                var weight = st?.Weight ?? (field.id * 10);
                                 var inputType = GetInputTypeString(st?.IType ?? 1);
                                 var fieldGroup = st?.IdFieldGroup ?? 0;
                                 var fieldTitle = st?.Title ?? field.title;
@@ -82,21 +94,26 @@
                                 var readOnlyValue = st?.IsReadOnly == true ? "true" : "false";
                                 var upperCaseValue = st?.IsUpperCase == true ? "true" : "false";
                                 var capitalizeValue = st?.IsCapitalize == true ? "true" : "false";
+                                var dbColumn = GetDbStorageColumn(field.id, field.name);
 
                                 <tr class="default-field-row" data-field-id="@field.id" data-weight="@weight">
                                     <td>
                                         <div class="custom-control custom-checkbox">
-                                            <input type="checkbox" class="custom-control-input field-enabled" 
-                                                   id="df_@(field.id)" name="DF@(field.id)" value="true" 
+                                            <input type="checkbox" class="custom-control-input field-enabled"
+                                                   id="df_@(field.id)" name="DF@(field.id)" value="true"
                                                    @(isEnabled ? "checked" : null) />
                                             <label class="custom-control-label" for="df_@(field.id)"></label>
                                             <input type="hidden" name="DF_Enabled_@(field.id)" value="@(isEnabled ? "true" : "false")" class="field-enabled-hidden" />
                                         </div>
                                     </td>
                                     <td>
-                                        <input type="text" class="form-control form-control-sm field-title" 
-                                               name="DF_Title_@(field.id)" value="@fieldTitle" 
-                                               placeholder="@field.title" />
+                                        <div class="d-flex align-items-center" style="gap:8px;">
+                                            <input type="text" class="form-control form-control-sm field-title"
+                                                   name="DF_Title_@(field.id)" value="@fieldTitle"
+                                                   placeholder="@field.title" />
+                                            <input type="text" class="form-control form-control-sm bg-light text-muted"
+                                                   value="@dbColumn" readonly title="Cột lưu dữ liệu trong bảng documents" />
+                                        </div>
                                         <input type="hidden" name="DF_Weight_@(field.id)" value="@weight" class="field-weight" />
                                         <input type="hidden" name="DF_InputType_@(field.id)" value="@inputType" />
                                         <input type="hidden" name="DF_GroupDetail_@(field.id)" value="@fieldGroup" />
@@ -112,230 +129,19 @@
                                         <input type="hidden" name="DF_UpperCase_@(field.id)" value="@upperCaseValue" />
                                         <input type="hidden" name="DF_Capitalize_@(field.id)" value="@capitalizeValue" />
                                     </td>
-                                    <td class="text-center">
-                                        <button type="button" class="btn btn-sm btn-outline-secondary field-config-btn" 
-                                                data-field-id="@field.id" data-field-name="@field.title" 
-                                                data-input-type="@inputType" data-field-group="@fieldGroup"
-                                                title="Cấu hình chi tiết">
-                                            <i class="fas fa-cog"></i>
-                                        </button>
-                                    </td>
                                 </tr>
-                                stt++;
                             }
-                        }
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Cột phải -->
-        <div class="col-md-6">
-            <div class="table-container-figma mb-0" style="max-height: 500px; overflow-y: auto;">
-                <table class="table table-sm table-figma mb-0">
-                    <thead>
-                        <tr>
-                            <th style="width: 48px;">Dùng</th>
-                            <th>Tên trường</th>
-                            <th style="width: 60px;">Cấu hình</th>
-                        </tr>
-                    </thead>
-                    <tbody id="defaultFieldsBodyRight">
-                        @{
-                            foreach (var field in rightFields)
-                            {
-                                var st = Model.Settings.FirstOrDefault(s => s.IdField == field.id && !s.IsCatalog);
-                                var isEnabled = st != null;
-                                var weight = st?.Weight ?? (stt * 10);
-                                var inputType = GetInputTypeString(st?.IType ?? 1);
-                                var fieldGroup = st?.IdFieldGroup ?? 0;
-                                var fieldTitle = st?.Title ?? field.title;
-                                var description = st?.PatternCustom ?? "";
-                                var defaultValue = st?.FixValue ?? "";
-                                var patternId = st?.IdPatternType ?? 0;
-                                var minValue = st?.MinValue ?? "";
-                                var maxValue = st?.MaxValue ?? "";
-                                var minLen = st?.MinLen ?? 0;
-                                var maxLen = st?.MaxLen ?? 0;
-                                var requiredValue = st?.IsRequired == true ? "true" : "false";
-                                var readOnlyValue = st?.IsReadOnly == true ? "true" : "false";
-                                var upperCaseValue = st?.IsUpperCase == true ? "true" : "false";
-                                var capitalizeValue = st?.IsCapitalize == true ? "true" : "false";
-
-                                <tr class="default-field-row" data-field-id="@field.id" data-weight="@weight">
-                                    <td>
-                                        <div class="custom-control custom-checkbox">
-                                            <input type="checkbox" class="custom-control-input field-enabled" 
-                                                   id="df_@(field.id)" name="DF@(field.id)" value="true" 
-                                                   @(isEnabled ? "checked" : null) />
-                                            <label class="custom-control-label" for="df_@(field.id)"></label>
-                                            <input type="hidden" name="DF_Enabled_@(field.id)" value="@(isEnabled ? "true" : "false")" class="field-enabled-hidden" />
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <input type="text" class="form-control form-control-sm field-title" 
-                                               name="DF_Title_@(field.id)" value="@fieldTitle" 
-                                               placeholder="@field.title" />
-                                        <input type="hidden" name="DF_Weight_@(field.id)" value="@weight" class="field-weight" />
-                                        <input type="hidden" name="DF_InputType_@(field.id)" value="@inputType" />
-                                        <input type="hidden" name="DF_GroupDetail_@(field.id)" value="@fieldGroup" />
-                                        <input type="hidden" name="DF_Description_@(field.id)" value="@description" />
-                                        <input type="hidden" name="DF_DefaultValue_@(field.id)" value="@defaultValue" />
-                                        <input type="hidden" name="DF_Pattern_@(field.id)" value="@patternId" />
-                                        <input type="hidden" name="DF_MinValue_@(field.id)" value="@minValue" />
-                                        <input type="hidden" name="DF_MaxValue_@(field.id)" value="@maxValue" />
-                                        <input type="hidden" name="DF_MinLen_@(field.id)" value="@minLen" />
-                                        <input type="hidden" name="DF_MaxLen_@(field.id)" value="@maxLen" />
-                                        <input type="hidden" name="DF_Required_@(field.id)" value="@requiredValue" />
-                                        <input type="hidden" name="DF_ReadOnly_@(field.id)" value="@readOnlyValue" />
-                                        <input type="hidden" name="DF_UpperCase_@(field.id)" value="@upperCaseValue" />
-                                        <input type="hidden" name="DF_Capitalize_@(field.id)" value="@capitalizeValue" />
-                                    </td>
-                                    <td class="text-center">
-                                        <button type="button" class="btn btn-sm btn-outline-secondary field-config-btn" 
-                                                data-field-id="@field.id" data-field-name="@field.title" 
-                                                data-input-type="@inputType" data-field-group="@fieldGroup"
-                                                title="Cấu hình chi tiết">
-                                            <i class="fas fa-cog"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                                stt++;
-                            }
-                        }
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal cấu hình chi tiết -->
-<div class="modal fade" id="fieldConfigModal" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-lg" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Cấu hình trường: <span id="modalFieldName"></span></h5>
-                <button type="button" class="close" data-dismiss="modal">
-                    <span>&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <input type="hidden" id="modalFieldId" />
-                <div class="form-row">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label>Kiểu nhập</label>
-                            <select class="form-control" id="modalInputType">
-                                <option value="text">Text</option>
-                                <option value="textarea">Textarea</option>
-                                <option value="number">Number</option>
-                                <option value="date">Date</option>
-                                <option value="select">Select</option>
-                                <option value="radio">Radio</option>
-                                <option value="checkbox">Checkbox</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label>Nhóm trường</label>
-                            <select class="form-control" id="modalFieldGroup">
-                                @foreach (var g in groupOptions)
-                                {
-                                    <option value="@g.Id">@g.Name</option>
-                                }
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Mô tả / Ghi chú</label>
-                    <textarea class="form-control" id="modalDescription" rows="2"></textarea>
-                </div>
-                <div class="form-row">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label>Giá trị mặc định</label>
-                            <input type="text" class="form-control" id="modalDefaultValue" />
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label>Quy tắc</label>
-                            <select class="form-control" id="modalPattern">
-                                <option value="0">—</option>
-                                @foreach (var p in Model.PatternTypes)
-                                {
-                                    <option value="@p.Id">@p.Name</option>
-                                }
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="col-md-6">
-                        <label>Min / Max giá trị</label>
-                        <div class="d-flex" style="gap: 8px;">
-                            <input type="text" class="form-control" id="modalMinValue" placeholder="Min" />
-                            <input type="text" class="form-control" id="modalMaxValue" placeholder="Max" />
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <label>Min / Max độ dài</label>
-                        <div class="d-flex" style="gap: 8px;">
-                            <input type="number" class="form-control" id="modalMinLen" placeholder="Min" />
-                            <input type="number" class="form-control" id="modalMaxLen" placeholder="Max" />
-                        </div>
-                    </div>
-                </div>
-                <div class="form-row mt-3">
-                    <div class="col-auto">
-                        <div class="custom-control custom-checkbox">
-                            <input type="checkbox" class="custom-control-input" id="modalRequired" />
-                            <label class="custom-control-label" for="modalRequired">Bắt buộc</label>
-                        </div>
-                    </div>
-                    <div class="col-auto">
-                        <div class="custom-control custom-checkbox">
-                            <input type="checkbox" class="custom-control-input" id="modalReadOnly" />
-                            <label class="custom-control-label" for="modalReadOnly">Chỉ đọc</label>
-                        </div>
-                    </div>
-                    <div class="col-auto">
-                        <div class="custom-control custom-checkbox">
-                            <input type="checkbox" class="custom-control-input" id="modalUpperCase" />
-                            <label class="custom-control-label" for="modalUpperCase">Viết hoa</label>
-                        </div>
-                    </div>
-                    <div class="col-auto">
-                        <div class="custom-control custom-checkbox">
-                            <input type="checkbox" class="custom-control-input" id="modalCapitalize" />
-                            <label class="custom-control-label" for="modalCapitalize">Capitalize</label>
-                        </div>
-                    </div>
+                        </tbody>
+                    </table>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Đóng</button>
-                <button type="button" class="btn btn-primary" id="saveFieldConfig">Lưu cấu hình</button>
-            </div>
-        </div>
+        }
     </div>
 </div>
 
 <style>
 .default-fields-container {
     margin-bottom: 20px;
-}
-
-.field-config-btn {
-    padding: 4px 8px;
-    font-size: 12px;
-}
-
-.field-config-btn:hover {
-    background-color: #e2e6ea;
 }
 
 .default-field-row.disabled {
@@ -350,16 +156,10 @@
 </style>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize Bootstrap tooltips
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-
+document.addEventListener('DOMContentLoaded', function () {
     // Toggle field enabled/disabled state
-    document.querySelectorAll('.field-enabled').forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
+    document.querySelectorAll('.default-field-row .field-enabled').forEach(checkbox => {
+        checkbox.addEventListener('change', function () {
             const row = this.closest('tr');
             const enabledHidden = row ? row.querySelector('.field-enabled-hidden') : null;
             if (this.checked) {
@@ -370,108 +170,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (enabledHidden) enabledHidden.value = 'false';
             }
         });
-    });
-
-    // Open config modal
-    document.querySelectorAll('.field-config-btn').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            const fieldId = this.getAttribute('data-field-id');
-            const fieldName = this.getAttribute('data-field-name');
-            const inputType = this.getAttribute('data-input-type') || 'text';
-            const fieldGroup = this.getAttribute('data-field-group') || '';
-            
-            // Set modal data
-            document.getElementById('modalFieldId').value = fieldId;
-            document.getElementById('modalFieldName').textContent = fieldName;
-            document.getElementById('modalInputType').value = inputType;
-            document.getElementById('modalFieldGroup').value = fieldGroup;
-            
-            // Load existing values from hidden inputs if any
-            const prefix = 'DF_';
-            document.getElementById('modalDescription').value = document.querySelector(`[name="${prefix}Description_${fieldId}"]`)?.value || '';
-            document.getElementById('modalFieldGroup').value = document.querySelector(`[name="${prefix}GroupDetail_${fieldId}"]`)?.value || fieldGroup;
-            document.getElementById('modalDefaultValue').value = document.querySelector(`[name="${prefix}DefaultValue_${fieldId}"]`)?.value || '';
-            document.getElementById('modalPattern').value = document.querySelector(`[name="${prefix}Pattern_${fieldId}"]`)?.value || '0';
-            document.getElementById('modalMinValue').value = document.querySelector(`[name="${prefix}MinValue_${fieldId}"]`)?.value || '';
-            document.getElementById('modalMaxValue').value = document.querySelector(`[name="${prefix}MaxValue_${fieldId}"]`)?.value || '';
-            document.getElementById('modalMinLen').value = document.querySelector(`[name="${prefix}MinLen_${fieldId}"]`)?.value || '';
-            document.getElementById('modalMaxLen').value = document.querySelector(`[name="${prefix}MaxLen_${fieldId}"]`)?.value || '';
-            document.getElementById('modalRequired').checked = (document.querySelector(`[name="${prefix}Required_${fieldId}"]`)?.value || '').toLowerCase() === 'true';
-            document.getElementById('modalReadOnly').checked = (document.querySelector(`[name="${prefix}ReadOnly_${fieldId}"]`)?.value || '').toLowerCase() === 'true';
-            document.getElementById('modalUpperCase').checked = (document.querySelector(`[name="${prefix}UpperCase_${fieldId}"]`)?.value || '').toLowerCase() === 'true';
-            document.getElementById('modalCapitalize').checked = (document.querySelector(`[name="${prefix}Capitalize_${fieldId}"]`)?.value || '').toLowerCase() === 'true';
-            
-            $('#fieldConfigModal').modal('show');
-        });
-    });
-
-    // Save config
-    document.getElementById('saveFieldConfig').addEventListener('click', function() {
-        const fieldId = document.getElementById('modalFieldId').value;
-        const prefix = 'DF_';
-        const row = document.querySelector(`.default-field-row[data-field-id="${fieldId}"]`);
-        const configBtn = document.querySelector(`.field-config-btn[data-field-id="${fieldId}"]`);
-        
-        const form = row?.closest('form') ?? document.querySelector('#page-content-scroll form[method="post"]');
-        if (!form) return;
-        const fields = {
-            [`${prefix}InputType_${fieldId}`]: document.getElementById('modalInputType').value,
-            [`${prefix}GroupDetail_${fieldId}`]: document.getElementById('modalFieldGroup').value,
-            [`${prefix}Description_${fieldId}`]: document.getElementById('modalDescription').value,
-            [`${prefix}DefaultValue_${fieldId}`]: document.getElementById('modalDefaultValue').value,
-            [`${prefix}Pattern_${fieldId}`]: document.getElementById('modalPattern').value,
-            [`${prefix}MinValue_${fieldId}`]: document.getElementById('modalMinValue').value,
-            [`${prefix}MaxValue_${fieldId}`]: document.getElementById('modalMaxValue').value,
-            [`${prefix}MinLen_${fieldId}`]: document.getElementById('modalMinLen').value,
-            [`${prefix}MaxLen_${fieldId}`]: document.getElementById('modalMaxLen').value
-        };
-        
-        Object.keys(fields).forEach(name => {
-            let input = form.querySelector(`[name="${name}"]`);
-            if (!input) {
-                input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = name;
-                form.appendChild(input);
-            }
-            input.value = fields[name];
-        });
-
-        if (configBtn) {
-            configBtn.setAttribute('data-input-type', document.getElementById('modalInputType').value);
-            configBtn.setAttribute('data-field-group', document.getElementById('modalFieldGroup').value);
-        }
-
-        if (row) {
-            const enabled = row.querySelector('.field-enabled');
-            if (enabled) enabled.checked = true;
-            const enabledHidden = row.querySelector('.field-enabled-hidden');
-            if (enabledHidden) enabledHidden.value = 'true';
-            row.classList.remove('disabled');
-        }
-        
-        // Handle checkboxes
-        const checkboxes = {
-            [`${prefix}Required_${fieldId}`]: document.getElementById('modalRequired').checked,
-            [`${prefix}ReadOnly_${fieldId}`]: document.getElementById('modalReadOnly').checked,
-            [`${prefix}UpperCase_${fieldId}`]: document.getElementById('modalUpperCase').checked,
-            [`${prefix}Capitalize_${fieldId}`]: document.getElementById('modalCapitalize').checked
-        };
-        
-        Object.keys(checkboxes).forEach(name => {
-            let input = form.querySelector(`[name="${name}"]`);
-            if (!input) {
-                input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = name;
-                form.appendChild(input);
-            }
-            input.value = checkboxes[name] ? 'true' : 'false';
-        });
-        
-        $('#fieldConfigModal').modal('hide');
-        alert('Đã lưu cấu hình!');
     });
 });
 </script>

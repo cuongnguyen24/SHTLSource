@@ -41,6 +41,7 @@ public class DocumentWorkflowService : IDocumentWorkflowService
     private readonly ICnfRepository _cnfRepo;
     private readonly IActionLogRepository _logRepo;
     private readonly IRepository<StgExportType> _exportTypeRepo;
+    private readonly IAxeDocTypeRepository _docTypeRepo;
     private readonly IStorageService _storage;
     private readonly ILogger<DocumentWorkflowService> _logger;
 
@@ -51,6 +52,7 @@ public class DocumentWorkflowService : IDocumentWorkflowService
         ICnfRepository cnfRepo,
         IActionLogRepository logRepo,
         IRepository<StgExportType> exportTypeRepo,
+        IAxeDocTypeRepository docTypeRepo,
         IStorageService storage,
         ILogger<DocumentWorkflowService> logger)
     {
@@ -60,6 +62,7 @@ public class DocumentWorkflowService : IDocumentWorkflowService
         _cnfRepo = cnfRepo;
         _logRepo = logRepo;
         _exportTypeRepo = exportTypeRepo;
+        _docTypeRepo = docTypeRepo;
         _storage = storage;
         _logger = logger;
     }
@@ -201,6 +204,17 @@ public class DocumentWorkflowService : IDocumentWorkflowService
             }
         }
 
+        // Validate giá trị theo cấu hình loại tài liệu (number/date/select/required/min-max-len)
+        var validationErrors = await ValidateExtractValuesAsync(doc, req);
+        if (validationErrors.Count > 0)
+        {
+            _logger.LogInformation(
+                "SubmitExtract validate fail: DocumentId={DocumentId}, Errors={Errors}",
+                req.DocumentId,
+                string.Join(" | ", validationErrors.Select(e => $"{e.FieldKey}:{e.Message}")));
+            return ApiResult.Fail(DocumentFieldValueValidator.FormatErrorsForUser(validationErrors));
+        }
+
         // Cập nhật fields
         MapExtractFields(doc, req);
         doc.IsExtracted = true;
@@ -241,6 +255,66 @@ public class DocumentWorkflowService : IDocumentWorkflowService
 
         _logger.LogInformation("SubmitExtract hoàn tất: DocumentId={DocumentId}", req.DocumentId);
         return ApiResult.Ok("Nhập liệu thành công");
+    }
+
+    /// <summary>Validate dữ liệu nhập liệu Extract theo cấu hình loại tài liệu.</summary>
+    private async Task<IReadOnlyList<FieldValidationError>> ValidateExtractValuesAsync(Document doc, ExtractRequest req)
+    {
+        if (req.StgFieldValues is null || req.StgFieldValues.Count == 0)
+            return Array.Empty<FieldValidationError>();
+
+        var settings = await _docTypeRepo.GetFieldSettingsByTypeAsync(doc.DocTypeId);
+        if (settings.Count == 0) return Array.Empty<FieldValidationError>();
+
+        var fields = await _docTypeRepo.GetAllFieldsAsync();
+        var fieldMap = fields.ToDictionary(f => f.Id);
+        return DocumentFieldValueValidator.Validate(settings, fieldMap, req.StgFieldValues);
+    }
+
+    /// <summary>Validate dữ liệu chỉnh sửa khi Check1/Check2 (chỉ chặn khi <see cref="StepResult.Pass"/>).</summary>
+    private async Task<IReadOnlyList<FieldValidationError>> ValidateCheckValuesAsync(Document doc, CheckReviewRequest req)
+    {
+        // Chỉ ràng buộc khi Check duyệt PASS — Reject/Return không cần hợp lệ.
+        if (req.Result != StepResult.Pass) return Array.Empty<FieldValidationError>();
+
+        var values = req.StgFieldValues != null
+            ? new Dictionary<string, string?>(req.StgFieldValues, StringComparer.OrdinalIgnoreCase)
+            : new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+
+        // Đảm bảo các property scalar có giá trị cũng được validate.
+        void Put(string key, string? value)
+        {
+            if (string.IsNullOrEmpty(key)) return;
+            if (value == null) return;
+            if (!values.ContainsKey(key)) values[key] = value;
+        }
+        Put("dc_title", req.Name);
+        Put("dc_symbol", req.SymbolNo);
+        Put("symbol_no", req.SymbolNo);
+        Put("dc_record", req.RecordNo);
+        Put("record_no", req.RecordNo);
+        Put("dc_issued_by", req.IssuedBy);
+        Put("issued_by", req.IssuedBy);
+        Put("dc_author", req.Author);
+        Put("author", req.Author);
+        Put("dc_noted", req.Noted);
+        Put("noted", req.Noted);
+        Put("field1", req.Field1);
+        Put("field2", req.Field2);
+        Put("field3", req.Field3);
+        Put("field4", req.Field4);
+        Put("field5", req.Field5);
+        Put("field6", req.Field6);
+        Put("field7", req.Field7);
+        Put("field8", req.Field8);
+
+        if (values.Count == 0) return Array.Empty<FieldValidationError>();
+
+        var settings = await _docTypeRepo.GetFieldSettingsByTypeAsync(doc.DocTypeId);
+        if (settings.Count == 0) return Array.Empty<FieldValidationError>();
+        var fields = await _docTypeRepo.GetAllFieldsAsync();
+        var fieldMap = fields.ToDictionary(f => f.Id);
+        return DocumentFieldValueValidator.Validate(settings, fieldMap, values);
     }
 
     private async Task RunExtractStepAsync(string stepName, long documentId, Func<Task> action)
@@ -393,6 +467,16 @@ public class DocumentWorkflowService : IDocumentWorkflowService
         if (doc is null) return ApiResult.Fail("Tài liệu không tồn tại");
         if (doc.CurrentStep != expectedStep)
             return ApiResult.Fail($"Tài liệu đang ở bước {doc.CurrentStep}, không phải {expectedStep}");
+
+        var checkErrors = await ValidateCheckValuesAsync(doc, req);
+        if (checkErrors.Count > 0)
+        {
+            _logger.LogInformation(
+                "{Action} validate fail: DocumentId={DocumentId}, Errors={Errors}",
+                actionName, req.DocumentId,
+                string.Join(" | ", checkErrors.Select(e => $"{e.FieldKey}:{e.Message}")));
+            return ApiResult.Fail(DocumentFieldValueValidator.FormatErrorsForUser(checkErrors));
+        }
 
         ApplyCheckEdits(doc, req);
 

@@ -262,7 +262,7 @@ public class DocumentFormViewModelBuilder : IDocumentFormViewModelBuilder
         return names;
     }
 
-    /// <summary>Convert INT input type ID sang string.</summary>
+    /// <summary>Convert INT input type ID sang string. Radio/Checkbox (6/7) đã bỏ — fallback về "text" để tương thích dữ liệu cũ.</summary>
     private static string GetInputTypeString(int inputTypeId)
     {
         return inputTypeId switch
@@ -272,8 +272,6 @@ public class DocumentFormViewModelBuilder : IDocumentFormViewModelBuilder
             3 => "number",
             4 => "date",
             5 => "select",
-            6 => "radio",
-            7 => "checkbox",
             _ => "text"
         };
     }

@@ -58,6 +58,19 @@
 
     var orderedFields = Model.FieldSettings.OrderBy(f => f.Weight).ToList();
     var cells = Model.Cells.OrderBy(c => c.Page).ThenBy(c => c.Y).ThenBy(c => c.X).ToList();
+
+    string GroupNameOf(int groupId)
+    {
+        if (!Model.FieldGroups.TryGetValue(groupId, out var g)) return string.Empty;
+        return string.IsNullOrEmpty(g.GroupName) ? g.Name : (g.GroupName ?? string.Empty);
+    }
+    bool IsDocInfoField(FieldSettingViewModel f) => string.Equals(GroupNameOf(f.GroupId), "Thông tin tài liệu", StringComparison.Ordinal);
+    bool IsRecordInfoField(FieldSettingViewModel f) => string.Equals(GroupNameOf(f.GroupId), "Thông tin hồ sơ", StringComparison.Ordinal);
+
+    var docInfoFields = orderedFields.Where(IsDocInfoField).ToList();
+    var recordInfoFields = orderedFields.Where(IsRecordInfoField).ToList();
+    var otherFields = orderedFields.Where(f => !IsDocInfoField(f) && !IsRecordInfoField(f)).ToList();
+    var hasOtherTab = otherFields.Count > 0 || cells.Count > 0;
 }
 @section Breadcrumb {
     <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="Check" asp-action="Check2">Kiểm tra lần 2</a></li>
@@ -68,22 +81,58 @@
         .split-layout {
             display: flex;
             align-items: stretch;
-            min-height: calc(100vh - 220px);
+            height: calc(100vh - 220px); /* fallback — JS sẽ ghi đè theo offset thật */
+            min-height: 420px;
+            overflow: hidden;
         }
         .split-pane-left {
             flex: 0 0 42%;
             min-width: 320px;
             max-width: 78%;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .split-pane-left > .card-figma {
+            flex: 1 1 auto;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        .split-pane-left .card-content-figma {
+            flex: 1 1 auto;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        .split-pane-left iframe {
+            flex: 1 1 auto;
+            min-height: 0;
+            width: 100%;
+            border: 0;
+            display: block;
         }
         .split-pane-right {
             flex: 1 1 auto;
             min-width: 360px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-right: 4px;
+        }
+        .split-pane-right > .nav-tabs {
+            position: sticky;
+            top: 0;
+            background: #fff;
+            z-index: 2;
+            margin: 0 0 12px;
+            padding-top: 4px;
         }
         .splitter {
             width: 10px;
             cursor: col-resize;
             position: relative;
             user-select: none;
+            flex: 0 0 auto;
         }
         .splitter::before {
             content: "";
@@ -100,14 +149,23 @@
         @@media (max-width: 991.98px) {
             .split-layout {
                 display: block;
+                height: auto;
                 min-height: auto;
+                overflow: visible;
             }
             .split-pane-left,
             .split-pane-right {
                 min-width: 0;
                 max-width: none;
                 width: 100%;
+                overflow: visible;
+                height: auto;
             }
+            .split-pane-left iframe {
+                height: 60vh;
+                min-height: 420px;
+            }
+            .split-pane-right > .nav-tabs { position: static; }
             .splitter { display: none; }
         }
     </style>
@@ -150,7 +208,7 @@
                 <div class="card-content-figma p-0">
                     @if (showPdfViewer)
                     {
-                        <iframe src="@pdfViewerUrl" title="PDF tài liệu" class="w-100 border-0 d-block" style="min-height: 560px; height: calc(100vh - 280px);"></iframe>
+                        <iframe src="@pdfViewerUrl" title="PDF tài liệu" class="border-0 d-block"></iframe>
                     }
                     else
                     {
@@ -161,91 +219,135 @@
         </div>
         <div class="splitter" aria-hidden="true"></div>
         <div class="split-pane-right">
-            <ul class="nav nav-tabs mb-3" role="tablist">
-                <li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#c2-tab-info">Thông tin tài liệu</a></li>
+            <div class="card-figma mb-3">
+                <div class="card-header-figma"><h3 class="card-title-figma mb-0">Kết luận kiểm tra</h3></div>
+                <div class="card-content-figma">
+                    <div class="form-group mb-2">
+                        <label class="small text-muted mb-1 d-block">Ghi chú</label>
+                        <textarea id="check2-note" class="form-control" rows="2" placeholder="Ghi chú chung cho lần kiểm tra này"></textarea>
+                    </div>
+                    <div class="form-group mb-0">
+                        <label class="small text-muted mb-1 d-block">Lý do từ chối (bắt buộc — trả về kiểm tra lần 1)</label>
+                        <textarea id="check2-return-reason" class="form-control" rows="2" placeholder="Nhập lý do để người kiểm tra lần 1 biết cần xử lý gì"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <ul class="nav nav-tabs" role="tablist">
+                <li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#c2-tab-doc-info">Thông tin tài liệu</a></li>
+                <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#c2-tab-record-info">Thông tin hồ sơ</a></li>
+                @if (hasOtherTab)
+                {
+                    <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#c2-tab-other">Khác</a></li>
+                }
                 <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#c2-tab-record">Tài liệu cùng bộ</a></li>
                 <li class="nav-item"><span class="nav-link disabled">Ghi chú</span></li>
                 <li class="nav-item"><span class="nav-link disabled">Cá nhân xử lý</span></li>
             </ul>
 
             <div class="tab-content">
-                <div class="tab-pane fade show active" id="c2-tab-info">
+                <div class="tab-pane fade show active" id="c2-tab-doc-info">
                     <div class="card-figma mb-3">
-                        <div class="card-header-figma"><h3 class="card-title-figma mb-0">Kết luận kiểm tra</h3></div>
                         <div class="card-content-figma">
-                            <div class="form-group mb-2">
-                                <label class="small text-muted mb-1 d-block">Ghi chú</label>
-                                <textarea id="check2-note" class="form-control" rows="2" placeholder="Ghi chú chung cho lần kiểm tra này"></textarea>
-                            </div>
-                            <div class="form-group mb-0">
-                                <label class="small text-muted mb-1 d-block">Lý do từ chối (bắt buộc — trả về kiểm tra lần 1)</label>
-                                <textarea id="check2-return-reason" class="form-control" rows="2" placeholder="Nhập lý do để người kiểm tra lần 1 biết cần xử lý gì"></textarea>
-                            </div>
-                        </div>
-                    </div>
-                    @{
-                        var groupOrder = orderedFields
-                            .GroupBy(f => f.GroupId)
-                            .OrderBy(g => Model.FieldGroups.TryGetValue(g.Key, out var gr) ? gr.Weight : 999);
-                    }
-                    @foreach (var grp in groupOrder)
-                    {
-                        var gtitle = Model.FieldGroups.TryGetValue(grp.Key, out var g)
-                            ? (string.IsNullOrEmpty(g.GroupName) ? g.Name : g.GroupName)
-                            : (grp.Key == 0 ? "Trường thông tin" : $"Nhóm #{grp.Key}");
-                        <div class="card-figma mb-3">
-                            <div class="card-header-figma"><h3 class="card-title-figma mb-0">@gtitle</h3></div>
-                            <div class="card-content-figma">
+                            @if (docInfoFields.Count == 0)
+                            {
+                                <div class="text-muted small mb-0">Chưa có trường nào thuộc nhóm <strong>Thông tin tài liệu</strong>.</div>
+                            }
+                            else
+                            {
                                 <div class="row">
-                                    @foreach (var fs in grp.OrderBy(f => f.Weight))
+                                    @foreach (var fs in docInfoFields)
                                     {
                                         <div class="col-md-6">
                                             <partial name="_FieldInput" model="(fs, Fv(fs))" />
                                         </div>
                                     }
                                 </div>
-                            </div>
+                            }
                         </div>
-                    }
-                    @if (cells.Count > 0)
-                    {
-                        <div class="card-figma mb-3">
-                            <div class="card-header-figma">
-                                <h3 class="card-title-figma mb-0"><i class="fas fa-th mr-2" style="color:var(--primary);"></i>Ô nhập từ biểu mẫu / OCR</h3>
-                            </div>
-                            <div class="card-content-figma p-0">
-                                <div class="table-container-figma mb-0" style="max-height:360px; overflow:auto;">
-                                    <table class="table table-sm table-figma mb-0">
-                                        <thead>
-                                            <tr>
-                                                <th>ID ô</th>
-                                                <th>Tiêu đề</th>
-                                                <th>Trang</th>
-                                                <th>OCR / đã nhập</th>
-                                                <th>Giá trị nhập</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                        @foreach (var c in cells)
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="c2-tab-record-info">
+                    <div class="card-figma mb-3">
+                        <div class="card-content-figma">
+                            @if (recordInfoFields.Count == 0)
+                            {
+                                <div class="text-muted small mb-0">Chưa có trường nào thuộc nhóm <strong>Thông tin hồ sơ</strong>.</div>
+                            }
+                            else
+                            {
+                                <div class="row">
+                                    @foreach (var fs in recordInfoFields)
+                                    {
+                                        <div class="col-md-6">
+                                            <partial name="_FieldInput" model="(fs, Fv(fs))" />
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                @if (hasOtherTab)
+                {
+                    <div class="tab-pane fade" id="c2-tab-other">
+                        @if (otherFields.Count > 0)
+                        {
+                            <div class="card-figma mb-3">
+                                <div class="card-content-figma">
+                                    <div class="row">
+                                        @foreach (var fs in otherFields)
                                         {
-                                            var showVal = string.IsNullOrEmpty(c.ExtractedValue) ? c.Value : c.ExtractedValue;
-                                            <tr>
-                                                <td><code>@c.Id</code></td>
-                                                <td>@(c.Title ?? c.Field ?? "—")</td>
-                                                <td>@c.Page</td>
-                                                <td class="small text-muted text-truncate" style="max-width:180px;" title="@showVal">@showVal</td>
-                                                <td style="min-width:200px;">
-                                                    <input type="text" class="form-control form-control-sm chk-cell" data-cell-id="@c.Id" value="@c.ExtractedValue" placeholder="@c.Value" />
-                                                </td>
-                                            </tr>
+                                            <div class="col-md-6">
+                                                <partial name="_FieldInput" model="(fs, Fv(fs))" />
+                                            </div>
                                         }
-                                        </tbody>
-                                    </table>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    }
-                </div>
+                        }
+                        @if (cells.Count > 0)
+                        {
+                            <div class="card-figma mb-3">
+                                <div class="card-header-figma">
+                                    <h3 class="card-title-figma mb-0"><i class="fas fa-th mr-2" style="color:var(--primary);"></i>Ô nhập từ biểu mẫu / OCR</h3>
+                                </div>
+                                <div class="card-content-figma p-0">
+                                    <div class="table-container-figma mb-0" style="max-height:360px; overflow:auto;">
+                                        <table class="table table-sm table-figma mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>ID ô</th>
+                                                    <th>Tiêu đề</th>
+                                                    <th>Trang</th>
+                                                    <th>OCR / đã nhập</th>
+                                                    <th>Giá trị nhập</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                            @foreach (var c in cells)
+                                            {
+                                                var showVal = string.IsNullOrEmpty(c.ExtractedValue) ? c.Value : c.ExtractedValue;
+                                                <tr>
+                                                    <td><code>@c.Id</code></td>
+                                                    <td>@(c.Title ?? c.Field ?? "—")</td>
+                                                    <td>@c.Page</td>
+                                                    <td class="small text-muted text-truncate" style="max-width:180px;" title="@showVal">@showVal</td>
+                                                    <td style="min-width:200px;">
+                                                        <input type="text" class="form-control form-control-sm chk-cell" data-cell-id="@c.Id" value="@c.ExtractedValue" placeholder="@c.Value" />
+                                                    </td>
+                                                </tr>
+                                            }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
 
                 <div class="tab-pane fade" id="c2-tab-record">
                     <div class="card-figma mb-3">
@@ -311,6 +413,7 @@
 
 @section Scripts {
     <script src="~/js/shtl-ajax.js" asp-append-version="true"></script>
+    <script src="~/js/sohoa/field-input-enhance.js" asp-append-version="true"></script>
     <script>
         (function () {
             var submitUrl = @Html.Raw(JsonSerializer.Serialize(submitUrl));
@@ -324,6 +427,20 @@
                 var leftPane = layout.querySelector('.split-pane-left');
                 var splitter = layout.querySelector('.splitter');
                 if (!leftPane || !splitter) return;
+
+                function syncHeight() {
+                    if (window.innerWidth < 992) {
+                        layout.style.height = '';
+                        return;
+                    }
+                    var top = layout.getBoundingClientRect().top;
+                    var margin = 16;
+                    var h = Math.max(420, window.innerHeight - top - margin);
+                    layout.style.height = h + 'px';
+                }
+                syncHeight();
+                window.addEventListener('resize', syncHeight);
+                window.addEventListener('load', syncHeight);
 
                 var dragging = false;
                 var startX = 0;
@@ -369,10 +486,22 @@
             function token() { return window.ShtlAjax.getRequestVerificationToken(); }
 
             function submitCheck(resultCode) {
+                if (resultCode === 1 && window.ShtlFieldInputEnhance && window.ShtlFieldInputEnhance.validateBeforeSubmit) {
+                    var v = window.ShtlFieldInputEnhance.validateBeforeSubmit(document);
+                    if (!v.ok) {
+                        if (typeof toastr !== 'undefined') toastr.error(v.message);
+                        else alert(v.message);
+                        window.ShtlFieldInputEnhance.focusFirstInvalid(document);
+                        return;
+                    }
+                }
                 var stg = {};
+                var getVal = (window.ShtlFieldInputEnhance && window.ShtlFieldInputEnhance.getSubmitValue)
+                    ? window.ShtlFieldInputEnhance.getSubmitValue
+                    : function (el) { return el.value; };
                 document.querySelectorAll('[data-stg-field]').forEach(function (el) {
                     var k = el.getAttribute('data-stg-field');
-                    if (k) stg[k] = el.value;
+                    if (k) stg[k] = getVal(el);
                 });
                 var cells = [];
                 document.querySelectorAll('.chk-cell[data-cell-id]').forEach(function (el) {
@@ -404,7 +533,8 @@
                     field6: stg['field6'] || null,
                     field7: stg['field7'] || null,
                     field8: stg['field8'] || null,
-                    cells: cells
+                    cells: cells,
+                    stgFieldValues: stg
                 };
                 var hint = document.getElementById('check2-submit-hint');
                 hint.classList.remove('d-none');

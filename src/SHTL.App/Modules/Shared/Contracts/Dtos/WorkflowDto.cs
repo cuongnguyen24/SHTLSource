@@ -28,6 +28,11 @@ public class CheckReviewRequest : WorkflowActionRequest
     public string? Field7 { get; set; }
     public string? Field8 { get; set; }
     public List<FormCellValueDto> Cells { get; set; } = new();
+
+    /// <summary>
+    /// Cặp tên trường STG (vd. dc_title, field1…) → giá trị; dùng để validate đầy đủ ở server.
+    /// </summary>
+    public Dictionary<string, string?>? StgFieldValues { get; set; }
 }
 
 public class CheckScanRequest

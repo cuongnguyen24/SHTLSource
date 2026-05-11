@@ -191,9 +191,10 @@ public sealed class AxeDocTypeAdminService : IAxeDocTypeAdminService
 
             var allFields = await _stg.GetAllFieldsAsync();
             var cats = await _stg.GetCategoryTypesAsync();
+            var groups = await _stg.GetFieldGroupsAsync();
             var current = await _stg.GetFieldSettingsByTypeAsync(docTypeId);
             await _stg.DeleteFieldSettingsByTypeAsync(docTypeId);
-            var built = DocTypeFieldSettingsBuilder.Build(allFields, cats, docTypeId, form, current, true);
+            var built = DocTypeFieldSettingsBuilder.Build(allFields, cats, groups, docTypeId, form, current, true);
             await _stg.InsertFieldSettingsAsync(built);
 
             return ApiResult.Ok(isNew ? "Tạo loại tài liệu thành công" : "Cập nhật loại tài liệu thành công");
