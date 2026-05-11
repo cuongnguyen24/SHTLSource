@@ -39,9 +39,20 @@ public abstract class BaseAdminController : Controller
             return;
         }
 
-        if (!currentUser.IsAdmin)
+        // Cho phép user thường truy cập trang AccessDenied (Home/AccessDenied) để hiển thị
+        // thông báo thân thiện thay vì màn hình 403 trống.
+        var actionName = (context.RouteData.Values["action"] as string ?? string.Empty);
+        var controllerName = (context.RouteData.Values["controller"] as string ?? string.Empty);
+        var isAccessDeniedPage = string.Equals(controllerName, "Home", StringComparison.OrdinalIgnoreCase)
+            && string.Equals(actionName, "AccessDenied", StringComparison.OrdinalIgnoreCase);
+
+        if (!currentUser.IsAdmin && !isAccessDeniedPage)
         {
-            context.Result = Forbid();
+            var req = context.HttpContext.Request;
+            var returnUrl = $"{req.PathBase}{req.Path}{req.QueryString}";
+            context.Result = new RedirectToActionResult(
+                "AccessDenied", "Home",
+                new { area = "admin", returnUrl });
             return;
         }
 

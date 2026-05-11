@@ -1,0 +1,59 @@
+@model EditRoleRequest
+@{ ViewData["Title"] = "Sửa vai trò"; }
+@section Breadcrumb {
+    <li class="breadcrumb-item"><a asp-action="Index">Vai trò</a></li>
+    <li class="breadcrumb-item active">Sửa</li>
+}
+<div class="layout-expanded">
+    <div class="frame-figma mb-3">
+        <div class="frame-header">
+            <div class="d-flex align-items-center">
+                <div class="mr-3 d-flex align-items-center justify-content-center"
+                     style="width:36px;height:36px;background:var(--primary-light);color:var(--primary);border-radius:8px;">
+                    <i class="fas fa-edit"></i>
+                </div>
+                <div>
+                    <h6 class="mb-0 font-weight-bold" style="color:var(--primary);">Sửa vai trò</h6>
+                    <div class="text-muted small">Cập nhật tên hiển thị và mô tả. <strong>Không được đổi mã.</strong></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-figma">
+        <div class="card-content-figma">
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+            <form asp-action="Edit" method="post" novalidate>
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="Id" />
+
+                <div class="form-group-figma">
+                    <label asp-for="Code" class="label-figma">Mã (không sửa được)</label>
+                    <input asp-for="Code" class="form-control bg-light text-muted" readonly />
+                </div>
+
+                <div class="form-group-figma">
+                    <label asp-for="Name" class="label-figma">Tên vai trò</label>
+                    <input asp-for="Name" class="form-control" autofocus />
+                    <span asp-validation-for="Name" class="text-danger small"></span>
+                </div>
+
+                <div class="form-group-figma">
+                    <label asp-for="Description" class="label-figma">Mô tả</label>
+                    <textarea asp-for="Description" class="form-control" rows="3"
+                              placeholder="Mô tả ngắn vai trò sử dụng để làm gì (tuỳ chọn)."></textarea>
+                    <span asp-validation-for="Description" class="text-danger small"></span>
+                </div>
+
+                <div class="d-flex flex-wrap" style="gap:8px;">
+                    <button type="submit" class="btn-figma btn-figma-primary">
+                        <i class="fas fa-save mr-1"></i>Lưu thay đổi
+                    </button>
+                    <a asp-action="Index" class="btn-figma btn-figma-outline">Hủy</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

@@ -18,6 +18,18 @@ public class CreateRoleRequest
     public string? Description { get; set; }
 }
 
+public class EditRoleRequest
+{
+    public int Id { get; set; }
+    /// <summary>Hiển thị readonly trên form — không gửi/lưu khi Edit.</summary>
+    public string Code { get; set; } = string.Empty;
+    [Required(ErrorMessage = "Tên vai trò không được để trống")]
+    [StringLength(200, ErrorMessage = "Tên vai trò tối đa 200 ký tự")]
+    public string Name { get; set; } = string.Empty;
+    [StringLength(500, ErrorMessage = "Mô tả tối đa 500 ký tự")]
+    public string? Description { get; set; }
+}
+
 // ---------- Dept ----------
 public class DeptDto
 {

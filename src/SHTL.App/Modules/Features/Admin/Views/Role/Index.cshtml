@@ -1,39 +1,53 @@
 @model IEnumerable<RoleDto>
-@using System.Text.Json
 @{
     ViewData["Title"] = "Vai trò";
-    var rows = Model.Select(r => new Dictionary<string, object?> { ["id"] = r.Id, ["name"] = r.Name, ["code"] = r.Code, ["desc"] = r.Description ?? "" }).ToList();
-    var json = JsonSerializer.Serialize(rows);
 }
 @section Breadcrumb { <li class="breadcrumb-item active">Vai trò</li> }
-@section Styles { <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable@14.1.0/dist/handsontable.full.min.css" /> }
 <div class="layout-expanded">
     <div class="frame-figma mb-3">
         <div class="frame-header">
             <h6 class="mb-0 font-weight-bold" style="color:var(--primary);">Vai trò &amp; nhóm quyền</h6>
-            <a asp-action="Create" class="btn-figma btn-figma-primary btn-sm"><i class="fas fa-plus mr-1"></i>Tạo mới</a>
+            <span class="text-muted small">Danh sách vai trò có sẵn trong hệ thống — chỉ được phép sửa, không tạo mới hay xoá.</span>
         </div>
     </div>
-    <div class="frame-figma p-3">
-        <p id="ld" class="text-muted small"><i class="fas fa-spinner fa-spin mr-1"></i>Đang tải...</p>
-        <div id="em" class="alert alert-light border d-none">Chưa có vai trò.</div>
-        <div id="ht" class="d-none"></div>
-        <p class="small text-muted mt-2 mb-0">Double-click dòng để xóa (sẽ bổ sung UI xác nhận) — hiện dùng nút Tạo mới.</p>
+    <div class="frame-figma p-0">
+        @if (!Model.Any())
+        {
+            <div class="alert alert-light border m-3 mb-0">Chưa có vai trò.</div>
+        }
+        else
+        {
+            <div class="table-container-figma mb-0">
+                <table class="table table-sm table-figma mb-0">
+                    <thead>
+                        <tr>
+                            <th style="width:60px;">ID</th>
+                            <th>Tên vai trò</th>
+                            <th style="width:220px;">Mã</th>
+                            <th>Mô tả</th>
+                            <th style="width:100px;" class="text-center">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var r in Model)
+                    {
+                        <tr>
+                            <td>@r.Id</td>
+                            <td><strong>@r.Name</strong></td>
+                            <td><code>@r.Code</code></td>
+                            <td class="text-muted small">@(string.IsNullOrWhiteSpace(r.Description) ? "—" : r.Description)</td>
+                            <td class="text-center">
+                                <a asp-action="Edit" asp-route-id="@r.Id"
+                                   class="btn-figma btn-figma-outline btn-sm"
+                                   title="Sửa vai trò">
+                                    <i class="fas fa-edit mr-1"></i>Sửa
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
     </div>
 </div>
-@section Scripts {
-    <script src="https://cdn.jsdelivr.net/npm/handsontable@14.1.0/dist/handsontable.full.min.js"></script>
-    <script src="~/js/shtl-handsontable.js" asp-append-version="true"></script>
-    <script>
-        (function () {
-            var data = @Html.Raw(json);
-            var cols = [
-                { data: 'id', title: 'ID', readOnly: true, type: 'numeric' },
-                { data: 'name', title: 'Tên', readOnly: true },
-                { data: 'code', title: 'Mã', readOnly: true },
-                { data: 'desc', title: 'Mô tả', readOnly: true }
-            ];
-            window.ShtlHot.initReadOnly('ht', document.getElementById('ld'), document.getElementById('em'), cols, data, { height: 320 });
-        })();
-    </script>
-}

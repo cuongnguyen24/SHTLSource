@@ -11,6 +11,7 @@ public interface IUserManagementService
 {
     Task<PaginatedResult<UserDto>> GetListAsync(int pageIndex, int pageSize, string? search);
     Task<UserDto?> GetByIdAsync(int id);
+    Task<List<int>> GetUserRoleIdsAsync(int userId);
     Task<ApiResult<int>> CreateAsync(CreateUserRequest req, ICurrentUser currentUser);
     Task<ApiResult> UpdateAsync(UpdateUserRequest req, ICurrentUser currentUser);
     Task<ApiResult> SetActiveAsync(int id, bool isActive, ICurrentUser currentUser);
@@ -36,12 +37,23 @@ public class UserManagementService : IUserManagementService
 
     public async Task<PaginatedResult<UserDto>> GetListAsync(int pageIndex, int pageSize, string? search)
     {
-        var items = await _userRepo.GetListAsync(pageIndex, pageSize, search);
+        var items = (await _userRepo.GetListAsync(pageIndex, pageSize, search)).ToList();
         var count = await _userRepo.CountAsync(search);
+
+        var deptMap = await _userRepo.GetDeptNameMapAsync(items.Select(u => u.DeptId));
+        var roleMap = await _userRepo.GetRoleNamesByUserIdsAsync(items.Select(u => u.Id));
+
+        var dtos = items.Select(u =>
+        {
+            var dto = MapToDto(u);
+            dto.DeptName = u.DeptId > 0 ? (deptMap.TryGetValue(u.DeptId, out var dn) ? dn : null) : null;
+            dto.Roles = roleMap.TryGetValue(u.Id, out var roles) ? roles : new List<string>();
+            return dto;
+        });
 
         return new PaginatedResult<UserDto>
         {
-            Items = items.Select(MapToDto),
+            Items = dtos,
             TotalCount = count,
             PageIndex = pageIndex,
             PageSize = pageSize
@@ -53,6 +65,9 @@ public class UserManagementService : IUserManagementService
         var user = await _userRepo.GetByIdAsync(id);
         return user is null ? null : MapToDto(user);
     }
+
+    public Task<List<int>> GetUserRoleIdsAsync(int userId)
+        => _userRepo.GetRoleIdsForUserAsync(userId);
 
     public async Task<ApiResult<int>> CreateAsync(CreateUserRequest req, ICurrentUser currentUser)
     {
@@ -70,7 +85,7 @@ public class UserManagementService : IUserManagementService
             DeptId = req.DeptId,
             PositionId = req.PositionId,
             IsActive = true,
-            IsAdmin = req.IsAdmin && currentUser.IsAdmin,
+            IsAdmin = false,
             Phone = req.Phone,
             Created = DateTime.UtcNow,
             CreatedBy = currentUser.Id,
@@ -78,6 +93,10 @@ public class UserManagementService : IUserManagementService
         };
 
         var id = await _userRepo.InsertAsync(user);
+
+        if (req.RoleIds.Count > 0)
+            await _userRepo.SaveUserRolesAsync(id, req.RoleIds);
+
         return ApiResult<int>.Ok(id, "Tạo người dùng thành công");
     }
 
@@ -87,13 +106,8 @@ public class UserManagementService : IUserManagementService
         if (user is null)
             return ApiResult.Fail("Không tìm thấy người dùng");
 
-        if (req.Id == currentUser.Id)
-        {
-            if (currentUser.IsAdmin && !req.IsAdmin)
-                return ApiResult.Fail("Không thể bỏ quyền quản trị của chính bạn");
-            if (!req.IsActive)
-                return ApiResult.Fail("Không thể vô hiệu hóa chính bạn");
-        }
+        if (req.Id == currentUser.Id && !req.IsActive)
+            return ApiResult.Fail("Không thể vô hiệu hóa chính bạn");
 
         var email = req.Email.Trim().ToLower();
         var existingEmail = await _userRepo.GetByEmailAsync(email);
@@ -106,12 +120,12 @@ public class UserManagementService : IUserManagementService
         user.DeptId = req.DeptId;
         user.PositionId = req.PositionId;
         user.IsActive = req.IsActive;
-        user.IsAdmin = req.IsAdmin && currentUser.IsAdmin;
         user.SearchMeta = $"{user.FullName} {user.UserName} {user.Email}";
         user.Updated = DateTime.UtcNow;
         user.UpdatedBy = currentUser.Id;
 
         await _userRepo.UpdateAsync(user);
+        await _userRepo.SaveUserRolesAsync(req.Id, req.RoleIds);
         return ApiResult.Ok("Cập nhật người dùng thành công");
     }
 
