@@ -11,27 +11,96 @@
     var it = (f.InputType ?? "text").ToLowerInvariant();
     var isNum = it == "number" || (f.Datatype?.Contains("number", StringComparison.OrdinalIgnoreCase) ?? false);
     var isDate = it == "date" || (f.Datatype?.Contains("date", StringComparison.OrdinalIgnoreCase) ?? false) || (f.Datatype?.Contains("time", StringComparison.OrdinalIgnoreCase) ?? false);
+    var isSelect = it == "select";
+    var rowsTa = Math.Max(2, f.Row > 0 ? f.Row : 3);
+
+    var selectOptions = isSelect
+        ? (f.PatternCustom ?? string.Empty)
+            .Replace("\r\n", "\n")
+            .Replace("\r", "\n")
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .Select(x => x.Trim())
+            .Where(x => x.Length > 0)
+            .Distinct()
+            .ToList()
+        : new List<string>();
+
+    string FormatDateValue(string raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return string.Empty;
+        if (DateTime.TryParse(raw, out var d)) return d.ToString("dd/MM/yyyy");
+        return raw;
+    }
+    var dateDisplay = isDate ? FormatDateValue(val) : val;
 }
-<div class="form-group">
-    <label class="small text-muted mb-1 d-block" for="@id">
-        @f.Title @if (f.IsRequired) { <span class="text-danger">*</span> }
-    </label>
+<div class="form-group chk-field-group" data-input-type="@it">
+    <div class="d-flex align-items-center justify-content-between mb-1">
+        <label class="small text-muted mb-0 d-block" for="@id">
+            @f.Title @if (f.IsRequired) { <span class="text-danger">*</span> }
+        </label>
+        @if (it == "textarea" && !isReadOnlyField)
+        {
+            <button type="button" class="btn btn-link btn-sm p-0 chk-textarea-expand"
+                    data-target="#@id" title="Mở rộng để soạn nội dung dài">
+                <i class="fas fa-expand-alt"></i>
+            </button>
+        }
+    </div>
     @if (isReadOnlyField)
     {
         <input type="text" class="form-control bg-light" id="@id" value="@val" readonly data-stg-field="@postKey" />
     }
     else if (it == "textarea")
     {
-        var rows = Math.Max(2, f.Row > 0 ? f.Row : 3);
-        <textarea class="form-control chk-field" id="@id" data-stg-field="@postKey" rows="@rows" @(f.MaxLen > 0 ? $"maxlength=\"{f.MaxLen}\"" : null)>@val</textarea>
+        <textarea class="form-control chk-field chk-textarea" id="@id" data-stg-field="@postKey" rows="@rowsTa"
+                  style="resize: vertical; min-height: @(rowsTa * 24)px;"
+                  @(f.MaxLen > 0 ? $"maxlength=\"{f.MaxLen}\"" : null)>@val</textarea>
+    }
+    else if (isSelect)
+    {
+        var hasMatch = !string.IsNullOrEmpty(val) && selectOptions.Any(o => string.Equals(o, val, StringComparison.OrdinalIgnoreCase));
+        // Không hiển thị option trống. Khi tài liệu chưa có giá trị, dòng đầu của Mô tả/Ghi chú là mặc định.
+        <select class="form-control chk-field chk-select" id="@id" data-stg-field="@postKey">
+            @for (var i = 0; i < selectOptions.Count; i++)
+            {
+                var opt = selectOptions[i];
+                var isSelected = hasMatch
+                    ? string.Equals(opt, val, StringComparison.OrdinalIgnoreCase)
+                    : (string.IsNullOrEmpty(val) && i == 0);
+                if (isSelected)
+                {
+                    <option value="@opt" selected="selected">@opt</option>
+                }
+                else
+                {
+                    <option value="@opt">@opt</option>
+                }
+            }
+            @if (!hasMatch && !string.IsNullOrEmpty(val))
+            {
+                <option value="@val" selected="selected">@val (cũ)</option>
+            }
+        </select>
+        @if (selectOptions.Count == 0)
+        {
+            <small class="text-warning d-block">
+                <i class="fas fa-exclamation-triangle mr-1"></i>
+                Loại tài liệu chưa khai báo lựa chọn. Vào cấu hình trường &gt; "Mô tả / Ghi chú", mỗi dòng là 1 lựa chọn.
+            </small>
+        }
     }
     else if (isNum)
     {
-        <input type="number" class="form-control chk-field" id="@id" data-stg-field="@postKey" value="@val" />
+        <input type="text" inputmode="decimal" class="form-control chk-field chk-number"
+               id="@id" data-stg-field="@postKey" value="@val"
+               pattern="^-?\d+([.,]\d+)?$"
+               @(f.MaxLen > 0 ? $"maxlength=\"{f.MaxLen}\"" : null) />
     }
     else if (isDate)
     {
-        <input type="date" class="form-control chk-field" id="@id" data-stg-field="@postKey" value="@val" />
+        <input type="text" class="form-control chk-field chk-date"
+               id="@id" data-stg-field="@postKey" value="@dateDisplay"
+               placeholder="dd/MM/yyyy" autocomplete="off" />
     }
     else
     {

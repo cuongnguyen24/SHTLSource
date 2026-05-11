@@ -1,19 +1,23 @@
 using Microsoft.AspNetCore.Mvc;
 using SHTL.Modules.Core.Application.Services;
 using SHTL.Modules.Features.Shared;
+using SHTL.Modules.Infrastructure.Identity;
 using SHTL.Modules.Shared.Contracts.Dtos;
 
 namespace SHTL.Modules.Features.Admin.Controllers;
 
+[AuthorizeAdmin]
 public class UserController : BaseAdminController
 {
     private readonly IUserManagementService _userService;
     private readonly IDeptService _deptService;
+    private readonly IRoleService _roleService;
 
-    public UserController(IUserManagementService userService, IDeptService deptService)
+    public UserController(IUserManagementService userService, IDeptService deptService, IRoleService roleService)
     {
         _userService = userService;
         _deptService = deptService;
+        _roleService = roleService;
     }
 
     [HttpGet]
@@ -38,6 +42,8 @@ public class UserController : BaseAdminController
     public async Task<IActionResult> Create()
     {
         ViewBag.Depts = await _deptService.GetListAsync();
+        ViewBag.AllRoles = await _roleService.GetListAsync();
+        ViewBag.UserRoleIds = new List<int>();
         SetPageHeader("Tạo người dùng", "user-plus",
             new BreadcrumbItem { Text = "Tổng quan", Url = Url.Action("Index", "Home") },
             new BreadcrumbItem { Text = "Người dùng", Url = Url.Action("Index", "User") },
@@ -52,6 +58,8 @@ public class UserController : BaseAdminController
         if (!ModelState.IsValid)
         {
             ViewBag.Depts = await _deptService.GetListAsync();
+            ViewBag.AllRoles = await _roleService.GetListAsync();
+            ViewBag.UserRoleIds = model.RoleIds;
             SetPageHeader("Tạo người dùng", "user-plus",
                 new BreadcrumbItem { Text = "Tổng quan", Url = Url.Action("Index", "Home") },
                 new BreadcrumbItem { Text = "Người dùng", Url = Url.Action("Index", "User") },
@@ -64,6 +72,8 @@ public class UserController : BaseAdminController
         {
             SetError(result.Message ?? "Tạo người dùng thất bại");
             ViewBag.Depts = await _deptService.GetListAsync();
+            ViewBag.AllRoles = await _roleService.GetListAsync();
+            ViewBag.UserRoleIds = model.RoleIds;
             SetPageHeader("Tạo người dùng", "user-plus",
                 new BreadcrumbItem { Text = "Tổng quan", Url = Url.Action("Index", "Home") },
                 new BreadcrumbItem { Text = "Người dùng", Url = Url.Action("Index", "User") },
@@ -80,13 +90,16 @@ public class UserController : BaseAdminController
     {
         var user = await _userService.GetByIdAsync(id);
         if (user is null) return NotFound();
+        var userRoleIds = await _userService.GetUserRoleIdsAsync(id);
         ViewBag.Depts = await _deptService.GetListAsync();
+        ViewBag.AllRoles = await _roleService.GetListAsync();
+        ViewBag.UserRoleIds = userRoleIds;
         SetPageHeader("Sửa người dùng", "user-edit",
             new BreadcrumbItem { Text = "Tổng quan", Url = Url.Action("Index", "Home") },
             new BreadcrumbItem { Text = "Người dùng", Url = Url.Action("Index", "User") },
             new BreadcrumbItem { Text = user.UserName });
         ViewBag.UserNameReadOnly = user.UserName;
-        return View(ToUpdateRequest(user));
+        return View(ToUpdateRequest(user, userRoleIds));
     }
 
     [HttpPost]
@@ -96,6 +109,8 @@ public class UserController : BaseAdminController
         if (!ModelState.IsValid)
         {
             ViewBag.Depts = await _deptService.GetListAsync();
+            ViewBag.AllRoles = await _roleService.GetListAsync();
+            ViewBag.UserRoleIds = model.RoleIds;
             var u = await _userService.GetByIdAsync(model.Id);
             ViewBag.UserNameReadOnly = u?.UserName;
             SetPageHeader(u is null ? "Sửa người dùng" : $"Sửa — {u.UserName}", "user-edit",
@@ -110,6 +125,8 @@ public class UserController : BaseAdminController
         {
             SetError(result.Message ?? "Cập nhật thất bại");
             ViewBag.Depts = await _deptService.GetListAsync();
+            ViewBag.AllRoles = await _roleService.GetListAsync();
+            ViewBag.UserRoleIds = model.RoleIds;
             var u = await _userService.GetByIdAsync(model.Id);
             ViewBag.UserNameReadOnly = u?.UserName;
             SetPageHeader(u is null ? "Sửa người dùng" : $"Sửa — {u.UserName}", "user-edit",
@@ -120,7 +137,7 @@ public class UserController : BaseAdminController
         }
 
         SetSuccess(result.Message ?? "Đã lưu");
-        return RedirectToAction(nameof(Edit), new { id = model.Id });
+        return RedirectToAction(nameof(Index));
     }
 
     [HttpPost]
@@ -157,7 +174,7 @@ public class UserController : BaseAdminController
         return JsonResult(result);
     }
 
-    private static UpdateUserRequest ToUpdateRequest(UserDto u) => new()
+    private static UpdateUserRequest ToUpdateRequest(UserDto u, List<int>? roleIds = null) => new()
     {
         Id = u.Id,
         Email = u.Email,
@@ -166,6 +183,6 @@ public class UserController : BaseAdminController
         DeptId = u.DeptId,
         PositionId = u.PositionId,
         IsActive = u.IsActive,
-        IsAdmin = u.IsAdmin
+        RoleIds = roleIds ?? new List<int>()
     };
 }

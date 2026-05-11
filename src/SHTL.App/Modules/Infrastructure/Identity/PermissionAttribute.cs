@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using SHTL.Modules.Core.Domain.Enums;
+using System.Security.Claims;
 
 namespace SHTL.Modules.Infrastructure.Identity;
 
@@ -20,11 +21,16 @@ public class AuthorizeModuleAttribute : Attribute, IAuthorizationFilter
         _requireAll = false;
     }
 
-    private static bool HasPermissionClaim(System.Security.Claims.ClaimsPrincipal user, ModuleCode m)
+    private static bool HasPermissionClaim(ClaimsPrincipal user, ModuleCode m)
     {
         var name = m.ToString();
         var numeric = ((int)m).ToString(System.Globalization.CultureInfo.InvariantCulture);
-        return user.HasClaim("permission", name) || user.HasClaim("permission", numeric);
+        if (user.HasClaim("permission", name) || user.HasClaim("permission", numeric))
+            return true;
+
+        // Phân quyền theo vai trò: nếu user có 1 vai trò mà vai trò đó được map tới module này → cho phép.
+        var roleCodes = user.FindAll(ClaimTypes.Role).Select(c => c.Value);
+        return roleCodes.Any(rc => RoleModuleMap.RoleHasModule(rc, m));
     }
 
     public void OnAuthorization(AuthorizationFilterContext context)
@@ -49,7 +55,8 @@ public class AuthorizeModuleAttribute : Attribute, IAuthorizationFilter
 
         if (!hasAccess)
         {
-            context.Result = new ForbidResult();
+            context.Result = new RedirectToActionResult(
+                "AccessDenied", "Home", new { area = "dashboard" });
         }
     }
 }
@@ -72,7 +79,15 @@ public class AuthorizeAdminAttribute : Attribute, IAuthorizationFilter
         }
         if (!user.IsInRole("admin"))
         {
-            context.Result = new ForbidResult();
+            var req = context.HttpContext.Request;
+            var returnUrl = $"{req.PathBase}{req.Path}{req.QueryString}";
+            // Nếu request đang ở area "admin" → dùng trang AccessDenied trong khu vực admin.
+            var area = (context.RouteData.Values["area"] as string ?? string.Empty);
+            var targetArea = string.Equals(area, "admin", StringComparison.OrdinalIgnoreCase)
+                ? "admin"
+                : "dashboard";
+            context.Result = new RedirectToActionResult(
+                "AccessDenied", "Home", new { area = targetArea, returnUrl });
         }
     }
 }

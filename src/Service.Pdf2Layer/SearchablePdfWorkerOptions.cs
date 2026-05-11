@@ -56,5 +56,19 @@ public sealed class SearchablePdfWorkerOptions
 
     public int StaleProcessingMinutes { get; set; } = 45;
 
-    public int RenderDpi { get; set; } = 150;
+    // ── Dynamic concurrency ───────────────────────────────────────────────────
+
+    /// <summary>
+    /// Số worker (Python process) chạy song song tối đa.
+    /// <c>0</c> (mặc định) = tự động scale theo RAM và số CPU core.
+    /// Đặt giá trị dương để cố định (bỏ qua auto-scale).
+    /// </summary>
+    public int MaxConcurrentWorkers { get; set; } = 0;
+
+    /// <summary>
+    /// RAM tối thiểu cần còn trống (MB) để khởi động thêm 1 Python worker.
+    /// Auto-scale sẽ không tăng thêm worker nếu RAM khả dụng &lt; giá trị này.
+    /// Mặc định 400 MB. Đặt 0 để tắt kiểm tra RAM.
+    /// </summary>
+    public int MinFreeMemoryPerJobMb { get; set; } = 400;
 }

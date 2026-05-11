@@ -65,11 +65,8 @@ public class CreateUserRequest
     [Display(Name = "Phòng ban")]
     public int DeptId { get; set; }
 
-    [Display(Name = "Chức vụ (mã)")]
+    [Display(Name = "Chức vụ")]
     public int PositionId { get; set; }
-
-    [Display(Name = "Quản trị viên")]
-    public bool IsAdmin { get; set; }
 
     [Display(Name = "Điện thoại")]
     public string? Phone { get; set; }
@@ -99,8 +96,7 @@ public class UpdateUserRequest
     [Display(Name = "Tài khoản hoạt động")]
     public bool IsActive { get; set; } = true;
 
-    [Display(Name = "Quản trị viên")]
-    public bool IsAdmin { get; set; }
+    public List<int> RoleIds { get; set; } = new();
 }
 
 public class AdminResetPasswordRequest

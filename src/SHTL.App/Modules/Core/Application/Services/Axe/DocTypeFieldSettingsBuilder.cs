@@ -6,29 +6,28 @@ namespace SHTL.Modules.Core.Application.Services.Axe;
 /// Hỗ trợ thêm trường mặc định (DF{id}) và trường mở rộng (EF{id}).</summary>
 public static class DocTypeFieldSettingsBuilder
 {
-    /// <summary>Mapping từ string input type sang INT ID.</summary>
-    private static readonly Dictionary<string, int> InputTypeMap = new()
+    /// <summary>Mapping từ string input type sang INT ID. Chỉ hỗ trợ 5 kiểu nhập hiện hành.</summary>
+    private static readonly Dictionary<string, int> InputTypeMap = new(StringComparer.OrdinalIgnoreCase)
     {
         { "text", 1 },
         { "textarea", 2 },
         { "number", 3 },
         { "date", 4 },
-        { "select", 5 },
-        { "radio", 6 },
-        { "checkbox", 7 }
+        { "select", 5 }
     };
 
-    /// <summary>Convert string input type sang INT ID.</summary>
+    /// <summary>Convert string input type sang INT ID. Mọi giá trị ngoài map (kể cả radio/checkbox cũ) fallback về 1 (text).</summary>
     private static int GetInputTypeId(string? inputType)
     {
         if (string.IsNullOrEmpty(inputType))
-            return 1; // Default to "text"
+            return 1;
 
-        return InputTypeMap.TryGetValue(inputType.ToLower(), out var id) ? id : 1;
+        return InputTypeMap.TryGetValue(inputType, out var id) ? id : 1;
     }
     public static List<StgDocFieldSettingDto> Build(
         IReadOnlyList<StgDocFieldDto> stgFields,
         IReadOnlyList<CategoryTypeDto> categoryTypes,
+        IReadOnlyList<StgDocFieldGroupDto> fieldGroups,
         int docTypeId,
         IFormCollection form,
         IReadOnlyList<StgDocFieldSettingDto> currentSettings,
@@ -38,8 +37,12 @@ public static class DocTypeFieldSettingsBuilder
         var weight = 0;
         var list = new List<StgDocFieldSettingDto>();
 
+        // Field "Tên" (id=1) phải thuộc nhóm "Thông tin tài liệu" — lookup id để chốt cứng.
+        var infoDocumentGroupId = fieldGroups
+            .FirstOrDefault(g => string.Equals(g.Name, "Thông tin tài liệu", StringComparison.Ordinal))?.Id ?? 0;
+
         // Xử lý trường mặc định (DF{id})
-        weight = ProcessDefaultFields(form, docTypeId, current, list, weight);
+        weight = ProcessDefaultFields(form, docTypeId, current, list, weight, infoDocumentGroupId);
 
         // Xử lý trường mở rộng (EF{id})
         weight = ProcessExtendedFields(form, docTypeId, current, list, weight);
@@ -161,7 +164,8 @@ public static class DocTypeFieldSettingsBuilder
         int docTypeId,
         List<StgDocFieldSettingDto> current,
         List<StgDocFieldSettingDto> list,
-        int weight)
+        int weight,
+        int infoDocumentGroupId)
     {
         // Danh sách trường mặc định (ID 1-14)
         var defaultFieldIds = Enumerable.Range(1, 14).ToList();
@@ -177,8 +181,12 @@ public static class DocTypeFieldSettingsBuilder
             weight++;
             var fieldWeight = AxeFormHelper.GetInt(form, $"DF_Weight_{fieldId}");
             var title = AxeFormHelper.GetString(form, $"DF_Title_{fieldId}");
-            var inputType = AxeFormHelper.GetString(form, $"DF_InputType_{fieldId}") ?? "text";
-            var idGroup = AxeFormHelper.GetInt(form, $"DF_GroupDetail_{fieldId}");
+            // Trường "Tên" luôn là Text + nhóm "Thông tin tài liệu" — ép cứng để chống dữ liệu cũ/sai từ form.
+            var inputType = isNameField ? "text" : (AxeFormHelper.GetString(form, $"DF_InputType_{fieldId}") ?? "text");
+            var idGroupRaw = AxeFormHelper.GetInt(form, $"DF_GroupDetail_{fieldId}");
+            var idGroup = isNameField
+                ? (infoDocumentGroupId > 0 ? infoDocumentGroupId : idGroupRaw)
+                : idGroupRaw;
             var minValue = AxeFormHelper.GetString(form, $"DF_MinValue_{fieldId}");
             var maxValue = AxeFormHelper.GetString(form, $"DF_MaxValue_{fieldId}");
             var minLen = AxeFormHelper.GetInt(form, $"DF_MinLen_{fieldId}");

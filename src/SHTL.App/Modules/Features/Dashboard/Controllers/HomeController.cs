@@ -44,6 +44,14 @@ public class HomeController : Controller
     }
 
     [AllowAnonymous]
+    public IActionResult AccessDenied(string? returnUrl = null)
+    {
+        Response.StatusCode = 403;
+        ViewData["ReturnUrl"] = returnUrl;
+        return View();
+    }
+
+    [AllowAnonymous]
     public IActionResult StatusCode(int? code)
     {
         var statusCode = code ?? 404;

@@ -11,8 +11,6 @@
             3 => "number",
             4 => "date",
             5 => "select",
-            6 => "radio",
-            7 => "checkbox",
             _ => "text"
         };
     }
@@ -220,10 +218,8 @@
                                 <option value="text">Text</option>
                                 <option value="textarea">Textarea</option>
                                 <option value="number">Number</option>
-                                <option value="date">Date</option>
-                                <option value="select">Select</option>
-                                <option value="radio">Radio</option>
-                                <option value="checkbox">Checkbox</option>
+                                <option value="date">Date (dd/MM/yyyy)</option>
+                                <option value="select">Select (dropdown)</option>
                             </select>
                         </div>
                     </div>
@@ -241,7 +237,14 @@
                 </div>
                 <div class="form-group">
                     <label>Mô tả / Ghi chú</label>
-                    <textarea class="form-control" id="extModalDescription" rows="2"></textarea>
+                    <textarea class="form-control" id="extModalDescription" rows="3"
+                              placeholder="Ghi chú cho trường (tuỳ chọn)."></textarea>
+                    <small class="form-text text-muted d-none" id="extModalDescriptionHintSelect">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Khi <strong>Kiểu nhập = Select</strong>: mỗi dòng tương đương 1 lựa chọn trong dropdown.
+                        Ví dụ:<br />
+                        <code>Đã ký<br />Chưa ký<br />Đang trình</code>
+                    </small>
                 </div>
                 <div class="form-row">
                     <div class="col-md-6">
@@ -347,6 +350,19 @@ document.addEventListener('DOMContentLoaded', function() {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
 
+    function toggleExtDescriptionHint(inputType) {
+        const hint = document.getElementById('extModalDescriptionHintSelect');
+        if (!hint) return;
+        hint.classList.toggle('d-none', inputType !== 'select');
+    }
+
+    const extInputTypeSelect = document.getElementById('extModalInputType');
+    if (extInputTypeSelect) {
+        extInputTypeSelect.addEventListener('change', function() {
+            toggleExtDescriptionHint(this.value);
+        });
+    }
+
     // Toggle field enabled/disabled state
     document.querySelectorAll('.field-enabled').forEach(checkbox => {
         checkbox.addEventListener('change', function() {
@@ -374,8 +390,10 @@ document.addEventListener('DOMContentLoaded', function() {
             // Set modal data
             document.getElementById('extModalFieldId').value = fieldId;
             document.getElementById('extModalFieldName').textContent = fieldName;
-            document.getElementById('extModalInputType').value = inputType;
+            const safeInputType = ['text','textarea','number','date','select'].includes(inputType) ? inputType : 'text';
+            document.getElementById('extModalInputType').value = safeInputType;
             document.getElementById('extModalFieldGroup').value = fieldGroup;
+            toggleExtDescriptionHint(safeInputType);
             
             // Load existing values from hidden inputs if any
             const prefix = 'EF_';

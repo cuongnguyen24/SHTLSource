@@ -6,11 +6,16 @@ namespace SHTL.Modules.Infrastructure.Data.Repositories.Acc;
 public interface IUserRepository
 {
     Task<IReadOnlyList<string>> GetPermissionCodesForUserAsync(int userId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<string>> GetRoleCodesForUserAsync(int userId, CancellationToken cancellationToken = default);
+    Task<List<int>> GetRoleIdsForUserAsync(int userId);
+    Task SaveUserRolesAsync(int userId, List<int> roleIds);
 
     Task<User?> GetByIdAsync(int id);
     Task<User?> GetByUserNameAsync(string userName);
     Task<User?> GetByEmailAsync(string email);
     Task<IEnumerable<User>> GetListAsync(int pageIndex = 1, int pageSize = 20, string? search = null);
+    Task<Dictionary<int, string?>> GetDeptNameMapAsync(IEnumerable<int> deptIds);
+    Task<Dictionary<int, List<string>>> GetRoleNamesByUserIdsAsync(IEnumerable<int> userIds);
     Task<long> CountAsync(string? search = null);
     Task<int> InsertAsync(User user);
     Task<int> UpdateAsync(User user);
@@ -73,6 +78,31 @@ public class UserRepository : IUserRepository
             .Skip((pageIndex - 1) * pageSize).Take(pageSize).ToListAsync();
     }
 
+    public async Task<Dictionary<int, string?>> GetDeptNameMapAsync(IEnumerable<int> deptIds)
+    {
+        var ids = deptIds.Where(d => d > 0).Distinct().ToList();
+        if (ids.Count == 0) return new Dictionary<int, string?>();
+        return await _db.Depts.AsNoTracking()
+            .Where(d => ids.Contains(d.Id))
+            .ToDictionaryAsync(d => d.Id, d => (string?)d.Name);
+    }
+
+    public async Task<Dictionary<int, List<string>>> GetRoleNamesByUserIdsAsync(IEnumerable<int> userIds)
+    {
+        var ids = userIds.Distinct().ToList();
+        if (ids.Count == 0) return new Dictionary<int, List<string>>();
+
+        var rows = await (
+            from ur in _db.UserRoles.AsNoTracking()
+            join r in _db.Roles.AsNoTracking() on ur.RoleId equals r.Id
+            where ids.Contains(ur.UserId) && r.IsActive
+            select new { ur.UserId, r.Name })
+            .ToListAsync();
+
+        return rows.GroupBy(x => x.UserId)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.Name).ToList());
+    }
+
     public async Task<long> CountAsync(string? search = null)
     {
         var q = _db.Users.AsNoTracking().AsQueryable();
@@ -119,6 +149,41 @@ public class UserRepository : IUserRepository
                 .SetProperty(u => u.Updated, DateTime.UtcNow)
                 .SetProperty(u => u.UpdatedBy, updatedBy));
         return rows;
+    }
+
+    public async Task<IReadOnlyList<string>> GetRoleCodesForUserAsync(int userId, CancellationToken cancellationToken = default)
+    {
+        if (userId <= 0) return Array.Empty<string>();
+        return await (
+                from ur in _db.UserRoles.AsNoTracking()
+                join r in _db.Roles.AsNoTracking() on ur.RoleId equals r.Id
+                where ur.UserId == userId && r.IsActive
+                select r.Code)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<List<int>> GetRoleIdsForUserAsync(int userId)
+    {
+        if (userId <= 0) return new List<int>();
+        return await _db.UserRoles.AsNoTracking()
+            .Where(ur => ur.UserId == userId)
+            .Select(ur => ur.RoleId)
+            .ToListAsync();
+    }
+
+    public async Task SaveUserRolesAsync(int userId, List<int> roleIds)
+    {
+        var existing = await _db.UserRoles.Where(ur => ur.UserId == userId).ToListAsync();
+        _db.UserRoles.RemoveRange(existing);
+
+        if (roleIds.Count > 0)
+        {
+            var newRoles = roleIds.Select(rid => new UserRole { UserId = userId, RoleId = rid });
+            await _db.UserRoles.AddRangeAsync(newRoles);
+        }
+
+        await _db.SaveChangesAsync();
     }
 
     public async Task<IEnumerable<User>> GetActiveUsersAsync()

@@ -46,7 +46,9 @@ public class AuthService : IAuthService
         };
 
         if (user.IsAdmin)
+        {
             claims.Add(new Claim(ClaimTypes.Role, "admin"));
+        }
         else
         {
             var codes = await _userRepo.GetPermissionCodesForUserAsync(user.Id);
@@ -54,6 +56,13 @@ public class AuthService : IAuthService
             {
                 if (string.IsNullOrWhiteSpace(code)) continue;
                 claims.Add(new Claim("permission", code.Trim(), ClaimValueTypes.String));
+            }
+
+            var roleCodes = await _userRepo.GetRoleCodesForUserAsync(user.Id);
+            foreach (var roleCode in roleCodes)
+            {
+                if (string.IsNullOrWhiteSpace(roleCode)) continue;
+                claims.Add(new Claim(ClaimTypes.Role, roleCode.Trim().ToUpper()));
             }
         }
 

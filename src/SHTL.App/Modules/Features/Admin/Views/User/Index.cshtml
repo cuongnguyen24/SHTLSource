@@ -1,25 +1,12 @@
 @model PaginatedResult<UserDto>
-@using System.Text.Json
 @{
     ViewData["Title"] = "Người dùng";
     var search = ViewBag.Search as string ?? "";
-    var hotData = Model.Items.Select(u => new Dictionary<string, object?> {
-        ["id"] = u.Id,
-        ["userName"] = u.UserName,
-        ["fullName"] = u.FullName,
-        ["email"] = u.Email,
-        ["dept"] = u.DeptName ?? "",
-        ["active"] = u.IsActive ? "Có" : "Không",
-        ["admin"] = u.IsAdmin ? "Có" : "Không"
-    }).ToList();
-    var json = JsonSerializer.Serialize(hotData);
+    var meId = (int)(ViewData["MeUserId"] ?? 0);
 }
 @section Breadcrumb {
     <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home">Tổng quan</a></li>
     <li class="breadcrumb-item active">Người dùng</li>
-}
-@section Styles {
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable@14.1.0/dist/handsontable.full.min.css" />
 }
 <div class="layout-expanded">
     <div class="frame-figma mb-3">
@@ -43,41 +30,77 @@
             </form>
         </div>
         <div class="p-3">
-            <p id="user-hot-loading" class="text-muted small mb-2"><i class="fas fa-spinner fa-spin mr-1"></i>Đang tải lưới...</p>
-            <div id="user-hot-empty" class="alert alert-light border d-none mb-0">Không có người dùng.</div>
-            <div id="user-hot" class="d-none"></div>
-            <partial name="_Pager" model="Model" />
-            <div class="mt-3 small">
-                <a asp-action="Index" asp-controller="User">Làm mới</a>
-                <span class="text-muted mx-2">|</span>
-                <span class="text-muted">Click dòng → Sửa (theo ID trong bảng).</span>
-            </div>
+            @if (!Model.Items.Any())
+            {
+                <div class="alert alert-light border mb-0">Không có người dùng.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover table-figma">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:50px;">STT</th>
+                                <th>Tài khoản</th>
+                                <th>Họ tên</th>
+                                <th>Email</th>
+                                <th>Phòng ban</th>
+                                <th>Vai trò</th>
+                                <th style="width:90px;">Hoạt động</th>
+                                <th style="width:80px;">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{int stt = (Model.PageIndex - 1) * Model.PageSize + 1;}
+                            @foreach (var u in Model.Items)
+                            {
+                                <tr>
+                                    <td class="text-center text-muted small">@(stt++)</td>
+                                    <td>
+                                        <strong>@u.UserName</strong>
+                                        @if (u.Id == meId)
+                                        {
+                                            <span class="badge badge-primary ml-1" style="font-size:10px;">Bạn</span>
+                                        }
+                                    </td>
+                                    <td>@u.FullName</td>
+                                    <td class="text-muted small">@u.Email</td>
+                                    <td class="text-muted small">@(u.DeptName ?? "—")</td>
+                                    <td>
+                                        @if (u.Roles.Count > 0)
+                                        {
+                                            @foreach (var role in u.Roles)
+                                            {
+                                                <span class="badge badge-light border mr-1" style="font-size:11px;">@role</span>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small">—</span>
+                                        }
+                                    </td>
+                                    <td class="text-center">
+                                        @if (u.IsActive)
+                                        {
+                                            <span class="badge badge-success">Hoạt động</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge badge-secondary">Vô hiệu</span>
+                                        }
+                                    </td>
+                                    <td class="text-center">
+                                        <a asp-action="Edit" asp-route-id="@u.Id" class="btn btn-sm btn-outline-primary" title="Sửa">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <partial name="_Pager" model="Model" />
+            }
         </div>
     </div>
 </div>
-@section Scripts {
-    <script src="https://cdn.jsdelivr.net/npm/handsontable@14.1.0/dist/handsontable.full.min.js"></script>
-    <script src="~/js/shtl-handsontable.js" asp-append-version="true"></script>
-    <script>
-        (function () {
-            var data = @Html.Raw(json);
-            var cols = [
-                { data: 'id', title: 'ID', type: 'numeric', readOnly: true },
-                { data: 'userName', title: 'Tài khoản', readOnly: true },
-                { data: 'fullName', title: 'Họ tên', readOnly: true },
-                { data: 'email', title: 'Email', readOnly: true },
-                { data: 'dept', title: 'Phòng ban', readOnly: true },
-                { data: 'active', title: 'Hoạt động', readOnly: true },
-                { data: 'admin', title: 'Admin', readOnly: true }
-            ];
-            var hot = window.ShtlHot.initReadOnly('user-hot', document.getElementById('user-hot-loading'), document.getElementById('user-hot-empty'), cols, data, { height: 440 });
-            if (hot) {
-                hot.addHook('afterOnCellDblClick', function (_e, coords) {
-                    if (!coords || coords.row < 0) return;
-                    var id = hot.getDataAtRowProp(coords.row, 'id');
-                    if (id) window.location.href = '@Url.Action("Edit", "User")?id=' + id;
-                });
-            }
-        })();
-    </script>
-}

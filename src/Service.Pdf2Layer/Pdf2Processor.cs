@@ -34,20 +34,25 @@ internal sealed class Pdf2Processor
         if (doc is null)
         {
             _logger.LogWarning("Pdf2Layer: tài liệu {Id} không tồn tại", documentId);
-            await AppDataFileLog.WriteAsync("WARN", $"Tài liệu #{documentId} không tồn tại khi xử lý.").ConfigureAwait(false);
+            await LogDocAsync(documentId, "WARN", "CLAIM_ORPHAN", "Tài liệu không tồn tại trong DB sau khi claim (có thể đã xóa).").ConfigureAwait(false);
             return;
         }
 
         if (doc.OcrStatus != (byte)Pdf2OcrStatus.SearchablePdfProcessing)
         {
             _logger.LogDebug("Pdf2Layer: bỏ qua id={Id}, ocr_status={Status}", documentId, doc.OcrStatus);
+            await LogDocAsync(documentId, "WARN", "STATUS_MISMATCH",
+                $"Bỏ qua xử lý: ocr_status hiện tại={doc.OcrStatus}, kỳ vọng={(byte)Pdf2OcrStatus.SearchablePdfProcessing} (Processing). Có thể đã được cập nhật từ nơi khác.")
+                .ConfigureAwait(false);
             return;
         }
 
         if (!SearchablePdfPathHelper.LooksLikePdf(doc.Extension, doc.FileName, doc.FilePath)
             || string.IsNullOrWhiteSpace(doc.FilePath))
         {
-            await AppDataFileLog.WriteAsync("ERROR", $"Tài liệu #{documentId} không hợp lệ để tạo PDF 2 lớp. extension={doc.Extension}; file={doc.FileName}; path={doc.FilePath}").ConfigureAwait(false);
+            await LogDocAsync(documentId, "ERROR", "NOT_PDF_OR_EMPTY_PATH",
+                $"Không hợp lệ để tạo PDF 2 lớp. extension={doc.Extension}; file={doc.FileName}; path={doc.FilePath}")
+                .ConfigureAwait(false);
             await _repo.UpdateSearchablePdfStateAsync(documentId, Pdf2OcrStatus.SearchablePdfFailed, null, 0, cancellationToken)
                 .ConfigureAwait(false);
             return;
@@ -57,7 +62,9 @@ internal sealed class Pdf2Processor
         if (inputFull is null || !File.Exists(inputFull))
         {
             _logger.LogError("Pdf2Layer: không đọc file gốc id={Id} path={Path}", documentId, doc.FilePath);
-            await AppDataFileLog.WriteAsync("ERROR", $"Không đọc được file gốc tài liệu #{documentId}. db_path={doc.FilePath}; root={_storageOpts.Value.RootPath}").ConfigureAwait(false);
+            await LogDocAsync(documentId, "ERROR", "FILE_NOT_ON_DISK",
+                $"Không đọc được file gốc. db_path={doc.FilePath}; resolved={(inputFull ?? "(null — path traversal / ngoài RootPath)")}; storageRoot={_storageOpts.Value.RootPath}")
+                .ConfigureAwait(false);
             await _repo.UpdateSearchablePdfStateAsync(documentId, Pdf2OcrStatus.SearchablePdfFailed, null, 0, cancellationToken)
                 .ConfigureAwait(false);
             return;
@@ -67,7 +74,9 @@ internal sealed class Pdf2Processor
         if (!dpiFromPage.HasValue || dpiFromPage.Value <= 0)
         {
             _logger.LogError("Pdf2Layer: không có DPI theo trang cho tài liệu id={Id}", documentId);
-            await AppDataFileLog.WriteAsync("ERROR", $"Không có DPI theo trang (stg_doc_sohoa_page) cho tài liệu #{documentId}.").ConfigureAwait(false);
+            await LogDocAsync(documentId, "ERROR", "NO_DPI_SOHOA",
+                "Không có dpi_x hợp lệ trên stg_doc_sohoa_page (cần số hóa lưu DPI theo trang trước).")
+                .ConfigureAwait(false);
             await _repo.UpdateSearchablePdfStateAsync(documentId, Pdf2OcrStatus.SearchablePdfFailed, null, 0, cancellationToken)
                 .ConfigureAwait(false);
             return;
@@ -79,11 +88,13 @@ internal sealed class Pdf2Processor
         try
         {
             _logger.LogInformation("Pdf2Layer: đang xử lý id={Id}", documentId);
-            await AppDataFileLog.WriteAsync("INFO", $"Bắt đầu xử lý tài liệu #{documentId}. input={inputFull}; dpi={dpi}; maxPages={(maxPages <= 0 ? "ALL" : maxPages)}").ConfigureAwait(false);
-            var ok = await _runner.RunAsync(inputFull, tempOut, dpi, maxPages, cancellationToken).ConfigureAwait(false);
-            if (!ok)
+            await LogDocAsync(documentId, "INFO", "START",
+                $"Bắt đầu xử lý. input={inputFull}; dpi={dpi}; maxPages={(maxPages <= 0 ? "ALL" : maxPages.ToString())}")
+                .ConfigureAwait(false);
+            var run = await _runner.RunAsync(inputFull, tempOut, dpi, maxPages, cancellationToken).ConfigureAwait(false);
+            if (!run.Ok)
             {
-                await AppDataFileLog.WriteAsync("ERROR", $"Runner trả lỗi cho tài liệu #{documentId}. input={inputFull}").ConfigureAwait(false);
+                await LogDocAsync(documentId, "ERROR", "PYTHON_OR_RUNNER", run.Reason).ConfigureAwait(false);
                 await _repo.UpdateSearchablePdfStateAsync(documentId, Pdf2OcrStatus.SearchablePdfFailed, null, 0, cancellationToken)
                     .ConfigureAwait(false);
                 return;
@@ -105,13 +116,21 @@ internal sealed class Pdf2Processor
             }
 
             _logger.LogInformation("Pdf2Layer: hoàn tất id={Id} → {Path}", documentId, storedRel);
-            await AppDataFileLog.WriteAsync("INFO", $"Hoàn tất tài liệu #{documentId}. output={storedRel}").ConfigureAwait(false);
+            await LogDocAsync(documentId, "INFO", "DONE", $"Hoàn tất. output={storedRel}").ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // Service đang dừng — KHÔNG đánh dấu Failed. Document ở trạng thái Processing (11),
+            // stale-reset khi khởi động lại sẽ đưa nó về Queued (10) để xử lý tiếp.
+            throw;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Pdf2Layer: lỗi id={Id}", documentId);
-            await AppDataFileLog.WriteAsync("ERROR", $"Exception khi xử lý tài liệu #{documentId}", ex).ConfigureAwait(false);
-            await _repo.UpdateSearchablePdfStateAsync(documentId, Pdf2OcrStatus.SearchablePdfFailed, null, 0, cancellationToken)
+            await LogDocAsync(documentId, "ERROR", "EXCEPTION", $"{ex.GetType().Name}: {ex.Message}", ex).ConfigureAwait(false);
+            // Dùng CancellationToken.None để đảm bảo update luôn thành công,
+            // tránh trường hợp token vừa bị cancel ngay lúc ghi DB.
+            await _repo.UpdateSearchablePdfStateAsync(documentId, Pdf2OcrStatus.SearchablePdfFailed, null, 0, CancellationToken.None)
                 .ConfigureAwait(false);
         }
         finally
@@ -154,5 +173,12 @@ internal sealed class Pdf2Processor
         }
 
         return fallback <= 0 ? 0 : Math.Clamp(fallback, 1, 5000);
+    }
+
+    /// <summary>Ghi log file AppData với mã lỗi cố định để tra cứu nhanh (dashboard chỉ thấy ocr_status=13).</summary>
+    private static Task LogDocAsync(long documentId, string level, string reasonCode, string detail, Exception? ex = null)
+    {
+        var line = $"[doc #{documentId}] [{reasonCode}] {detail}";
+        return AppDataFileLog.WriteAsync(level, line, ex);
     }
 }

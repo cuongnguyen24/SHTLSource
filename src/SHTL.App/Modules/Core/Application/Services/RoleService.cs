@@ -9,8 +9,8 @@ namespace SHTL.Modules.Core.Application.Services;
 public interface IRoleService
 {
     Task<IEnumerable<RoleDto>> GetListAsync();
-    Task<ApiResult<int>> CreateAsync(CreateRoleRequest req, ICurrentUser currentUser);
-    Task<ApiResult> DeleteAsync(int id, ICurrentUser currentUser);
+    Task<RoleDto?> GetByIdAsync(int id);
+    Task<ApiResult> UpdateAsync(EditRoleRequest req, ICurrentUser currentUser);
     Task<ApiResult> SavePermissionsAsync(int roleId, List<string> permissions, ICurrentUser currentUser);
 }
 
@@ -35,34 +35,36 @@ public class RoleService : IRoleService
         });
     }
 
-    public async Task<ApiResult<int>> CreateAsync(CreateRoleRequest req, ICurrentUser currentUser)
+    public async Task<RoleDto?> GetByIdAsync(int id)
     {
-        var existing = await _roleRepo.GetByCodeAsync(req.Code);
-        if (existing is not null)
-            return ApiResult<int>.Fail("Mã quyền đã tồn tại");
-
-        var role = new Role
+        var r = await _roleRepo.GetByIdAsync(id);
+        if (r is null) return null;
+        return new RoleDto
         {
-            Name = req.Name.Trim(),
-            Code = req.Code.Trim().ToUpper(),
-            Description = req.Description,
-            IsActive = true,
-            Created = DateTime.UtcNow,
-            CreatedBy = currentUser.Id
+            Id = r.Id,
+            Name = r.Name,
+            Code = r.Code,
+            Description = r.Description
         };
-
-        var id = (int)await _roleRepo.InsertAsync(role);
-        return ApiResult<int>.Ok(id, "Tạo quyền thành công");
     }
 
-    public async Task<ApiResult> DeleteAsync(int id, ICurrentUser currentUser)
+    public async Task<ApiResult> UpdateAsync(EditRoleRequest req, ICurrentUser currentUser)
     {
-        var role = await _roleRepo.GetByIdAsync(id);
+        var role = await _roleRepo.GetByIdAsync(req.Id);
         if (role is null)
-            return ApiResult.Fail("Quyền không tồn tại");
+            return ApiResult.Fail("Vai trò không tồn tại");
 
-        await _roleRepo.DeleteAsync(id);
-        return ApiResult.Ok("Đã xóa quyền");
+        // Cố ý KHÔNG đụng vào Code — vai trò là dữ liệu hạt giống, mã cố định.
+        role.Name = (req.Name ?? string.Empty).Trim();
+        role.Description = string.IsNullOrWhiteSpace(req.Description) ? null : req.Description.Trim();
+        role.Updated = DateTime.UtcNow;
+        role.UpdatedBy = currentUser.Id;
+
+        var affected = await _roleRepo.UpdateAsync(role);
+        if (affected <= 0)
+            return ApiResult.Fail("Không cập nhật được vai trò");
+
+        return ApiResult.Ok("Cập nhật vai trò thành công");
     }
 
     public async Task<ApiResult> SavePermissionsAsync(int roleId, List<string> permissions, ICurrentUser currentUser)

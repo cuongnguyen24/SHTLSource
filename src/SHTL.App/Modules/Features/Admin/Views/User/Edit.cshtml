@@ -1,12 +1,25 @@
 @model UpdateUserRequest
+@using SHTL.Modules.Shared.Contracts.Dtos
 @{
     ViewData["Title"] = "Sửa người dùng";
     var depts = ViewBag.Depts as IEnumerable<DeptDto> ?? Enumerable.Empty<DeptDto>();
+    var allRoles = (ViewBag.AllRoles as IEnumerable<RoleDto> ?? Enumerable.Empty<RoleDto>()).ToList();
+    var userRoleIds = ViewBag.UserRoleIds as List<int> ?? Model.RoleIds;
+    var assignedRoles = allRoles.Where(r => userRoleIds.Contains(r.Id)).ToList();
+    var availableRoles = allRoles.Where(r => !userRoleIds.Contains(r.Id)).ToList();
     var uname = ViewBag.UserNameReadOnly as string ?? "";
 }
 @section Breadcrumb {
     <li class="breadcrumb-item"><a asp-action="Index" asp-controller="User">Người dùng</a></li>
     <li class="breadcrumb-item active">@uname</li>
+}
+@section Styles {
+<style>
+.role-picker { display: flex; align-items: center; gap: 8px; }
+.role-picker select { flex: 1; min-height: 140px; }
+.role-picker .role-btns { display: flex; flex-direction: column; gap: 6px; }
+.role-picker .role-btns button { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+</style>
 }
 <div class="layout-expanded">
     <div class="frame-figma mb-3">
@@ -21,7 +34,7 @@
         </div>
     </div>
     <div class="row">
-        <div class="col-lg-7">
+        <div class="col-lg-8">
             <div class="card-figma mb-3">
                 <div class="card-header-figma"><h3 class="card-title-figma mb-0">Thông tin</h3></div>
                 <div class="card-content-figma">
@@ -33,38 +46,75 @@
                             <label class="label-figma">Tài khoản</label>
                             <input class="form-control" value="@uname" readonly disabled />
                         </div>
-                        <div class="form-group-figma">
-                            <label asp-for="FullName" class="label-figma"></label>
-                            <input asp-for="FullName" class="form-control" />
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label asp-for="FullName" class="label-figma"></label>
+                                <input asp-for="FullName" class="form-control" />
+                                <span asp-validation-for="FullName" class="text-danger small"></span>
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label asp-for="Email" class="label-figma"></label>
+                                <input asp-for="Email" class="form-control" />
+                                <span asp-validation-for="Email" class="text-danger small"></span>
+                            </div>
                         </div>
-                        <div class="form-group-figma">
-                            <label asp-for="Email" class="label-figma"></label>
-                            <input asp-for="Email" class="form-control" />
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label asp-for="Phone" class="label-figma"></label>
+                                <input asp-for="Phone" class="form-control" />
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label asp-for="DeptId" class="label-figma"></label>
+                                <select asp-for="DeptId" class="form-control">
+                                    @foreach (var d in depts)
+                                    {
+                                        <option value="@d.Id">@d.Name</option>
+                                    }
+                                </select>
+                            </div>
                         </div>
-                        <div class="form-group-figma">
-                            <label asp-for="Phone" class="label-figma"></label>
-                            <input asp-for="Phone" class="form-control" />
-                        </div>
-                        <div class="form-group-figma">
-                            <label asp-for="DeptId" class="label-figma"></label>
-                            <select asp-for="DeptId" class="form-control">
-                                @foreach (var d in depts)
+
+                        <div class="form-group">
+                            <label class="label-figma">Chức vụ (Vai trò)</label>
+                            <div class="role-picker">
+                                <div class="d-flex flex-column flex-grow-1">
+                                    <div class="text-muted small mb-1">Chưa gán</div>
+                                    <select id="availableRoles" multiple class="form-control">
+                                        @foreach (var r in availableRoles)
+                                        {
+                                            <option value="@r.Id">@r.Name</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="role-btns">
+                                    <button type="button" id="btnAddRole" class="btn btn-outline-primary" title="Gán vai trò">
+                                        <i class="fas fa-chevron-right"></i>
+                                    </button>
+                                    <button type="button" id="btnRemoveRole" class="btn btn-outline-secondary" title="Bỏ vai trò">
+                                        <i class="fas fa-chevron-left"></i>
+                                    </button>
+                                </div>
+                                <div class="d-flex flex-column flex-grow-1">
+                                    <div class="text-muted small mb-1">Đã gán</div>
+                                    <select id="assignedRoles" multiple class="form-control">
+                                        @foreach (var r in assignedRoles)
+                                        {
+                                            <option value="@r.Id">@r.Name</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                            <div id="roleHiddenInputs">
+                                @foreach (var rid in userRoleIds)
                                 {
-                                    <option value="@d.Id">@d.Name</option>
+                                    <input type="hidden" name="RoleIds" value="@rid" />
                                 }
-                            </select>
+                            </div>
                         </div>
-                        <div class="form-group-figma">
-                            <label asp-for="PositionId" class="label-figma"></label>
-                            <input asp-for="PositionId" class="form-control" />
-                        </div>
-                        <div class="custom-control custom-checkbox mb-2">
+
+                        <div class="custom-control custom-checkbox mb-3">
                             <input asp-for="IsActive" class="custom-control-input" id="userActive" />
                             <label asp-for="IsActive" class="custom-control-label" for="userActive"></label>
-                        </div>
-                        <div class="custom-control custom-checkbox mb-3">
-                            <input asp-for="IsAdmin" class="custom-control-input" id="userAdmin" />
-                            <label asp-for="IsAdmin" class="custom-control-label" for="userAdmin"></label>
                         </div>
                         <div class="d-flex flex-wrap" style="gap:8px;">
                             <button type="submit" class="btn-figma btn-figma-primary">Cập nhật</button>
@@ -74,7 +124,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-lg-5">
+        <div class="col-lg-4">
             <div class="card-figma">
                 <div class="card-header-figma"><h3 class="card-title-figma mb-0">Đặt lại mật khẩu (admin)</h3></div>
                 <div class="card-content-figma">
@@ -98,4 +148,36 @@
 </div>
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+    (function () {
+        const available = document.getElementById('availableRoles');
+        const assigned = document.getElementById('assignedRoles');
+        const hiddenContainer = document.getElementById('roleHiddenInputs');
+
+        function syncHidden() {
+            hiddenContainer.innerHTML = '';
+            Array.from(assigned.options).forEach(opt => {
+                const inp = document.createElement('input');
+                inp.type = 'hidden';
+                inp.name = 'RoleIds';
+                inp.value = opt.value;
+                hiddenContainer.appendChild(inp);
+            });
+        }
+
+        function moveSelected(from, to) {
+            Array.from(from.selectedOptions).forEach(opt => {
+                from.remove(opt.index);
+                to.appendChild(opt);
+            });
+            syncHidden();
+        }
+
+        document.getElementById('btnAddRole').addEventListener('click', () => moveSelected(available, assigned));
+        document.getElementById('btnRemoveRole').addEventListener('click', () => moveSelected(assigned, available));
+
+        available.addEventListener('dblclick', () => moveSelected(available, assigned));
+        assigned.addEventListener('dblclick', () => moveSelected(assigned, available));
+    })();
+    </script>
 }

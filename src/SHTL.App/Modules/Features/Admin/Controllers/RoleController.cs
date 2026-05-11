@@ -20,38 +20,58 @@ public class RoleController : BaseAdminController
         SetPageHeader("Vai trò & nhóm quyền", "user-shield",
             new BreadcrumbItem { Text = "Tổng quan", Url = Url.Action("Index", "Home") },
             new BreadcrumbItem { Text = "Vai trò" });
-        ViewData["PrimaryButtonText"] = "Tạo mới";
-        ViewData["PrimaryButtonUrl"] = Url.Action("Create", "Role");
         return View(list);
     }
 
     [HttpGet]
-    public IActionResult Create()
+    public async Task<IActionResult> Edit(int id)
     {
-        SetPageHeader("Tạo vai trò", "plus",
+        var role = await _roleService.GetByIdAsync(id);
+        if (role is null)
+        {
+            SetError("Vai trò không tồn tại");
+            return RedirectToAction(nameof(Index));
+        }
+
+        SetPageHeader("Sửa vai trò", "edit",
             new BreadcrumbItem { Text = "Tổng quan", Url = Url.Action("Index", "Home") },
             new BreadcrumbItem { Text = "Vai trò", Url = Url.Action("Index", "Role") },
-            new BreadcrumbItem { Text = "Tạo mới" });
-        return View(new CreateRoleRequest());
+            new BreadcrumbItem { Text = "Sửa" });
+
+        var vm = new EditRoleRequest
+        {
+            Id = role.Id,
+            Code = role.Code,
+            Name = role.Name,
+            Description = role.Description
+        };
+        return View(vm);
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(CreateRoleRequest model)
+    public async Task<IActionResult> Edit(EditRoleRequest model)
     {
-        if (!ModelState.IsValid) return View(model);
-        var result = await _roleService.CreateAsync(model, CurrentUser);
-        if (!result.Success) { SetError(result.Message!); return View(model); }
-        SetSuccess("Tạo quyền thành công");
+        if (!ModelState.IsValid)
+        {
+            // Bổ sung Code (readonly) lại từ DB để hiển thị nếu form post thiếu.
+            if (string.IsNullOrWhiteSpace(model.Code))
+            {
+                var existing = await _roleService.GetByIdAsync(model.Id);
+                if (existing is not null) model.Code = existing.Code;
+            }
+            return View(model);
+        }
+
+        var result = await _roleService.UpdateAsync(model, CurrentUser);
+        if (!result.Success)
+        {
+            SetError(result.Message ?? "Cập nhật thất bại");
+            return View(model);
+        }
+
+        SetSuccess(result.Message ?? "Cập nhật vai trò thành công");
         return RedirectToAction(nameof(Index));
-    }
-
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Delete(int id)
-    {
-        var result = await _roleService.DeleteAsync(id, CurrentUser);
-        return JsonResult(result);
     }
 
     [HttpPost]

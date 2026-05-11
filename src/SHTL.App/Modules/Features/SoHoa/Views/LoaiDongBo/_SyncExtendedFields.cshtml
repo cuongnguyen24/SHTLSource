@@ -1,5 +1,5 @@
 @model SyncTypeEditPageDto
-@* Trường mở rộng (Field 1-25) — cấu hình tương tự trường mặc định *@
+@* Trường mở rộng (Field 1-25) — không cần cấu hình chi tiết ở Loại đồng bộ. *@
 
 @{
     string GetInputTypeString(int inputTypeId)
@@ -11,15 +11,9 @@
             3 => "number",
             4 => "date",
             5 => "select",
-            6 => "radio",
-            7 => "checkbox",
             _ => "text"
         };
     }
-    var groupOptions = Model.FieldGroups
-        .Where(g => g.Name == "Thông tin hồ sơ" || g.Name == "Thông tin tài liệu")
-        .OrderBy(g => g.Name == "Thông tin hồ sơ" ? 1 : 2)
-        .ToList();
 }
 
 <div class="extended-fields-container">
@@ -28,294 +22,93 @@
             var midPoint = 13; // Chia 25 fields thành 2 cột: 13 và 12
         }
 
-        <!-- Cột trái (Field 1-13) -->
-        <div class="col-md-6">
-            <div class="table-container-figma mb-0" style="max-height: 500px; overflow-y: auto;">
-                <table class="table table-sm table-figma mb-0">
-                    <thead>
-                        <tr>
-                            <th style="width: 48px;">Dùng</th>
-                            <th>Tên trường</th>
-                            <th style="width: 60px;">Cấu hình</th>
-                        </tr>
-                    </thead>
-                    <tbody id="extendedFieldsBodyLeft">
-                        @for (int i = 1; i <= midPoint; i++)
-                        {
-                            var fieldId = 100 + i;
-                            var fieldName = $"field{i}";
-                            var fieldTitle = $"Field {i}";
-                            
-                            var st = Model.Settings.FirstOrDefault(s => s.IdField == fieldId && !s.IsCatalog);
-                            var isEnabled = st != null;
-                            var weight = st?.Weight ?? (i * 10);
-                            var inputType = GetInputTypeString(st?.IType ?? 1);
-                            var fieldGroup = st?.IdFieldGroup ?? 0;
-                            var customTitle = st?.Title ?? fieldTitle;
-                            var description = st?.PatternCustom ?? "";
-                            var defaultValue = st?.FixValue ?? "";
-                            var patternId = st?.IdPatternType ?? 0;
-                            var minValue = st?.MinValue ?? "";
-                            var maxValue = st?.MaxValue ?? "";
-                            var minLen = st?.MinLen ?? 0;
-                            var maxLen = st?.MaxLen ?? 0;
-                            var requiredValue = st?.IsRequired == true ? "true" : "false";
-                            var readOnlyValue = st?.IsReadOnly == true ? "true" : "false";
-                            var upperCaseValue = st?.IsUpperCase == true ? "true" : "false";
-                            var capitalizeValue = st?.IsCapitalize == true ? "true" : "false";
-
-                            <tr class="extended-field-row" data-field-id="@fieldId" data-weight="@weight">
-                                <td>
-                                    <div class="custom-control custom-checkbox">
-                                        <input type="checkbox" class="custom-control-input field-enabled" 
-                                               id="ef_@(fieldId)" name="EF@(fieldId)" value="true" 
-                                               @(isEnabled ? "checked" : null) />
-                                        <label class="custom-control-label" for="ef_@(fieldId)"></label>
-                                        <input type="hidden" name="EF_Enabled_@(fieldId)" value="@(isEnabled ? "true" : "false")" class="field-enabled-hidden" />
-                                    </div>
-                                </td>
-                                <td>
-                                    <input type="text" class="form-control form-control-sm field-title" 
-                                           name="EF_Title_@(fieldId)" value="@customTitle" 
-                                           placeholder="@fieldTitle" />
-                                    <input type="hidden" name="EF_Weight_@(fieldId)" value="@weight" class="field-weight" />
-                                    <input type="hidden" name="EF_InputType_@(fieldId)" value="@inputType" />
-                                    <input type="hidden" name="EF_GroupDetail_@(fieldId)" value="@fieldGroup" />
-                                    <input type="hidden" name="EF_Description_@(fieldId)" value="@description" />
-                                    <input type="hidden" name="EF_DefaultValue_@(fieldId)" value="@defaultValue" />
-                                    <input type="hidden" name="EF_Pattern_@(fieldId)" value="@patternId" />
-                                    <input type="hidden" name="EF_MinValue_@(fieldId)" value="@minValue" />
-                                    <input type="hidden" name="EF_MaxValue_@(fieldId)" value="@maxValue" />
-                                    <input type="hidden" name="EF_MinLen_@(fieldId)" value="@minLen" />
-                                    <input type="hidden" name="EF_MaxLen_@(fieldId)" value="@maxLen" />
-                                    <input type="hidden" name="EF_Required_@(fieldId)" value="@requiredValue" />
-                                    <input type="hidden" name="EF_ReadOnly_@(fieldId)" value="@readOnlyValue" />
-                                    <input type="hidden" name="EF_UpperCase_@(fieldId)" value="@upperCaseValue" />
-                                    <input type="hidden" name="EF_Capitalize_@(fieldId)" value="@capitalizeValue" />
-                                </td>
-                                <td class="text-center">
-                                    <button type="button" class="btn btn-sm btn-outline-secondary field-config-btn-ext" 
-                                            data-field-id="@fieldId" data-field-name="@customTitle" 
-                                            data-input-type="@inputType" data-field-group="@fieldGroup"
-                                            title="Cấu hình chi tiết">
-                                        <i class="fas fa-cog"></i>
-                                    </button>
-                                </td>
+        @foreach (var pane in new[]
+        {
+            ("extendedFieldsBodyLeft", 1, midPoint),
+            ("extendedFieldsBodyRight", midPoint + 1, 25)
+        })
+        {
+            <div class="col-md-6">
+                <div class="table-container-figma mb-0" style="max-height: 500px; overflow-y: auto;">
+                    <table class="table table-sm table-figma mb-0">
+                        <thead>
+                            <tr>
+                                <th style="width: 48px;">Dùng</th>
+                                <th>Tên trường hiển thị / Lưu DB</th>
                             </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        </div>
+                        </thead>
+                        <tbody id="@pane.Item1">
+                            @for (var i = pane.Item2; i <= pane.Item3; i++)
+                            {
+                                var fieldId = 100 + i;
+                                var fieldName = $"field{i}";
+                                var fieldTitle = $"Field {i}";
 
-        <!-- Cột phải (Field 14-25) -->
-        <div class="col-md-6">
-            <div class="table-container-figma mb-0" style="max-height: 500px; overflow-y: auto;">
-                <table class="table table-sm table-figma mb-0">
-                    <thead>
-                        <tr>
-                            <th style="width: 48px;">Dùng</th>
-                            <th>Tên trường</th>
-                            <th style="width: 60px;">Cấu hình</th>
-                        </tr>
-                    </thead>
-                    <tbody id="extendedFieldsBodyRight">
-                        @for (int i = midPoint + 1; i <= 25; i++)
-                        {
-                            var fieldId = 100 + i;
-                            var fieldName = $"field{i}";
-                            var fieldTitle = $"Field {i}";
-                            
-                            var st = Model.Settings.FirstOrDefault(s => s.IdField == fieldId && !s.IsCatalog);
-                            var isEnabled = st != null;
-                            var weight = st?.Weight ?? (i * 10);
-                            var inputType = GetInputTypeString(st?.IType ?? 1);
-                            var fieldGroup = st?.IdFieldGroup ?? 0;
-                            var customTitle = st?.Title ?? fieldTitle;
-                            var description = st?.PatternCustom ?? "";
-                            var defaultValue = st?.FixValue ?? "";
-                            var patternId = st?.IdPatternType ?? 0;
-                            var minValue = st?.MinValue ?? "";
-                            var maxValue = st?.MaxValue ?? "";
-                            var minLen = st?.MinLen ?? 0;
-                            var maxLen = st?.MaxLen ?? 0;
-                            var requiredValue = st?.IsRequired == true ? "true" : "false";
-                            var readOnlyValue = st?.IsReadOnly == true ? "true" : "false";
-                            var upperCaseValue = st?.IsUpperCase == true ? "true" : "false";
-                            var capitalizeValue = st?.IsCapitalize == true ? "true" : "false";
+                                var st = Model.Settings.FirstOrDefault(s => s.IdField == fieldId && !s.IsCatalog);
+                                var isEnabled = st != null;
+                                var weight = st?.Weight ?? (i * 10);
+                                var inputType = GetInputTypeString(st?.IType ?? 1);
+                                var fieldGroup = st?.IdFieldGroup ?? 0;
+                                var customTitle = st?.Title ?? fieldTitle;
+                                var description = st?.PatternCustom ?? "";
+                                var defaultValue = st?.FixValue ?? "";
+                                var patternId = st?.IdPatternType ?? 0;
+                                var minValue = st?.MinValue ?? "";
+                                var maxValue = st?.MaxValue ?? "";
+                                var minLen = st?.MinLen ?? 0;
+                                var maxLen = st?.MaxLen ?? 0;
+                                var requiredValue = st?.IsRequired == true ? "true" : "false";
+                                var readOnlyValue = st?.IsReadOnly == true ? "true" : "false";
+                                var upperCaseValue = st?.IsUpperCase == true ? "true" : "false";
+                                var capitalizeValue = st?.IsCapitalize == true ? "true" : "false";
+                                var dbColumn = fieldName;
 
-                            <tr class="extended-field-row" data-field-id="@fieldId" data-weight="@weight">
-                                <td>
-                                    <div class="custom-control custom-checkbox">
-                                        <input type="checkbox" class="custom-control-input field-enabled" 
-                                               id="ef_@(fieldId)" name="EF@(fieldId)" value="true" 
-                                               @(isEnabled ? "checked" : null) />
-                                        <label class="custom-control-label" for="ef_@(fieldId)"></label>
-                                        <input type="hidden" name="EF_Enabled_@(fieldId)" value="@(isEnabled ? "true" : "false")" class="field-enabled-hidden" />
-                                    </div>
-                                </td>
-                                <td>
-                                    <input type="text" class="form-control form-control-sm field-title" 
-                                           name="EF_Title_@(fieldId)" value="@customTitle" 
-                                           placeholder="@fieldTitle" />
-                                    <input type="hidden" name="EF_Weight_@(fieldId)" value="@weight" class="field-weight" />
-                                    <input type="hidden" name="EF_InputType_@(fieldId)" value="@inputType" />
-                                    <input type="hidden" name="EF_GroupDetail_@(fieldId)" value="@fieldGroup" />
-                                    <input type="hidden" name="EF_Description_@(fieldId)" value="@description" />
-                                    <input type="hidden" name="EF_DefaultValue_@(fieldId)" value="@defaultValue" />
-                                    <input type="hidden" name="EF_Pattern_@(fieldId)" value="@patternId" />
-                                    <input type="hidden" name="EF_MinValue_@(fieldId)" value="@minValue" />
-                                    <input type="hidden" name="EF_MaxValue_@(fieldId)" value="@maxValue" />
-                                    <input type="hidden" name="EF_MinLen_@(fieldId)" value="@minLen" />
-                                    <input type="hidden" name="EF_MaxLen_@(fieldId)" value="@maxLen" />
-                                    <input type="hidden" name="EF_Required_@(fieldId)" value="@requiredValue" />
-                                    <input type="hidden" name="EF_ReadOnly_@(fieldId)" value="@readOnlyValue" />
-                                    <input type="hidden" name="EF_UpperCase_@(fieldId)" value="@upperCaseValue" />
-                                    <input type="hidden" name="EF_Capitalize_@(fieldId)" value="@capitalizeValue" />
-                                </td>
-                                <td class="text-center">
-                                    <button type="button" class="btn btn-sm btn-outline-secondary field-config-btn-ext" 
-                                            data-field-id="@fieldId" data-field-name="@customTitle" 
-                                            data-input-type="@inputType" data-field-group="@fieldGroup"
-                                            title="Cấu hình chi tiết">
-                                        <i class="fas fa-cog"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal cấu hình chi tiết cho Extended Fields -->
-<div class="modal fade" id="extFieldConfigModal" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-lg" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Cấu hình trường: <span id="extModalFieldName"></span></h5>
-                <button type="button" class="close" data-dismiss="modal">
-                    <span>&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <input type="hidden" id="extModalFieldId" />
-                <div class="form-row">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label>Kiểu nhập</label>
-                            <select class="form-control" id="extModalInputType">
-                                <option value="text">Text</option>
-                                <option value="textarea">Textarea</option>
-                                <option value="number">Number</option>
-                                <option value="date">Date</option>
-                                <option value="select">Select</option>
-                                <option value="radio">Radio</option>
-                                <option value="checkbox">Checkbox</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label>Nhóm trường</label>
-                            <select class="form-control" id="extModalFieldGroup">
-                                @foreach (var g in groupOptions)
-                                {
-                                    <option value="@g.Id">@g.Name</option>
-                                }
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Mô tả / Ghi chú</label>
-                    <textarea class="form-control" id="extModalDescription" rows="2"></textarea>
-                </div>
-                <div class="form-row">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label>Giá trị mặc định</label>
-                            <input type="text" class="form-control" id="extModalDefaultValue" />
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label>Quy tắc</label>
-                            <select class="form-control" id="extModalPattern">
-                                <option value="0">—</option>
-                                @foreach (var p in Model.PatternTypes)
-                                {
-                                    <option value="@p.Id">@p.Name</option>
-                                }
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="col-md-6">
-                        <label>Min / Max giá trị</label>
-                        <div class="d-flex" style="gap: 8px;">
-                            <input type="text" class="form-control" id="extModalMinValue" placeholder="Min" />
-                            <input type="text" class="form-control" id="extModalMaxValue" placeholder="Max" />
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <label>Min / Max độ dài</label>
-                        <div class="d-flex" style="gap: 8px;">
-                            <input type="number" class="form-control" id="extModalMinLen" placeholder="Min" />
-                            <input type="number" class="form-control" id="extModalMaxLen" placeholder="Max" />
-                        </div>
-                    </div>
-                </div>
-                <div class="form-row mt-3">
-                    <div class="col-auto">
-                        <div class="custom-control custom-checkbox">
-                            <input type="checkbox" class="custom-control-input" id="extModalRequired" />
-                            <label class="custom-control-label" for="extModalRequired">Bắt buộc</label>
-                        </div>
-                    </div>
-                    <div class="col-auto">
-                        <div class="custom-control custom-checkbox">
-                            <input type="checkbox" class="custom-control-input" id="extModalReadOnly" />
-                            <label class="custom-control-label" for="extModalReadOnly">Chỉ đọc</label>
-                        </div>
-                    </div>
-                    <div class="col-auto">
-                        <div class="custom-control custom-checkbox">
-                            <input type="checkbox" class="custom-control-input" id="extModalUpperCase" />
-                            <label class="custom-control-label" for="extModalUpperCase">Viết hoa</label>
-                        </div>
-                    </div>
-                    <div class="col-auto">
-                        <div class="custom-control custom-checkbox">
-                            <input type="checkbox" class="custom-control-input" id="extModalCapitalize" />
-                            <label class="custom-control-label" for="extModalCapitalize">Capitalize</label>
-                        </div>
-                    </div>
+                                <tr class="extended-field-row" data-field-id="@fieldId" data-weight="@weight">
+                                    <td>
+                                        <div class="custom-control custom-checkbox">
+                                            <input type="checkbox" class="custom-control-input field-enabled"
+                                                   id="ef_@(fieldId)" name="EF@(fieldId)" value="true"
+                                                   @(isEnabled ? "checked" : null) />
+                                            <label class="custom-control-label" for="ef_@(fieldId)"></label>
+                                            <input type="hidden" name="EF_Enabled_@(fieldId)" value="@(isEnabled ? "true" : "false")" class="field-enabled-hidden" />
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center" style="gap:8px;">
+                                            <input type="text" class="form-control form-control-sm field-title"
+                                                   name="EF_Title_@(fieldId)" value="@customTitle"
+                                                   placeholder="@fieldTitle" />
+                                            <input type="text" class="form-control form-control-sm bg-light text-muted"
+                                                   value="@dbColumn" readonly title="Cột lưu dữ liệu trong bảng documents" />
+                                        </div>
+                                        <input type="hidden" name="EF_Weight_@(fieldId)" value="@weight" class="field-weight" />
+                                        <input type="hidden" name="EF_InputType_@(fieldId)" value="@inputType" />
+                                        <input type="hidden" name="EF_GroupDetail_@(fieldId)" value="@fieldGroup" />
+                                        <input type="hidden" name="EF_Description_@(fieldId)" value="@description" />
+                                        <input type="hidden" name="EF_DefaultValue_@(fieldId)" value="@defaultValue" />
+                                        <input type="hidden" name="EF_Pattern_@(fieldId)" value="@patternId" />
+                                        <input type="hidden" name="EF_MinValue_@(fieldId)" value="@minValue" />
+                                        <input type="hidden" name="EF_MaxValue_@(fieldId)" value="@maxValue" />
+                                        <input type="hidden" name="EF_MinLen_@(fieldId)" value="@minLen" />
+                                        <input type="hidden" name="EF_MaxLen_@(fieldId)" value="@maxLen" />
+                                        <input type="hidden" name="EF_Required_@(fieldId)" value="@requiredValue" />
+                                        <input type="hidden" name="EF_ReadOnly_@(fieldId)" value="@readOnlyValue" />
+                                        <input type="hidden" name="EF_UpperCase_@(fieldId)" value="@upperCaseValue" />
+                                        <input type="hidden" name="EF_Capitalize_@(fieldId)" value="@capitalizeValue" />
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Đóng</button>
-                <button type="button" class="btn btn-primary" id="saveExtFieldConfig">Lưu cấu hình</button>
-            </div>
-        </div>
+        }
     </div>
 </div>
 
 <style>
 .extended-fields-container {
     margin-bottom: 20px;
-}
-
-.field-config-btn-ext {
-    padding: 4px 8px;
-    font-size: 12px;
-}
-
-.field-config-btn-ext:hover {
-    background-color: #e2e6ea;
 }
 
 .extended-field-row.disabled {
@@ -330,16 +123,9 @@
 </style>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize Bootstrap tooltips
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-
-    // Toggle field enabled/disabled state
-    document.querySelectorAll('.field-enabled').forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.extended-field-row .field-enabled').forEach(checkbox => {
+        checkbox.addEventListener('change', function () {
             const row = this.closest('tr');
             const enabledHidden = row ? row.querySelector('.field-enabled-hidden') : null;
             if (this.checked) {
@@ -350,108 +136,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (enabledHidden) enabledHidden.value = 'false';
             }
         });
-    });
-
-    // Open config modal for extended fields
-    document.querySelectorAll('.field-config-btn-ext').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            const fieldId = this.getAttribute('data-field-id');
-            const fieldName = this.getAttribute('data-field-name');
-            const inputType = this.getAttribute('data-input-type') || 'text';
-            const fieldGroup = this.getAttribute('data-field-group') || '';
-            
-            // Set modal data
-            document.getElementById('extModalFieldId').value = fieldId;
-            document.getElementById('extModalFieldName').textContent = fieldName;
-            document.getElementById('extModalInputType').value = inputType;
-            document.getElementById('extModalFieldGroup').value = fieldGroup;
-            
-            // Load existing values from hidden inputs if any
-            const prefix = 'EF_';
-            document.getElementById('extModalDescription').value = document.querySelector(`[name="${prefix}Description_${fieldId}"]`)?.value || '';
-            document.getElementById('extModalFieldGroup').value = document.querySelector(`[name="${prefix}GroupDetail_${fieldId}"]`)?.value || fieldGroup;
-            document.getElementById('extModalDefaultValue').value = document.querySelector(`[name="${prefix}DefaultValue_${fieldId}"]`)?.value || '';
-            document.getElementById('extModalPattern').value = document.querySelector(`[name="${prefix}Pattern_${fieldId}"]`)?.value || '0';
-            document.getElementById('extModalMinValue').value = document.querySelector(`[name="${prefix}MinValue_${fieldId}"]`)?.value || '';
-            document.getElementById('extModalMaxValue').value = document.querySelector(`[name="${prefix}MaxValue_${fieldId}"]`)?.value || '';
-            document.getElementById('extModalMinLen').value = document.querySelector(`[name="${prefix}MinLen_${fieldId}"]`)?.value || '';
-            document.getElementById('extModalMaxLen').value = document.querySelector(`[name="${prefix}MaxLen_${fieldId}"]`)?.value || '';
-            document.getElementById('extModalRequired').checked = (document.querySelector(`[name="${prefix}Required_${fieldId}"]`)?.value || '').toLowerCase() === 'true';
-            document.getElementById('extModalReadOnly').checked = (document.querySelector(`[name="${prefix}ReadOnly_${fieldId}"]`)?.value || '').toLowerCase() === 'true';
-            document.getElementById('extModalUpperCase').checked = (document.querySelector(`[name="${prefix}UpperCase_${fieldId}"]`)?.value || '').toLowerCase() === 'true';
-            document.getElementById('extModalCapitalize').checked = (document.querySelector(`[name="${prefix}Capitalize_${fieldId}"]`)?.value || '').toLowerCase() === 'true';
-            
-            $('#extFieldConfigModal').modal('show');
-        });
-    });
-
-    // Save config for extended fields
-    document.getElementById('saveExtFieldConfig').addEventListener('click', function() {
-        const fieldId = document.getElementById('extModalFieldId').value;
-        const prefix = 'EF_';
-        const row = document.querySelector(`.extended-field-row[data-field-id="${fieldId}"]`);
-        const configBtn = document.querySelector(`.field-config-btn-ext[data-field-id="${fieldId}"]`);
-        
-        const form = row?.closest('form') ?? document.querySelector('#page-content-scroll form[method="post"]');
-        if (!form) return;
-        const fields = {
-            [`${prefix}InputType_${fieldId}`]: document.getElementById('extModalInputType').value,
-            [`${prefix}GroupDetail_${fieldId}`]: document.getElementById('extModalFieldGroup').value,
-            [`${prefix}Description_${fieldId}`]: document.getElementById('extModalDescription').value,
-            [`${prefix}DefaultValue_${fieldId}`]: document.getElementById('extModalDefaultValue').value,
-            [`${prefix}Pattern_${fieldId}`]: document.getElementById('extModalPattern').value,
-            [`${prefix}MinValue_${fieldId}`]: document.getElementById('extModalMinValue').value,
-            [`${prefix}MaxValue_${fieldId}`]: document.getElementById('extModalMaxValue').value,
-            [`${prefix}MinLen_${fieldId}`]: document.getElementById('extModalMinLen').value,
-            [`${prefix}MaxLen_${fieldId}`]: document.getElementById('extModalMaxLen').value
-        };
-        
-        Object.keys(fields).forEach(name => {
-            let input = form.querySelector(`[name="${name}"]`);
-            if (!input) {
-                input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = name;
-                form.appendChild(input);
-            }
-            input.value = fields[name];
-        });
-
-        if (configBtn) {
-            configBtn.setAttribute('data-input-type', document.getElementById('extModalInputType').value);
-            configBtn.setAttribute('data-field-group', document.getElementById('extModalFieldGroup').value);
-        }
-
-        if (row) {
-            const enabled = row.querySelector('.field-enabled');
-            if (enabled) enabled.checked = true;
-            const enabledHidden = row.querySelector('.field-enabled-hidden');
-            if (enabledHidden) enabledHidden.value = 'true';
-            row.classList.remove('disabled');
-        }
-        
-        // Handle checkboxes
-        const checkboxes = {
-            [`${prefix}Required_${fieldId}`]: document.getElementById('extModalRequired').checked,
-            [`${prefix}ReadOnly_${fieldId}`]: document.getElementById('extModalReadOnly').checked,
-            [`${prefix}UpperCase_${fieldId}`]: document.getElementById('extModalUpperCase').checked,
-            [`${prefix}Capitalize_${fieldId}`]: document.getElementById('extModalCapitalize').checked
-        };
-        
-        Object.keys(checkboxes).forEach(name => {
-            let input = form.querySelector(`[name="${name}"]`);
-            if (!input) {
-                input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = name;
-                form.appendChild(input);
-            }
-            input.value = checkboxes[name] ? 'true' : 'false';
-        });
-        
-        $('#extFieldConfigModal').modal('hide');
-        alert('Đã lưu cấu hình!');
     });
 });
 </script>

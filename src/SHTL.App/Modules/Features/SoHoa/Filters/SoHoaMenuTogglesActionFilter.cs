@@ -7,6 +7,7 @@ namespace SHTL.Modules.Features.SoHoa.Filters;
 
 /// <summary>
 /// Nạp cờ <c>IsCheckFirstScan</c>, <c>IsCheckSecondScan</c>, <c>IsCheck1</c>, <c>IsCheck2</c> vào ViewBag cho mọi action area sohoa.
+/// Kết hợp cấu hình hệ thống (toggle) VÀ vai trò của người dùng.
 /// </summary>
 public sealed class SoHoaMenuTogglesActionFilter : IAsyncActionFilter
 {
@@ -27,10 +28,19 @@ public sealed class SoHoaMenuTogglesActionFilter : IAsyncActionFilter
 
         if (context.Controller is Controller c)
         {
-            c.ViewBag.ShowCheckFirstScan = SohoWorkflowUiToggles.IsFeatureEnabled(map, "IsCheckFirstScan");
-            c.ViewBag.ShowCheckSecondScan = SohoWorkflowUiToggles.IsFeatureEnabled(map, "IsCheckSecondScan");
-            c.ViewBag.ShowCheck1 = SohoWorkflowUiToggles.IsFeatureEnabled(map, "IsCheck1");
-            c.ViewBag.ShowCheck2 = SohoWorkflowUiToggles.IsFeatureEnabled(map, "IsCheck2");
+            var user = context.HttpContext.User;
+            var isAdmin = user.IsInRole("admin");
+
+            bool CanAccess(string configKey, string roleCode)
+            {
+                if (!SohoWorkflowUiToggles.IsFeatureEnabled(map, configKey)) return false;
+                return isAdmin || user.IsInRole(roleCode);
+            }
+
+            c.ViewBag.ShowCheckFirstScan = CanAccess("IsCheckFirstScan", "CHECK_SCAN_1");
+            c.ViewBag.ShowCheckSecondScan = CanAccess("IsCheckSecondScan", "CHECK_SCAN_2");
+            c.ViewBag.ShowCheck1 = CanAccess("IsCheck1", "CHECK_EXTRACT_1");
+            c.ViewBag.ShowCheck2 = CanAccess("IsCheck2", "CHECK_EXTRACT_2");
         }
 
         await next();
