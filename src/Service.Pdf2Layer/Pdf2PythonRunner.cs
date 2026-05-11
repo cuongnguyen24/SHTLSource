@@ -7,6 +7,8 @@ namespace SHTL.Service.Pdf2Layer;
 
 internal sealed class Pdf2PythonRunner
 {
+    private const int MaxLogSnippetChars = 8000;
+
     private readonly IHostEnvironment _env;
     private readonly IOptions<SearchablePdfWorkerOptions> _options;
     private readonly PythonDependencyBootstrapper _bootstrapper;
@@ -24,7 +26,8 @@ internal sealed class Pdf2PythonRunner
         _logger = logger;
     }
 
-    public async Task<bool> RunAsync(
+    /// <summary>Chi tiết lỗi ghi vào AppData ở <see cref="Pdf2Processor"/> (kèm documentId).</summary>
+    public async Task<Pdf2PythonRunResult> RunAsync(
         string inputFullPath,
         string outputFullPath,
         int renderDpi,
@@ -35,16 +38,16 @@ internal sealed class Pdf2PythonRunner
         var script = Path.GetFullPath(Path.Combine(_env.ContentRootPath, opt.ScriptRelativePath));
         if (!File.Exists(script))
         {
+            var msg = $"Không tìm thấy script OCR: {script}";
             _logger.LogError("Pdf2Layer: không tìm thấy script {Script}", script);
-            await AppDataFileLog.WriteAsync("ERROR", $"Không tìm thấy script OCR: {script}", cancellationToken: cancellationToken).ConfigureAwait(false);
-            return false;
+            return Pdf2PythonRunResult.Fail(msg);
         }
 
         if (!File.Exists(inputFullPath))
         {
+            var msg = $"Không tìm thấy file đầu vào (trước khi chạy Python): {inputFullPath}";
             _logger.LogError("Pdf2Layer: không có file đầu vào {Path}", inputFullPath);
-            await AppDataFileLog.WriteAsync("ERROR", $"Không tìm thấy file đầu vào: {inputFullPath}", cancellationToken: cancellationToken).ConfigureAwait(false);
-            return false;
+            return Pdf2PythonRunResult.Fail(msg);
         }
 
         try
@@ -55,7 +58,6 @@ internal sealed class Pdf2PythonRunner
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Pdf2Layer: không xóa được file đích tạm");
-            await AppDataFileLog.WriteAsync("WARN", $"Không xóa được file output tạm: {outputFullPath}", ex, cancellationToken).ConfigureAwait(false);
         }
 
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -84,16 +86,18 @@ internal sealed class Pdf2PythonRunner
 
             if (proc.ExitCode != 0)
             {
+                var errT = err.Trim();
+                var outT = outp.Trim();
                 _logger.LogError(
                     "Pdf2Layer: Python thoát mã {Code}. stderr: {Err}. stdout: {Out}",
                     proc.ExitCode,
-                    err.Trim(),
-                    outp.Trim());
-                await AppDataFileLog.WriteAsync(
-                    "ERROR",
-                    $"Python exit code={proc.ExitCode}. input={inputFullPath}; output={outputFullPath}; stderr={err.Trim()}; stdout={outp.Trim()}",
-                    cancellationToken: cancellationToken).ConfigureAwait(false);
-                return false;
+                    errT,
+                    outT);
+                var detail =
+                    $"Python exitCode={proc.ExitCode}; exe={proc.StartInfo.FileName}; script={script}; " +
+                    $"input={inputFullPath}; output={outputFullPath}; dpi={renderDpi}; maxPages={(maxPages <= 0 ? "ALL" : maxPages)}; " +
+                    $"stderr={ClipForLog(errT)}; stdout={ClipForLog(outT)}";
+                return Pdf2PythonRunResult.Fail(detail, proc.ExitCode);
             }
         }
         catch (OperationCanceledException)
@@ -108,18 +112,27 @@ internal sealed class Pdf2PythonRunner
                 _logger.LogWarning(killEx, "Pdf2Layer: dừng process Python");
             }
 
+            var msg =
+                $"Python timeout hoặc bị hủy; exe={proc.StartInfo.FileName}; script={script}; input={inputFullPath}; output={outputFullPath}; " +
+                $"timeoutSeconds={Math.Clamp(opt.TimeoutSeconds, 60, 7200)}";
             _logger.LogWarning("Pdf2Layer: hết thời gian hoặc hủy");
-            await AppDataFileLog.WriteAsync("WARN", $"Python process timeout/cancel. input={inputFullPath}; output={outputFullPath}", cancellationToken: cancellationToken).ConfigureAwait(false);
-            return false;
+            return Pdf2PythonRunResult.Fail(msg);
         }
 
         if (!File.Exists(outputFullPath) || new FileInfo(outputFullPath).Length == 0)
         {
+            var msg = $"File đầu ra không tồn tại hoặc rỗng sau khi Python exit 0: {outputFullPath}";
             _logger.LogError("Pdf2Layer: file đầu ra không hợp lệ");
-            await AppDataFileLog.WriteAsync("ERROR", $"File đầu ra không hợp lệ hoặc rỗng: {outputFullPath}", cancellationToken: cancellationToken).ConfigureAwait(false);
-            return false;
+            return Pdf2PythonRunResult.Fail(msg, 0);
         }
 
-        return true;
+        return Pdf2PythonRunResult.Success();
+    }
+
+    private static string ClipForLog(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return "(empty)";
+        if (s.Length <= MaxLogSnippetChars) return s;
+        return s[..MaxLogSnippetChars] + $"… [cắt bớt, tổng {s.Length} ký tự]";
     }
 }

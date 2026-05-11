@@ -1,6 +1,7 @@
 using Dapper;
 using SHTL.Modules.Core.Domain.Entities.Stg;
 using SHTL.Modules.Core.Domain.Enums;
+using SHTL.Modules.Shared.Contracts;
 
 namespace SHTL.Modules.Infrastructure.Data.Repositories.Stg;
 
@@ -29,6 +30,11 @@ public interface IDocumentRepository
 
     /// <summary>Tài liệu kế tiếp trong cùng hàng đợi (ORDER BY id DESC), có id nhỏ hơn bản ghi vừa xử lý.</summary>
     Task<long?> GetNextQueueIdAfterAsync(DocumentFilterParams filter, long completedId);
+
+    /// <summary>
+    /// Tài liệu đang hoạt động thuộc “thư mục ảo” (cùng cách gom folder như báo cáo tiến độ thư mục).
+    /// </summary>
+    Task<IReadOnlyList<VirtualFolderDocumentRow>> GetActiveDocumentsInVirtualFolderAsync(string virtualFolderName);
 }
 
 public class DocumentFilterParams
@@ -361,6 +367,45 @@ WHERE ocr_status = @Processing
                 SystemUser = 0,
                 NegSeconds = -(int)olderThan.TotalSeconds
             });
+    }
+
+    public async Task<IReadOnlyList<VirtualFolderDocumentRow>> GetActiveDocumentsInVirtualFolderAsync(string virtualFolderName)
+    {
+        if (string.IsNullOrWhiteSpace(virtualFolderName))
+            return Array.Empty<VirtualFolderDocumentRow>();
+
+        const string sql = """
+WITH base AS (
+    SELECT
+        id, file_path, thumb_path, path_pdf_searchable, path_converted, path_original,
+        REPLACE(COALESCE(NULLIF(path_original, N''), NULLIF(file_path, N''), N'Không rõ'), N'\', N'/') AS rel
+    FROM dbo.stg_documents
+    WHERE status = 1
+),
+tagged AS (
+    SELECT
+        id, file_path, thumb_path, path_pdf_searchable, path_converted, path_original,
+        CASE
+            WHEN rel = N'' THEN N'(trống)'
+            WHEN CHARINDEX(N'/', rel) > 0 THEN LEFT(rel, CHARINDEX(N'/', rel) - 1)
+            ELSE rel
+        END AS folder_name
+    FROM base
+)
+SELECT
+    id AS Id,
+    file_path AS FilePath,
+    thumb_path AS ThumbPath,
+    path_pdf_searchable AS PathPdfSearchable,
+    path_converted AS PathConverted,
+    path_original AS PathOriginal
+FROM tagged
+WHERE folder_name = @VirtualFolder;
+""";
+        var conn = await OpenConnectionAsync();
+        var list = (await QueryAsync<VirtualFolderDocumentRow>(conn, sql, new { VirtualFolder = virtualFolderName.Trim() }))
+            .ToList();
+        return list;
     }
 
     public async Task<IEnumerable<Document>> GetSameRecordDocumentsAsync(long documentId, IReadOnlyList<string> recordKeys, int limit = 200)

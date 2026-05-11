@@ -15,6 +15,8 @@
         .metric { display: inline-block; min-width: 86px; text-align: center; border-radius: 8px; padding: 8px 10px; background: #f8f9fa; margin-right: 8px; margin-bottom: 8px; }
         .metric .k { display:block; font-size:11px; color:#6c757d; }
         .metric .v { font-size:20px; font-weight:700; color:#0b7285; line-height:1.1; }
+        .btn-purge-folder { line-height: 1; opacity: 0.75; }
+        .btn-purge-folder:hover { opacity: 1; }
     </style>
 }
 
@@ -122,7 +124,7 @@
                     <tbody>
                     @if (!Model.Rows.Any())
                     {
-                        <tr><td colspan="10" class="text-center text-muted p-4">Không có dữ liệu.</td></tr>
+                        <tr><td colspan="11" class="text-center text-muted p-4">Không có dữ liệu.</td></tr>
                     }
                     else
                     {
@@ -131,7 +133,18 @@
                         {
                             <tr>
                                 <td class="text-center">@i</td>
-                                <td><i class="fas fa-folder text-warning mr-1"></i>@r.Folder</td>
+                                <td>
+                                    <div class="d-flex align-items-center justify-content-between flex-wrap" style="gap:4px;">
+                                        <span><i class="fas fa-folder text-warning mr-1"></i>@r.Folder</span>
+                                        <button type="button"
+                                                class="btn btn-link btn-sm text-danger p-0 btn-purge-folder"
+                                                title="Xóa toàn bộ tài liệu trong thư mục này (DB + file storage)"
+                                                data-folder="@r.Folder"
+                                                data-count="@r.TotalDocs">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </div>
+                                </td>
                                 <td class="text-center font-weight-bold">@r.TotalDocs</td>
                                 <td class="text-center">@r.TotalPdfs</td>
                                 <td class="text-center text-secondary">@r.PdfQueued</td>
@@ -151,3 +164,33 @@
         </div>
     </div>
 </div>
+
+<form id="folderPurgeForm" method="post" class="d-none">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="folder" id="folderPurgeFolderInput" value="" />
+</form>
+
+@section Scripts {
+    <script>
+        (function () {
+            var postUrl = '@Url.Action("PurgeFolderDocuments", "Report", new { area = "sohoa", q = Model.Filter })';
+            document.querySelectorAll('.btn-purge-folder').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var folder = this.getAttribute('data-folder') || '';
+                    var n = this.getAttribute('data-count') || '0';
+                    if (!folder) return;
+                    var msg = 'Xác nhận XÓA TOÀN BỘ ' + n + ' tài liệu trong thư mục «' + folder + '»?\n\n' +
+                        'Hành động này sẽ:\n' +
+                        '• Soft-delete bản ghi trong CSDL và xóa dữ liệu ô nhập / trang số hóa liên quan\n' +
+                        '• Xóa file trên storage (file gốc, thumb, PDF 2 lớp, …)\n\n' +
+                        'Không thể hoàn tác.';
+                    if (!confirm(msg)) return;
+                    var f = document.getElementById('folderPurgeForm');
+                    document.getElementById('folderPurgeFolderInput').value = folder;
+                    f.action = postUrl;
+                    f.submit();
+                });
+            });
+        })();
+    </script>
+}
