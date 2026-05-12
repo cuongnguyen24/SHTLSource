@@ -50,7 +50,7 @@
                 {
                     <a asp-area="sohoa" asp-controller="Scan" asp-action="CheckScan2List" class="btn-figma btn-figma-outline btn-sm">Kiểm tra scan 2</a>
                 }
-                <a asp-area="sohoa" asp-controller="SyncUpload" asp-action="Index" class="btn-figma btn-figma-primary btn-sm"><i class="fas fa-cloud-upload-alt mr-1"></i>Đồng bộ</a>
+                <a href="#" id="btnPluginSync" class="btn-figma btn-figma-primary btn-sm"><i class="fas fa-cloud-upload-alt mr-1"></i>Đồng bộ</a>
             </div>
         </div>
     </div>
@@ -161,7 +161,10 @@
     <script>
         (function () {
             var deleteUrl = '@Url.Content("~/scan/delete")';
+            var pluginStatusUrl = '@Url.Content("~/sohoa/scan/plugin-sync-status")';
+            var pluginConfigUrl = '@Url.Content("~/sohoa/scan/plugin-sync-config")';
             var selectAll = document.getElementById('selectAll');
+            var pluginSyncBtn = document.getElementById('btnPluginSync');
             if (selectAll) {
                 selectAll.addEventListener('change', function () {
                     document.querySelectorAll('.row-check').forEach(function (cb) { cb.checked = selectAll.checked; });
@@ -180,6 +183,50 @@
                     }
                 });
             });
+
+            if (pluginSyncBtn) {
+                pluginSyncBtn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    fetch(pluginStatusUrl, { credentials: 'same-origin' })
+                        .then(function (r) { return r.json(); })
+                        .then(function (j) {
+                            if (!j.enabled) {
+                                if (typeof toastr !== 'undefined') toastr.warning(j.message || 'Plugin đồng bộ đang tắt.');
+                                else alert(j.message || 'Plugin đồng bộ đang tắt.');
+                                return;
+                            }
+
+                            if (!j.online) {
+                                var msg = 'Plugin đồng bộ chưa chạy. Vui lòng bật plugin rồi thử lại.';
+                                if (typeof toastr !== 'undefined') toastr.error(msg);
+                                else alert(msg);
+                                return;
+                            }
+
+                            var url = j.activateUrl || 'http://127.0.0.1:18181/activate';
+                            fetch(pluginConfigUrl, { credentials: 'same-origin' })
+                                .then(function (r) { return r.json(); })
+                                .then(function (cfg) {
+                                    return fetch('http://127.0.0.1:18181/configure', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify(cfg || { items: [] })
+                                    });
+                                })
+                                .then(function () { return fetch(url, { method: 'GET' }); })
+                                .then(function () {
+                                    if (typeof toastr !== 'undefined') toastr.success('Đã đồng bộ cấu hình và kích hoạt plugin.');
+                                })
+                                .catch(function () {
+                                    if (typeof toastr !== 'undefined') toastr.error('Không thể gửi cấu hình hoặc kích hoạt plugin.');
+                                });
+                        })
+                        .catch(function () {
+                            if (typeof toastr !== 'undefined') toastr.error('Không kiểm tra được trạng thái plugin.');
+                            else alert('Không kiểm tra được trạng thái plugin.');
+                        });
+                });
+            }
 
             function token() {
                 var i = document.querySelector('#antiScan input[name="__RequestVerificationToken"]');
