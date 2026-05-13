@@ -1,5 +1,8 @@
+using Microsoft.Extensions.Options;
+using SHTL.Modules.Core.Domain.Contracts;
 using SHTL.Modules.Infrastructure.Data.Repositories.Cnf;
 using SHTL.Modules.Infrastructure.Data.Repositories.Stg;
+using SHTL.Modules.Infrastructure.Storage;
 using SHTL.Modules.Shared.Contracts;
 using SHTL.Modules.Shared.Contracts.Dtos;
 
@@ -17,6 +20,12 @@ public interface IAxeDocTypeAdminService
     Task<ApiResult> SaveSortableAsync(int docTypeId, IFormCollection form);
     Task<DocTypeSeparatePageDto?> GetSeparatePageAsync(int id);
     Task<ApiResult> SaveSeparateAsync(int docTypeId, IFormCollection form);
+    Task<DocTypeOcrMapPageDto?> GetOcrMapPageAsync(int id, string? sampleFileKey);
+    Task<ApiResult<DocTypeOcrSampleFileDto>> UploadOcrSampleFileAsync(int userId, int docTypeId, IFormFile file);
+    Task<ApiResult> DeleteOcrSampleFileAsync(int docTypeId, string? sampleFileKey);
+    bool TryResolveOcrSampleFileKey(int docTypeId, string? sampleFileKey, out string storageRelativePath);
+    Task<ApiResult<DocTypeOcrZoneDto>> SaveOcrZoneAsync(int userId, int docTypeId, DocTypeOcrZoneSaveRequest request);
+    Task<ApiResult> DeleteOcrZoneAsync(int docTypeId, long zoneId);
     Task<DocTypeOcrFixPageDto?> GetOcrFixPageAsync(int id);
     Task<ApiResult> SaveOcrFixFieldAsync(int userId, int docTypeId, IFormCollection form);
     Task<string> PreviewOcrFixAsync(int docTypeId, IFormCollection form);
@@ -49,6 +58,30 @@ public sealed class DocTypeSeparatePageDto
     public IReadOnlyList<DocTypeSeparateDto> Separates { get; init; } = Array.Empty<DocTypeSeparateDto>();
 }
 
+public sealed class DocTypeOcrMapPageDto
+{
+    public DocTypeFullDto DocType { get; init; } = null!;
+    public IReadOnlyList<StgDocFieldSettingDto> FieldSettings { get; init; } = Array.Empty<StgDocFieldSettingDto>();
+    public IReadOnlyDictionary<int, StgDocFieldDto> FieldById { get; init; } = new Dictionary<int, StgDocFieldDto>();
+    public IReadOnlyList<DocTypeOcrZoneDto> Zones { get; init; } = Array.Empty<DocTypeOcrZoneDto>();
+    public IReadOnlyList<DocTypeOcrSampleFileDto> SampleFiles { get; init; } = Array.Empty<DocTypeOcrSampleFileDto>();
+    public string? SampleFileKey { get; init; }
+}
+
+public sealed class DocTypeOcrZoneSaveRequest
+{
+    public long Id { get; set; }
+    public int FieldSettingId { get; set; }
+    public int PageNumber { get; set; }
+    public decimal XRatio { get; set; }
+    public decimal YRatio { get; set; }
+    public decimal WidthRatio { get; set; }
+    public decimal HeightRatio { get; set; }
+    public string? Label { get; set; }
+    public string? SampleText { get; set; }
+    public int Weight { get; set; }
+}
+
 public sealed class DocTypeOcrFixPageDto
 {
     public DocTypeFullDto DocType { get; init; } = null!;
@@ -60,15 +93,26 @@ public sealed class DocTypeOcrFixPageDto
 
 public sealed class AxeDocTypeAdminService : IAxeDocTypeAdminService
 {
+    private const string OcrSampleRootFolder = "SetOCR";
+
     private readonly IAxeDocTypeRepository _stg;
     private readonly ICnfRepository _cnf;
     private readonly IDocCatalogRepository _docCatalog;
+    private readonly IStorageService _storage;
+    private readonly StorageOptions _storageOpt;
 
-    public AxeDocTypeAdminService(IAxeDocTypeRepository stg, ICnfRepository cnf, IDocCatalogRepository docCatalog)
+    public AxeDocTypeAdminService(
+        IAxeDocTypeRepository stg,
+        ICnfRepository cnf,
+        IDocCatalogRepository docCatalog,
+        IStorageService storage,
+        IOptions<StorageOptions> storageOpt)
     {
         _stg = stg;
         _cnf = cnf;
         _docCatalog = docCatalog;
+        _storage = storage;
+        _storageOpt = storageOpt.Value;
     }
 
     public async Task<IReadOnlyList<DocTypeIndexRowDto>> GetIndexAsync(string? search)
@@ -342,6 +386,184 @@ public sealed class AxeDocTypeAdminService : IAxeDocTypeAdminService
 
         await _stg.ReplaceSeparatesAsync(docTypeId, rows, 0);
         return ApiResult.Ok(rows.Count > 0 ? "Đã lưu cấu hình phân tách" : "Đã xóa cấu hình phân tách");
+    }
+
+    public async Task<DocTypeOcrMapPageDto?> GetOcrMapPageAsync(int id, string? sampleFileKey)
+    {
+        var doc = await _stg.GetDocTypeAsync(id);
+        if (doc == null) return null;
+        var settings = (await _stg.GetFieldSettingsByTypeAsync(id)).OrderBy(x => x.Weight).ToList();
+        var fields = await _stg.GetAllFieldsAsync();
+        var samples = ListOcrSampleFiles(id);
+        var pickedSampleKey = TryResolveOcrSampleFileKey(id, sampleFileKey, out var resolvedKey)
+            ? resolvedKey
+            : samples.FirstOrDefault()?.FileKey;
+        var fieldById = (fields ?? new List<StgDocFieldDto>())
+            .GroupBy(f => f.Id)
+            .ToDictionary(g => g.Key, g => g.First());
+        return new DocTypeOcrMapPageDto
+        {
+            DocType = doc,
+            FieldSettings = settings,
+            FieldById = fieldById,
+            Zones = await _stg.GetOcrZonesAsync(id),
+            SampleFiles = samples,
+            SampleFileKey = pickedSampleKey
+        };
+    }
+
+    public async Task<ApiResult<DocTypeOcrSampleFileDto>> UploadOcrSampleFileAsync(int userId, int docTypeId, IFormFile file)
+    {
+        var doc = await _stg.GetDocTypeAsync(docTypeId);
+        if (doc == null)
+            return ApiResult<DocTypeOcrSampleFileDto>.Fail("Loai tai lieu khong ton tai");
+        if (file == null || file.Length == 0)
+            return ApiResult<DocTypeOcrSampleFileDto>.Fail("File PDF mau khong hop le");
+        if (file.Length > _storageOpt.MaxFileSizeBytes)
+            return ApiResult<DocTypeOcrSampleFileDto>.Fail("File vuot qua dung luong cho phep");
+
+        var ext = Path.GetExtension(file.FileName);
+        if (!IsPdfExtension(ext))
+            return ApiResult<DocTypeOcrSampleFileDto>.Fail("Chi chap nhan file PDF");
+
+        await using var stream = file.OpenReadStream();
+        var stored = await _storage.SaveFileAsync(stream, file.FileName, BuildOcrSampleFolder(docTypeId));
+        var sample = new DocTypeOcrSampleFileDto
+        {
+            FileKey = stored,
+            FileName = Path.GetFileName(stored)
+        };
+        return ApiResult<DocTypeOcrSampleFileDto>.Ok(sample, "Da tai PDF mau len storage");
+    }
+
+    public async Task<ApiResult> DeleteOcrSampleFileAsync(int docTypeId, string? sampleFileKey)
+    {
+        var doc = await _stg.GetDocTypeAsync(docTypeId);
+        if (doc == null)
+            return ApiResult.Fail("Loại tài liệu không tồn tại");
+        if (!TryResolveOcrSampleFileKey(docTypeId, sampleFileKey, out var storagePath))
+            return ApiResult.Fail("File PDF mẫu không hợp lệ");
+
+        var deleted = await _storage.DeleteFileAsync(storagePath);
+        return deleted ? ApiResult.Ok("Đã xóa PDF mẫu") : ApiResult.Fail("Không xóa được file PDF mẫu");
+    }
+
+    public bool TryResolveOcrSampleFileKey(int docTypeId, string? sampleFileKey, out string storageRelativePath)
+    {
+        storageRelativePath = string.Empty;
+        if (string.IsNullOrWhiteSpace(sampleFileKey))
+            return false;
+
+        var normalized = sampleFileKey.Trim().Replace('\\', '/');
+        var prefix = $"{BuildOcrSampleFolder(docTypeId)}/";
+        if (!normalized.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        {
+            if (normalized.Contains('/') || normalized.Contains('\\'))
+                return false;
+            normalized = prefix + normalized;
+        }
+
+        if (!IsPdfExtension(Path.GetExtension(normalized)))
+            return false;
+
+        var fullPath = Path.GetFullPath(Path.Combine(_storageOpt.RootPath, normalized.Replace('/', Path.DirectorySeparatorChar)));
+        var root = Path.GetFullPath(_storageOpt.RootPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        var rootPrefix = root + Path.DirectorySeparatorChar;
+        if (!fullPath.Equals(root, StringComparison.OrdinalIgnoreCase)
+            && !fullPath.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        if (!File.Exists(fullPath))
+            return false;
+
+        storageRelativePath = normalized;
+        return true;
+    }
+
+    private IReadOnlyList<DocTypeOcrSampleFileDto> ListOcrSampleFiles(int docTypeId)
+    {
+        var folder = BuildOcrSampleFolder(docTypeId);
+        var fullDir = Path.GetFullPath(Path.Combine(_storageOpt.RootPath, folder.Replace('/', Path.DirectorySeparatorChar)));
+        var root = Path.GetFullPath(_storageOpt.RootPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        var rootPrefix = root + Path.DirectorySeparatorChar;
+        if (!fullDir.Equals(root, StringComparison.OrdinalIgnoreCase)
+            && !fullDir.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase))
+            return Array.Empty<DocTypeOcrSampleFileDto>();
+        if (!Directory.Exists(fullDir))
+            return Array.Empty<DocTypeOcrSampleFileDto>();
+
+        return Directory.EnumerateFiles(fullDir, "*.*", SearchOption.TopDirectoryOnly)
+            .Where(path => IsPdfExtension(Path.GetExtension(path)))
+            .Select(path =>
+            {
+                var fileName = Path.GetFileName(path);
+                return new DocTypeOcrSampleFileDto
+                {
+                    FileKey = $"{folder}/{fileName}".Replace('\\', '/'),
+                    FileName = fileName
+                };
+            })
+            .OrderByDescending(x => x.FileName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static string BuildOcrSampleFolder(int docTypeId) => $"{OcrSampleRootFolder}/{docTypeId}";
+
+    private static bool IsPdfExtension(string? extension)
+    {
+        var normalized = (extension ?? string.Empty).Trim();
+        if (normalized.Length == 0)
+            return false;
+        if (!normalized.StartsWith('.'))
+            normalized = "." + normalized;
+        return string.Equals(normalized, ".pdf", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public async Task<ApiResult<DocTypeOcrZoneDto>> SaveOcrZoneAsync(int userId, int docTypeId, DocTypeOcrZoneSaveRequest request)
+    {
+        var doc = await _stg.GetDocTypeAsync(docTypeId);
+        if (doc == null)
+            return ApiResult<DocTypeOcrZoneDto>.Fail("Loai tai lieu khong ton tai");
+
+        var settings = await _stg.GetFieldSettingsByTypeAsync(docTypeId);
+        var setting = settings.FirstOrDefault(x => x.Id == request.FieldSettingId);
+        if (setting == null)
+            return ApiResult<DocTypeOcrZoneDto>.Fail("Truong cau hinh khong hop le");
+        if (request.PageNumber <= 0)
+            return ApiResult<DocTypeOcrZoneDto>.Fail("Trang PDF khong hop le");
+        if (request.WidthRatio <= 0 || request.HeightRatio <= 0)
+            return ApiResult<DocTypeOcrZoneDto>.Fail("Vung OCR phai co kich thuoc");
+
+        var existingZones = await _stg.GetOcrZonesAsync(docTypeId);
+        if (existingZones.Any(z => z.FieldSettingId == request.FieldSettingId && z.Id != request.Id))
+            return ApiResult<DocTypeOcrZoneDto>.Fail("Trường cấu hình này đã được gán cho vùng OCR khác.");
+
+        static decimal ClampRatio(decimal value) => Math.Min(1m, Math.Max(0m, value));
+        var row = new DocTypeOcrZoneDto
+        {
+            Id = request.Id,
+            DocTypeId = docTypeId,
+            FieldSettingId = request.FieldSettingId,
+            FieldId = setting.IdField,
+            PageNumber = request.PageNumber,
+            XRatio = ClampRatio(request.XRatio),
+            YRatio = ClampRatio(request.YRatio),
+            WidthRatio = ClampRatio(request.WidthRatio),
+            HeightRatio = ClampRatio(request.HeightRatio),
+            Label = string.IsNullOrWhiteSpace(request.Label) ? null : request.Label.Trim(),
+            SampleText = string.IsNullOrWhiteSpace(request.SampleText) ? null : request.SampleText.Trim(),
+            Weight = Math.Max(0, request.Weight)
+        };
+        row.Id = await _stg.UpsertOcrZoneAsync(row, userId);
+        return ApiResult<DocTypeOcrZoneDto>.Ok(row, "Đã lưu vùng OCR");
+    }
+
+    public async Task<ApiResult> DeleteOcrZoneAsync(int docTypeId, long zoneId)
+    {
+        if (zoneId <= 0)
+            return ApiResult.Fail("Vung OCR khong hop le");
+        var affected = await _stg.DeleteOcrZoneAsync(docTypeId, zoneId);
+        return affected > 0 ? ApiResult.Ok("Đã xóa vùng OCR") : ApiResult.Fail("Không tìm thấy vùng OCR");
     }
 
     public async Task<DocTypeOcrFixPageDto?> GetOcrFixPageAsync(int id)

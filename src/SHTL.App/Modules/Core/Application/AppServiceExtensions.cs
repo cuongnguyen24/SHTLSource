@@ -26,10 +26,12 @@ public static class AppServiceExtensions
         services.AddScoped<ILogService, LogService>();
         services.AddScoped<IFolderProgressReportService, FolderProgressReportService>();
         services.AddScoped<IFolderDocumentsPurgeService, FolderDocumentsPurgeService>();
+        services.AddScoped<IFolderOcrRetryService, FolderOcrRetryService>();
         services.AddScoped<IDocCatalogService, DocCatalogService>();
         services.AddScoped<IAxeDocTypeAdminService, AxeDocTypeAdminService>();
         services.AddScoped<IAxeSyncTypeAdminService, AxeSyncTypeAdminService>();
         services.AddScoped<IDocumentSyncUploadService, DocumentSyncUploadService>();
+        services.AddScoped<IDocTypeOcrZoneExtractionService, DocTypeOcrZoneExtractionService>();
         services.AddScoped<IDocumentFormViewModelBuilder, DocumentFormViewModelBuilder>();
         return services;
     }

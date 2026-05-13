@@ -6,6 +6,7 @@ using SHTL.Modules.Core.Application.Services;
 using SHTL.Modules.Core.Domain.Contracts;
 using SHTL.Modules.Core.Domain.Enums;
 using SHTL.Modules.Infrastructure.Data.Repositories.Cnf;
+using SHTL.Modules.Infrastructure.Data.Repositories.Stg;
 using SHTL.Modules.Infrastructure.Identity;
 using SHTL.Modules.Infrastructure.Storage;
 using SHTL.Modules.Shared.Contracts.Dtos;
@@ -26,6 +27,8 @@ public class ScanController : BaseController
     private readonly IOptions<StorageOptions> _storageOpts;
     private readonly ICnfRepository _cnfRepo;
     private readonly ILogger<ScanController> _logger;
+    private readonly IConfiguration _configuration;
+    private readonly IAxeSyncTypeRepository _syncTypeRepository;
 
     public ScanController(
         IDocumentService docService,
@@ -34,7 +37,9 @@ public class ScanController : BaseController
         IWebHostEnvironment env,
         IOptions<StorageOptions> storageOpts,
         ICnfRepository cnfRepo,
-        ILogger<ScanController> logger)
+        ILogger<ScanController> logger,
+        IConfiguration configuration,
+        IAxeSyncTypeRepository syncTypeRepository)
     {
         _docService = docService;
         _workflowService = workflowService;
@@ -43,6 +48,8 @@ public class ScanController : BaseController
         _storageOpts = storageOpts;
         _cnfRepo = cnfRepo;
         _logger = logger;
+        _configuration = configuration;
+        _syncTypeRepository = syncTypeRepository;
     }
 
     // GET /scan - Danh sách tài liệu mới upload
@@ -338,4 +345,73 @@ public class ScanController : BaseController
 
     private static DateTime? ParseDate(string? s)
         => DateTime.TryParse(s, out var d) ? d : null;
+
+    [HttpGet("/sohoa/scan/plugin-sync-status")]
+    public async Task<IActionResult> PluginSyncStatus(CancellationToken cancellationToken)
+    {
+        var enabled = _configuration.GetValue<bool?>("PluginSync:Enabled") ?? false;
+        var launchUrl = _configuration["PluginSync:LaunchUrl"] ?? "http://127.0.0.1:18181/activate";
+        var healthUrl = _configuration["PluginSync:HealthUrl"] ?? "http://127.0.0.1:18181/health";
+        var timeoutMs = _configuration.GetValue<int?>("PluginSync:HealthTimeoutMs") ?? 1500;
+
+        if (!enabled)
+            return Json(new { enabled = false, online = false, activateUrl = launchUrl, message = "Plugin đồng bộ đang tắt. Vui lòng bật PluginSync:Enabled." });
+
+        var online = false;
+        try
+        {
+            using var http = new HttpClient { Timeout = TimeSpan.FromMilliseconds(Math.Max(500, timeoutMs)) };
+            using var resp = await http.GetAsync(healthUrl, cancellationToken);
+            online = resp.IsSuccessStatusCode;
+        }
+        catch
+        {
+            online = false;
+        }
+
+        return Json(new { enabled = true, online, activateUrl = launchUrl });
+    }
+
+    [HttpGet("/sohoa/scan/plugin-sync-config")]
+    public async Task<IActionResult> PluginSyncConfig(CancellationToken cancellationToken)
+    {
+        var syncTypes = await _syncTypeRepository.ListAsync(null);
+        var items = new List<object>(syncTypes.Count);
+        foreach (var sync in syncTypes.OrderBy(x => x.Weight).ThenBy(x => x.Name))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var settings = await _syncTypeRepository.GetSettingsAsync(sync.Id);
+            items.Add(new
+            {
+                syncTypeId = sync.Id,
+                docTypeId = sync.DocTypeId,
+                docTypeName = sync.DocTypeName,
+                name = sync.Name,
+                describe = sync.Describe,
+                format = sync.Format,
+                scanPathRoot = sync.ScanPathRoot,
+                weight = sync.Weight,
+                isDefault = sync.IsDefault,
+                settings = settings
+                    .OrderBy(s => s.Weight)
+                    .Select(s => new
+                    {
+                        id = s.Id,
+                        idField = s.IdField,
+                        title = s.Title,
+                        weight = s.Weight,
+                        isRequired = s.IsRequired
+                    })
+            });
+        }
+
+        return Json(new
+        {
+            uploadUrl = $"{Request.Scheme}://{Request.Host}{Request.PathBase}/api/upload/plugin-sync",
+            uploadChunkUrl = $"{Request.Scheme}://{Request.Host}{Request.PathBase}/api/upload/plugin-sync-chunk",
+            apiKey = _configuration["Uploader:ApiKey"] ?? string.Empty,
+            createdBy = CurrentUser.Id,
+            items
+        });
+    }
 }

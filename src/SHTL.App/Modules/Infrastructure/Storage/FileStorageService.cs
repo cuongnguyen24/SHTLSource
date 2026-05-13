@@ -83,6 +83,31 @@ public class LocalFileStorageService : IStorageService
         return Task.FromResult(true);
     }
 
+    public Task<bool> MarkDeletedAsync(string path, DateTime? deletedAtUtc = null)
+    {
+        var fullPath = ResolveSafeFullPath(path);
+        if (fullPath is null || !File.Exists(fullPath)) return Task.FromResult(false);
+
+        var deletedAt = deletedAtUtc ?? DateTime.UtcNow;
+        var dir = Path.GetDirectoryName(fullPath);
+        if (string.IsNullOrEmpty(dir)) return Task.FromResult(false);
+
+        var fileName = Path.GetFileName(fullPath);
+        var ext = Path.GetExtension(fileName);
+        var name = Path.GetFileNameWithoutExtension(fileName);
+        var stamp = deletedAt.ToString("yyyyMMdd_HHmm");
+        var targetName = $"{name}_deleteat{stamp}{ext}";
+        var targetPath = Path.Combine(dir, targetName);
+        if (File.Exists(targetPath))
+        {
+            targetName = $"{name}_deleteat{stamp}_{DateTime.UtcNow:yyyyMMddHHmmssfff}{ext}";
+            targetPath = Path.Combine(dir, targetName);
+        }
+
+        File.Move(fullPath, targetPath);
+        return Task.FromResult(true);
+    }
+
     public Task<string> GetPublicUrlAsync(string path)
     {
         var url = _options.VirtualPath.TrimEnd('/') + "/" + path.TrimStart('/');

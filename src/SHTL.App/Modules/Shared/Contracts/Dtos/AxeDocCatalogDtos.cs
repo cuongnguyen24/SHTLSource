@@ -114,6 +114,28 @@ public class DocTypeSeparateDto
     public int Weight { get; set; }
 }
 
+public class DocTypeOcrZoneDto
+{
+    public long Id { get; set; }
+    public int DocTypeId { get; set; }
+    public int FieldSettingId { get; set; }
+    public int FieldId { get; set; }
+    public int PageNumber { get; set; }
+    public decimal XRatio { get; set; }
+    public decimal YRatio { get; set; }
+    public decimal WidthRatio { get; set; }
+    public decimal HeightRatio { get; set; }
+    public string? Label { get; set; }
+    public string? SampleText { get; set; }
+    public int Weight { get; set; }
+}
+
+public class DocTypeOcrSampleFileDto
+{
+    public string FileKey { get; set; } = string.Empty;
+    public string FileName { get; set; } = string.Empty;
+}
+
 public class DocTypeSyncSettingDto
 {
     public int Id { get; set; }

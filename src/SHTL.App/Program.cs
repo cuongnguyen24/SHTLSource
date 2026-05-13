@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.Options;
 using SHTL;
@@ -63,6 +64,16 @@ var staticCt = new FileExtensionContentTypeProvider();
 staticCt.Mappings[".properties"] = "text/plain; charset=utf-8";
 staticCt.Mappings[".bcmap"] = "application/octet-stream";
 app.UseStaticFiles(new StaticFileOptions { ContentTypeProvider = staticCt });
+var soHoaPdfAssets = ResolveSoHoaPdfAssetsPath(builder.Environment);
+if (!string.IsNullOrEmpty(soHoaPdfAssets))
+{
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new PhysicalFileProvider(soHoaPdfAssets),
+        RequestPath = "/sohoa-assets/pdf",
+        ContentTypeProvider = staticCt
+    });
+}
 app.UseRouting();
 app.UseSession();
 app.UseAuthentication();
@@ -92,3 +103,30 @@ app.MapControllers();
 app.MapControllerRoute("default", "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();
+
+static string? ResolveSoHoaPdfAssetsPath(IWebHostEnvironment env)
+{
+    foreach (var root in EnumerateCandidateRoots(env))
+    {
+        var modulePdf = Path.Combine(root, "Modules", "Features", "SoHoa", "wwwroot", "pdf");
+        if (Directory.Exists(modulePdf))
+            return modulePdf;
+    }
+
+    if (!string.IsNullOrWhiteSpace(env.WebRootPath))
+    {
+        var webPdf = Path.Combine(env.WebRootPath, "sohoa-assets", "pdf");
+        if (Directory.Exists(webPdf))
+            return webPdf;
+    }
+
+    return null;
+}
+
+static IEnumerable<string> EnumerateCandidateRoots(IWebHostEnvironment env)
+{
+    if (!string.IsNullOrWhiteSpace(env.ContentRootPath))
+        yield return env.ContentRootPath;
+    if (!string.IsNullOrWhiteSpace(AppContext.BaseDirectory))
+        yield return AppContext.BaseDirectory;
+}

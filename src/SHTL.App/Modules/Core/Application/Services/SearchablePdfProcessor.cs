@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using SHTL.Modules.Core.Application.Services.Axe;
 using SHTL.Modules.Core.Domain.Contracts;
 using SHTL.Modules.Core.Domain.Enums;
 using SHTL.Modules.Infrastructure.Data.Repositories.Stg;
@@ -20,6 +21,7 @@ public sealed class SearchablePdfProcessor : ISearchablePdfProcessor
     private readonly IStorageService _storage;
     private readonly IOptions<StorageOptions> _storageOpts;
     private readonly ISearchablePdfPythonRunner _runner;
+    private readonly IDocTypeOcrZoneExtractionService _ocrZoneExtraction;
     private readonly ILogger<SearchablePdfProcessor> _logger;
 
     public SearchablePdfProcessor(
@@ -28,6 +30,7 @@ public sealed class SearchablePdfProcessor : ISearchablePdfProcessor
         IStorageService storage,
         IOptions<StorageOptions> storageOpts,
         ISearchablePdfPythonRunner runner,
+        IDocTypeOcrZoneExtractionService ocrZoneExtraction,
         ILogger<SearchablePdfProcessor> logger)
     {
         _documents = documents;
@@ -35,6 +38,7 @@ public sealed class SearchablePdfProcessor : ISearchablePdfProcessor
         _storage = storage;
         _storageOpts = storageOpts;
         _runner = runner;
+        _ocrZoneExtraction = ocrZoneExtraction;
         _logger = logger;
     }
 
@@ -106,6 +110,9 @@ public sealed class SearchablePdfProcessor : ISearchablePdfProcessor
                 await _documents.UpdateSearchablePdfStateAsync(documentId, OcrStatus.SearchablePdfReady, storedRel, 0)
                     .ConfigureAwait(false);
             }
+
+            await _ocrZoneExtraction.TryPrefillDocumentFromConfiguredZonesAsync(documentId, cancellationToken)
+                .ConfigureAwait(false);
 
             _logger.LogInformation("Searchable PDF: hoàn tất id={Id} → {Path}", documentId, storedRel);
         }

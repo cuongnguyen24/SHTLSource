@@ -16,7 +16,7 @@ public interface IFolderDocumentsPurgeService
 {
     /// <summary>
     /// Xóa toàn bộ tài liệu đang hoạt động trong “thư mục ảo” (khớp báo cáo tiến độ):
-    /// xóa dòng con trong DB, soft-delete <c>stg_documents</c>, xóa file trên storage, gỡ index ES (best-effort).
+    /// xóa dòng con trong DB, soft-delete <c>stg_documents</c>, đổi tên file storage (_deleteat), gỡ index ES (best-effort).
     /// </summary>
     Task<FolderPurgeResult> PurgeVirtualFolderAsync(string virtualFolderName, ICurrentUser user, CancellationToken cancellationToken = default);
 }
@@ -25,6 +25,9 @@ public sealed record FolderPurgeResult(bool Success, string Message, int Documen
 
 public sealed class FolderDocumentsPurgeService : IFolderDocumentsPurgeService
 {
+    private const int StorageParallelism = 16;
+    private const int SearchParallelism = 8;
+
     private readonly AppDbContext _db;
     private readonly IDocumentRepository _documents;
     private readonly IStorageService _storage;
@@ -62,6 +65,7 @@ public sealed class FolderDocumentsPurgeService : IFolderDocumentsPurgeService
 
         var ids = docs.Select(d => d.Id).ToList();
         var warnings = new List<string>();
+        var storagePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         var conn = await _db.GetOpenConnectionAsync(cancellationToken).ConfigureAwait(false);
 
@@ -84,6 +88,18 @@ public sealed class FolderDocumentsPurgeService : IFolderDocumentsPurgeService
         {
             _logger.LogError(ex, "Đọc cropped_path trước khi purge thư mục {Folder}", folder);
             return new FolderPurgeResult(false, $"Lỗi đọc DB: {ex.Message}", 0);
+        }
+
+        foreach (var rel in croppedRelPaths.Where(x => !string.IsNullOrWhiteSpace(x)))
+            storagePaths.Add(rel);
+
+        foreach (var d in docs)
+        {
+            AddStoragePath(storagePaths, d.FilePath);
+            AddStoragePath(storagePaths, d.ThumbPath);
+            AddStoragePath(storagePaths, d.PathPdfSearchable);
+            AddStoragePath(storagePaths, d.PathConverted);
+            AddStoragePath(storagePaths, d.PathOriginal);
         }
 
         using var tx = conn.BeginTransaction();
@@ -135,36 +151,41 @@ public sealed class FolderDocumentsPurgeService : IFolderDocumentsPurgeService
             return new FolderPurgeResult(false, $"Lỗi khi xóa trong DB: {ex.Message}", 0);
         }
 
-        foreach (var rel in croppedRelPaths.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase))
-        {
-            try
+        var deletedAtUtc = DateTime.UtcNow;
+        var storageWarnings = new List<string>();
+        await Parallel.ForEachAsync(
+            storagePaths,
+            new ParallelOptions { MaxDegreeOfParallelism = StorageParallelism, CancellationToken = cancellationToken },
+            async (rel, _) =>
             {
-                await _storage.DeleteFileAsync(rel).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Không xóa được ảnh crop ô: {Path}", rel);
-                warnings.Add(rel);
-            }
-        }
+                try
+                {
+                    var marked = await _storage.MarkDeletedAsync(rel, deletedAtUtc).ConfigureAwait(false);
+                    if (!marked)
+                        lock (storageWarnings) { storageWarnings.Add(rel); }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Không đổi tên được file storage: {Path}", rel);
+                    lock (storageWarnings) { storageWarnings.Add(rel); }
+                }
+            }).ConfigureAwait(false);
+        warnings.AddRange(storageWarnings);
 
-        foreach (var d in docs)
-        {
-            await TryDeleteStoredPathAsync(d.FilePath, warnings).ConfigureAwait(false);
-            await TryDeleteStoredPathAsync(d.ThumbPath, warnings).ConfigureAwait(false);
-            await TryDeleteStoredPathAsync(d.PathPdfSearchable, warnings).ConfigureAwait(false);
-            await TryDeleteStoredPathAsync(d.PathConverted, warnings).ConfigureAwait(false);
-            await TryDeleteStoredPathAsync(d.PathOriginal, warnings).ConfigureAwait(false);
-
-            try
+        await Parallel.ForEachAsync(
+            docs,
+            new ParallelOptions { MaxDegreeOfParallelism = SearchParallelism, CancellationToken = cancellationToken },
+            async (d, _) =>
             {
-                await _search.DeleteDocumentAsync(d.Id).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Không gỡ được index ES cho tài liệu {Id}", d.Id);
-            }
-        }
+                try
+                {
+                    await _search.DeleteDocumentAsync(d.Id).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Không gỡ được index ES cho tài liệu {Id}", d.Id);
+                }
+            }).ConfigureAwait(false);
 
         try
         {
@@ -185,21 +206,13 @@ public sealed class FolderDocumentsPurgeService : IFolderDocumentsPurgeService
             _logger.LogWarning(ex, "Không ghi được action log PURGE_FOLDER");
         }
 
-        var msg = $"Đã xóa {ids.Count} tài liệu trong thư mục «{folder}» (DB + storage).";
-        return new FolderPurgeResult(true, msg, ids.Count, warnings);
+        var msg = $"Đã xóa {ids.Count} tài liệu trong thư mục «{folder}» (CSDL). File storage được đổi tên hậu tố _deleteat.";
+        return new FolderPurgeResult(true, msg, ids.Count, warnings.Count > 0 ? warnings : null);
     }
 
-    private async Task TryDeleteStoredPathAsync(string? relativePath, List<string> warnings)
+    private static void AddStoragePath(ISet<string> paths, string? relativePath)
     {
         if (string.IsNullOrWhiteSpace(relativePath)) return;
-        try
-        {
-            await _storage.DeleteFileAsync(relativePath).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Không xóa được file storage: {Path}", relativePath);
-            warnings.Add(relativePath);
-        }
+        paths.Add(relativePath.Trim());
     }
 }

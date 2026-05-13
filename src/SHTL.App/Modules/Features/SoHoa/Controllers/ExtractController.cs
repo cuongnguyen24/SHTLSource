@@ -27,6 +27,7 @@ public class ExtractController : BaseController
     private readonly IUserRepository _userRepo;
     private readonly ICnfRepository _cnfRepo;
     private readonly IDocumentFormViewModelBuilder _formBuilder;
+    private readonly IDocTypeOcrZoneExtractionService _ocrZoneExtraction;
     private readonly ILogger<ExtractController> _logger;
     private readonly IWebHostEnvironment _env;
 
@@ -37,6 +38,7 @@ public class ExtractController : BaseController
         IUserRepository userRepo,
         ICnfRepository cnfRepo,
         IDocumentFormViewModelBuilder formBuilder,
+        IDocTypeOcrZoneExtractionService ocrZoneExtraction,
         ILogger<ExtractController> logger,
         IWebHostEnvironment env)
     {
@@ -46,6 +48,7 @@ public class ExtractController : BaseController
         _userRepo = userRepo;
         _cnfRepo = cnfRepo;
         _formBuilder = formBuilder;
+        _ocrZoneExtraction = ocrZoneExtraction;
         _logger = logger;
         _env = env;
     }
@@ -112,6 +115,19 @@ public class ExtractController : BaseController
         {
             return NotFound();
         }
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ApplyOcrZones(long id)
+    {
+        var applied = await _ocrZoneExtraction.TryPrefillDocumentFromConfiguredZonesAsync(id);
+        if (applied)
+            SetSuccess("Đã lấy dữ liệu từ vùng OCR vào các trường nhập liệu.");
+        else
+            SetWarning("Không lấy được dữ liệu từ vùng OCR. Kiểm tra loại tài liệu, file PDF 2 lớp và cấu hình vùng OCR.");
+
+        return RedirectToAction(nameof(Form), new { id });
     }
 
     // POST /extract/submit

@@ -146,6 +146,26 @@ public class StgDocTypeSeparate
     public int Weight { get; set; }
 }
 
+/// <summary>dbo.stg_doc_type_ocr_zones</summary>
+public class StgDocTypeOcrZone
+{
+    public long Id { get; set; }
+    public int DocTypeId { get; set; }
+    public int FieldSettingId { get; set; }
+    public int PageNumber { get; set; }
+    public decimal XRatio { get; set; }
+    public decimal YRatio { get; set; }
+    public decimal WidthRatio { get; set; }
+    public decimal HeightRatio { get; set; }
+    public string? Label { get; set; }
+    public string? SampleText { get; set; }
+    public int Weight { get; set; }
+    public DateTime Created { get; set; }
+    public int CreatedBy { get; set; }
+    public DateTime? Updated { get; set; }
+    public int UpdatedBy { get; set; }
+}
+
 /// <summary>dbo.stg_doc_sohoa_ocr_fixes</summary>
 public class StgDocSoHoaOcrFix
 {
