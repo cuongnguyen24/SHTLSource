@@ -51,7 +51,7 @@ public class ReportController : BaseController
         if (result.Warnings is { Count: > 0 })
         {
             var sample = string.Join("; ", result.Warnings.Take(5));
-            SetWarning($"Một số file trên storage có thể chưa xóa hết (kiểm tra log): {sample}");
+            SetWarning($"Một số file trên storage có thể chưa đổi tên hậu tố _deleteat (kiểm tra log): {sample}");
         }
 
         return RedirectToAction(nameof(FolderProgress), new { q });

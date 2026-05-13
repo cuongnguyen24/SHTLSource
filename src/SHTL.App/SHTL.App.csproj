@@ -35,4 +35,8 @@
     <None Include="tools\searchable-pdf\**\*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="Modules\Features\SoHoa\wwwroot\pdf\**\*" Link="wwwroot\sohoa-assets\pdf\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

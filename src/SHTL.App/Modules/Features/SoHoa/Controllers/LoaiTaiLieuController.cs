@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SHTL.Modules.Core.Application.Services.Axe;
+using SHTL.Modules.Core.Domain.Contracts;
 using SHTL.Modules.Core.Domain.Enums;
 using SHTL.Modules.Features.Shared;
 using SHTL.Modules.Infrastructure.Data.Repositories.Cnf;
@@ -15,11 +16,13 @@ public class LoaiTaiLieuController : BaseController
 {
     private readonly IAxeDocTypeAdminService _axe;
     private readonly ICnfRepository _cnf;
+    private readonly IStorageService _storage;
 
-    public LoaiTaiLieuController(IAxeDocTypeAdminService axe, ICnfRepository cnf)
+    public LoaiTaiLieuController(IAxeDocTypeAdminService axe, ICnfRepository cnf, IStorageService storage)
     {
         _axe = axe;
         _cnf = cnf;
+        _storage = storage;
     }
 
     private void SetPageHeader(string title)
@@ -200,6 +203,63 @@ public class LoaiTaiLieuController : BaseController
         else
             SetError(result.Message ?? "Lỗi");
         return RedirectToAction(nameof(Index));
+    }
+
+    [HttpGet("ocr-map/{id:int}")]
+    [HttpGet("/doctype/ocr-map/{id:int}")]
+    public async Task<IActionResult> OcrMap(int id, [FromQuery] string? sampleKey)
+    {
+        var vm = await _axe.GetOcrMapPageAsync(id, sampleKey);
+        if (vm == null)
+            return RedirectToAction(nameof(Index));
+        SetPageHeader("Cấu hình OCR");
+        return View(vm);
+    }
+
+    [HttpPost("ocr-map/{id:int}/sample-upload")]
+    [ValidateAntiForgeryToken]
+    [RequestSizeLimit(104857600)]
+    public async Task<IActionResult> UploadOcrSample(int id, IFormFile file)
+    {
+        var result = await _axe.UploadOcrSampleFileAsync(CurrentUser.Id, id, file);
+        return Json(result);
+    }
+
+    [HttpPost("ocr-map/{id:int}/sample-delete")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteOcrSample(int id, [FromQuery] string key)
+    {
+        var result = await _axe.DeleteOcrSampleFileAsync(id, key);
+        return Json(result);
+    }
+
+    [HttpGet("ocr-map/{id:int}/sample-pdf")]
+    public IActionResult OcrSamplePdf(int id, [FromQuery] string key)
+    {
+        if (!_axe.TryResolveOcrSampleFileKey(id, key, out var storagePath))
+            return NotFound();
+
+        var stream = _storage.OpenRead(storagePath);
+        if (stream is null)
+            return NotFound();
+
+        return File(stream, "application/pdf", enableRangeProcessing: true);
+    }
+
+    [HttpPost("ocr-map/{id:int}/zones")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SaveOcrMapZone(int id, [FromBody] DocTypeOcrZoneSaveRequest request)
+    {
+        var result = await _axe.SaveOcrZoneAsync(CurrentUser.Id, id, request);
+        return Json(result);
+    }
+
+    [HttpPost("ocr-map/{id:int}/zones/{zoneId:long}/delete")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteOcrMapZone(int id, long zoneId)
+    {
+        var result = await _axe.DeleteOcrZoneAsync(id, zoneId);
+        return Json(result);
     }
 
     [HttpGet("ocr-fix/{id:int}")]

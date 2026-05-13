@@ -218,7 +218,7 @@
                     var msg = 'Xác nhận XÓA TOÀN BỘ ' + n + ' tài liệu trong thư mục «' + folder + '»?\n\n' +
                         'Hành động này sẽ:\n' +
                         '• Soft-delete bản ghi trong CSDL và xóa dữ liệu ô nhập / trang số hóa liên quan\n' +
-                        '• Xóa file trên storage (file gốc, thumb, PDF 2 lớp, …)\n\n' +
+                        '• Đổi tên file trên storage (hậu tố _deleteat), không xóa vật lý ngay\n\n' +
                         'Không thể hoàn tác.';
                     if (!confirm(msg)) return;
                     var f = document.getElementById('folderPurgeForm');

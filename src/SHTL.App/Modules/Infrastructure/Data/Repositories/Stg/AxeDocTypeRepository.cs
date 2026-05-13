@@ -23,6 +23,9 @@ public interface IAxeDocTypeRepository
 
     Task<IReadOnlyList<DocTypeSeparateDto>> GetSeparatesAsync(int docTypeId);
     Task ReplaceSeparatesAsync(int docTypeId, IReadOnlyList<DocTypeSeparateDto> rows, int userId);
+    Task<IReadOnlyList<DocTypeOcrZoneDto>> GetOcrZonesAsync(int docTypeId);
+    Task<long> UpsertOcrZoneAsync(DocTypeOcrZoneDto row, int userId);
+    Task<int> DeleteOcrZoneAsync(int docTypeId, long zoneId);
 
     Task UpdateFieldSettingWeightsAsync(IReadOnlyList<StgDocFieldSettingDto> rows);
     Task UpdateFieldSettingWeightByIdAsync(int settingId, int weight);
@@ -261,6 +264,77 @@ public class AxeDocTypeRepository : BaseRepository, IAxeDocTypeRepository
                 Weight = w++
             });
         }
+    }
+
+    public async Task<IReadOnlyList<DocTypeOcrZoneDto>> GetOcrZonesAsync(int docTypeId)
+    {
+        var conn = await OpenConnectionAsync();
+        return (await QueryAsync<DocTypeOcrZoneDto>(conn, @"
+            SELECT z.id AS Id, z.doc_type_id AS DocTypeId, z.field_setting_id AS FieldSettingId,
+                   COALESCE(fs.id_field, 0) AS FieldId, z.page_number AS PageNumber, z.x_ratio AS XRatio,
+                   z.y_ratio AS YRatio, z.width_ratio AS WidthRatio, z.height_ratio AS HeightRatio,
+                   z.label AS Label, z.sample_text AS SampleText, z.weight AS Weight
+            FROM dbo.stg_doc_type_ocr_zones z
+            LEFT JOIN dbo.stg_doc_field_settings fs ON fs.id = z.field_setting_id
+            WHERE z.doc_type_id = @DocTypeId
+            ORDER BY z.page_number, z.weight, z.id",
+            new { DocTypeId = docTypeId })).ToList();
+    }
+
+    public async Task<long> UpsertOcrZoneAsync(DocTypeOcrZoneDto row, int userId)
+    {
+        var conn = await OpenConnectionAsync();
+        const string sql = @"
+            IF @Id > 0 AND EXISTS (SELECT 1 FROM dbo.stg_doc_type_ocr_zones WHERE id = @Id AND doc_type_id = @DocTypeId)
+            BEGIN
+                UPDATE dbo.stg_doc_type_ocr_zones SET
+                    field_setting_id = @FieldSettingId,
+                    page_number = @PageNumber,
+                    x_ratio = @XRatio,
+                    y_ratio = @YRatio,
+                    width_ratio = @WidthRatio,
+                    height_ratio = @HeightRatio,
+                    label = @Label,
+                    sample_text = @SampleText,
+                    weight = @Weight,
+                    updated = SYSUTCDATETIME(),
+                    updated_by = @UserId
+                WHERE id = @Id AND doc_type_id = @DocTypeId;
+                SELECT CAST(@Id AS BIGINT);
+            END
+            ELSE
+            BEGIN
+                INSERT INTO dbo.stg_doc_type_ocr_zones
+                    (doc_type_id, field_setting_id, page_number, x_ratio, y_ratio, width_ratio, height_ratio,
+                     label, sample_text, weight, created, created_by, updated, updated_by)
+                VALUES
+                    (@DocTypeId, @FieldSettingId, @PageNumber, @XRatio, @YRatio, @WidthRatio, @HeightRatio,
+                     @Label, @SampleText, @Weight, SYSUTCDATETIME(), @UserId, SYSUTCDATETIME(), @UserId);
+                SELECT CAST(SCOPE_IDENTITY() AS BIGINT);
+            END";
+        return await ExecuteScalarAsync<long>(conn, sql, new
+        {
+            row.Id,
+            row.DocTypeId,
+            row.FieldSettingId,
+            row.PageNumber,
+            row.XRatio,
+            row.YRatio,
+            row.WidthRatio,
+            row.HeightRatio,
+            row.Label,
+            row.SampleText,
+            row.Weight,
+            UserId = userId
+        });
+    }
+
+    public async Task<int> DeleteOcrZoneAsync(int docTypeId, long zoneId)
+    {
+        var conn = await OpenConnectionAsync();
+        return await ExecuteAsync(conn,
+            "DELETE FROM dbo.stg_doc_type_ocr_zones WHERE doc_type_id = @DocTypeId AND id = @ZoneId",
+            new { DocTypeId = docTypeId, ZoneId = zoneId });
     }
 
     public async Task UpdateFieldSettingWeightsAsync(IReadOnlyList<StgDocFieldSettingDto> rows)

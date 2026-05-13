@@ -1,0 +1,543 @@
+@model DocTypeOcrMapPageDto
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Cấu hình OCR";
+    var saveZoneUrl = $"/sohoa/loai-tai-lieu/ocr-map/{Model.DocType.Id}/zones";
+    var uploadSampleUrl = $"/sohoa/loai-tai-lieu/ocr-map/{Model.DocType.Id}/sample-upload";
+    var deleteSampleUrl = $"/sohoa/loai-tai-lieu/ocr-map/{Model.DocType.Id}/sample-delete";
+    var sampleKey = Model.SampleFileKey;
+    var pdfUrl = !string.IsNullOrWhiteSpace(sampleKey)
+        ? Url.Action("OcrSamplePdf", "LoaiTaiLieu", new { area = "sohoa", id = Model.DocType.Id, key = sampleKey })
+        : "";
+    var compatibilityJsUrl = Url.Content("~/sohoa-assets/pdf/compatibility.js");
+    var pdfJsUrl = Url.Content("~/sohoa-assets/pdf/build/pdf.js");
+    var pdfWorkerUrl = Url.Content("~/sohoa-assets/pdf/build/pdf.worker.js");
+    var sampleStorageFolder = $"SetOCR/{Model.DocType.Id}";
+    var sampleFiles = Model.SampleFiles;
+    var fields = Model.FieldSettings.Select(s =>
+    {
+        var field = Model.FieldById.TryGetValue(s.IdField, out var f) ? f : null;
+        return new
+        {
+            settingId = s.Id,
+            fieldId = s.IdField,
+            title = string.IsNullOrWhiteSpace(s.Title) ? (field?.Title ?? field?.Name ?? ("Field " + s.IdField)) : s.Title
+        };
+    }).ToList();
+}
+@section Breadcrumb {
+    <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="LoaiTaiLieu" asp-action="Index">Loại tài liệu</a></li>
+    <li class="breadcrumb-item active">Cấu hình OCR</li>
+}
+@section Styles {
+    <style>
+        .ocr-map-shell { display: grid; grid-template-columns: minmax(420px, 1fr) 360px; gap: 12px; min-height: calc(100vh - 190px); }
+        .ocr-map-viewer { min-height: 520px; background: #f8f9fa; overflow: auto; position: relative; }
+        .ocr-map-page { position: relative; margin: 16px auto; width: max-content; box-shadow: 0 2px 12px rgba(0,0,0,.12); background: #fff; }
+        .ocr-map-page canvas { display: block; }
+        .ocr-zone-layer { position: absolute; inset: 0; cursor: crosshair; }
+        .ocr-zone { position: absolute; border: 2px solid #1f7aec; background: rgba(31,122,236,.14); box-sizing: border-box; cursor: pointer; }
+        .ocr-zone.is-selected { border-color: #e03131; background: rgba(224,49,49,.12); }
+        .ocr-zone-label { position: absolute; top: -22px; left: -2px; max-width: 220px; padding: 2px 6px; border-radius: 4px; background: #1f7aec; color: #fff; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .ocr-draft { position: absolute; border: 2px dashed #f08c00; background: rgba(240,140,0,.12); box-sizing: border-box; pointer-events: none; }
+        .ocr-context { position: fixed; z-index: 1050; width: 300px; max-width: calc(100vw - 24px); display: none; }
+        .ocr-zone-list { max-height: 320px; overflow: auto; }
+        .ocr-zone-row-item { display: flex; gap: 8px; align-items: stretch; margin-bottom: 4px; }
+        .ocr-zone-row-item .ocr-zone-row { flex: 1 1 auto; }
+        .ocr-zone-row-item .ocr-zone-delete { flex: 0 0 auto; align-self: center; }
+        .ocr-sample-files { max-height: 132px; overflow: auto; }
+        .ocr-sample-item { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
+        .ocr-sample-item.is-active .ocr-sample-pick { font-weight: 600; color: var(--primary); }
+        .ocr-sample-pick { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        @@media (max-width: 991.98px) { .ocr-map-shell { display: block; } }
+    </style>
+}
+
+<div class="layout-expanded">
+    <div class="frame-figma mb-3">
+        <div class="frame-header">
+            <div>
+                <h6 class="mb-0 font-weight-bold" style="color:var(--primary);">@Model.DocType.Name</h6>
+                <div class="text-muted small">Khoanh vùng trên PDF 2 lớp, gán vùng vào trường cấu hình của loại tài liệu.</div>
+            </div>
+            <div class="d-flex flex-wrap" style="gap:8px;">
+                <a asp-area="sohoa" asp-controller="LoaiTaiLieu" asp-action="Edit" asp-route-id="@Model.DocType.Id" class="btn-figma btn-figma-outline btn-sm">Về form</a>
+                <a asp-area="sohoa" asp-controller="LoaiTaiLieu" asp-action="OcrFix" asp-route-id="@Model.DocType.Id" class="btn-figma btn-figma-outline btn-sm">Chỉnh sửa OCR</a>
+            </div>
+        </div>
+    </div>
+
+    <form id="antiOcrMap" class="d-none">@Html.AntiForgeryToken()</form>
+
+    <div class="ocr-map-shell">
+        <div class="card-figma mb-3 mb-lg-0">
+            <div class="card-header-figma d-flex justify-content-between align-items-center flex-wrap">
+                <h3 class="card-title-figma mb-0">PDF mẫu</h3>
+                <div class="d-flex align-items-center flex-wrap" style="gap:8px;">
+                    <input type="file" id="ocrUploadInput" accept="application/pdf,.pdf" class="d-none" />
+                    <button type="button" class="btn-figma btn-figma-primary btn-sm" id="ocrUploadBtn"><i class="fas fa-upload mr-1"></i>Tải PDF mẫu</button>
+                    <button type="button" class="btn-figma btn-figma-outline btn-sm" id="ocrPrevPage"><i class="fas fa-chevron-left"></i></button>
+                    <span class="small text-muted"><span id="ocrPageNo">0</span>/<span id="ocrPageCount">0</span></span>
+                    <button type="button" class="btn-figma btn-figma-outline btn-sm" id="ocrNextPage"><i class="fas fa-chevron-right"></i></button>
+                </div>
+                @if (sampleFiles.Count > 0)
+                {
+                    <div class="ocr-sample-files mt-2 w-100">
+                        @foreach (var file in sampleFiles)
+                        {
+                            var isActive = string.Equals(file.FileKey, sampleKey, StringComparison.OrdinalIgnoreCase);
+                            <div class="ocr-sample-item@(isActive ? " is-active" : "")" data-key="@file.FileKey">
+                                <button type="button" class="btn btn-link btn-sm p-0 text-left ocr-sample-pick" title="@file.FileName">@file.FileName</button>
+                                <button type="button" class="btn btn-link text-danger btn-sm p-0 ocr-sample-delete" title="Xóa PDF mẫu"><i class="fas fa-trash"></i></button>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+            <div class="card-content-figma p-0">
+                @if (string.IsNullOrWhiteSpace(sampleKey))
+                {
+                    <div class="p-3 text-muted small">Chưa có PDF mẫu trong storage/SetOCR. Hãy tải lên một file PDF để cấu hình vùng OCR.</div>
+                }
+                else
+                {
+                    <div id="ocrViewer" class="ocr-map-viewer">
+                        <div id="ocrPage" class="ocr-map-page">
+                            <canvas id="ocrCanvas"></canvas>
+                            <div id="ocrZoneLayer" class="ocr-zone-layer"></div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <aside class="card-figma">
+            <div class="card-header-figma">
+                <h3 class="card-title-figma mb-0">Vùng đã cấu hình</h3>
+            </div>
+            <div class="card-content-figma">
+                <div class="alert alert-light border small">Kéo chuột để tạo hình chữ nhật. Chuột phải vào vùng để gán trường hoặc sửa vùng. Nhấn phím Delete để xóa vùng đang chọn.</div>
+                <div id="ocrZoneList" class="ocr-zone-list mb-3"></div>
+                <button type="button" class="btn-figma btn-figma-outline btn-sm" id="ocrClearSelection">Bỏ chọn</button>
+            </div>
+        </aside>
+    </div>
+</div>
+
+<div id="ocrContext" class="ocr-context card-figma shadow">
+    <div class="card-content-figma">
+        <input type="hidden" id="ocrZoneId" value="0" />
+        <div class="form-group mb-3">
+            <label class="small text-muted">Trường lưu</label>
+            <select id="ocrFieldSetting" class="form-control form-control-sm"></select>
+        </div>
+        <div class="d-flex flex-wrap" style="gap:8px;">
+            <button type="button" class="btn-figma btn-figma-primary btn-sm" id="ocrSaveZone"><i class="fas fa-save mr-1"></i>Lưu</button>
+            <button type="button" class="btn-figma btn-figma-secondary btn-sm" id="ocrCloseContext">Đóng</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/shtl-ajax.js" asp-append-version="true"></script>
+    <script>
+        (function () {
+            var uploadUrl = @Html.Raw(JsonSerializer.Serialize(uploadSampleUrl));
+            var deleteSampleUrl = @Html.Raw(JsonSerializer.Serialize(deleteSampleUrl));
+            var pdfUrl = @Html.Raw(JsonSerializer.Serialize(pdfUrl));
+            var compatibilityJsUrl = @Html.Raw(JsonSerializer.Serialize(compatibilityJsUrl));
+            var pdfJsUrl = @Html.Raw(JsonSerializer.Serialize(pdfJsUrl));
+            var pdfWorkerUrl = @Html.Raw(JsonSerializer.Serialize(pdfWorkerUrl));
+            var sampleStorageFolder = @Html.Raw(JsonSerializer.Serialize(sampleStorageFolder));
+
+            function loadScript(url) {
+                return new Promise(function (resolve, reject) {
+                    var el = document.createElement('script');
+                    el.src = url;
+                    el.onload = resolve;
+                    el.onerror = function () { reject(new Error(url)); };
+                    document.head.appendChild(el);
+                });
+            }
+
+            function showPdfLibraryError(detail) {
+                var viewer = document.getElementById('ocrViewer');
+                if (!viewer) return;
+                viewer.innerHTML = '<div class="p-3 text-danger small mb-2">'
+                    + 'Không tải được thư viện PDF.js để khoanh vùng. '
+                    + 'Thư viện nằm ở /sohoa-assets/pdf; PDF mẫu loại tài liệu được lưu ở storage/' + sampleStorageFolder + '. '
+                    + (detail ? ('Chi tiết: ' + detail + '. ') : '')
+                    + 'Bạn vẫn có thể xem PDF mẫu bên dưới.</div>'
+                    + '<iframe src="' + pdfUrl + '" title="PDF mẫu" class="w-100 border-0" style="min-height:520px;"></iframe>';
+            }
+
+            function token() { return window.ShtlAjax.getRequestVerificationToken(); }
+
+            var uploadBtn = document.getElementById('ocrUploadBtn');
+            var uploadInput = document.getElementById('ocrUploadInput');
+            if (uploadBtn && uploadInput) {
+                uploadBtn.addEventListener('click', function () { uploadInput.click(); });
+                uploadInput.addEventListener('change', function () {
+                    if (!this.files || !this.files.length) return;
+                    var fd = new FormData();
+                    fd.append('file', this.files[0]);
+                    fetch(uploadUrl, {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: { 'RequestVerificationToken': token() },
+                        body: fd
+                    }).then(function (r) { return r.json(); }).then(function (j) {
+                        if (j.success && j.data && j.data.fileKey) {
+                            var url = new URL(window.location.href);
+                            url.searchParams.set('sampleKey', j.data.fileKey);
+                            window.location.href = url.toString();
+                        } else if (typeof toastr !== 'undefined') {
+                            toastr.error((j && j.message) || 'Lỗi');
+                        }
+                    });
+                });
+            }
+
+            var sampleItems = document.querySelectorAll('.ocr-sample-item');
+            Array.prototype.forEach.call(sampleItems, function (item) {
+                var key = item.getAttribute('data-key');
+                var pickBtn = item.querySelector('.ocr-sample-pick');
+                var deleteBtn = item.querySelector('.ocr-sample-delete');
+                if (pickBtn) {
+                    pickBtn.addEventListener('click', function () {
+                        var url = new URL(window.location.href);
+                        url.searchParams.set('sampleKey', key);
+                        window.location.href = url.toString();
+                    });
+                }
+                if (deleteBtn) {
+                    deleteBtn.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        if (!window.confirm('Xóa PDF mẫu này khỏi storage?')) return;
+                        fetch(deleteSampleUrl + '?key=' + encodeURIComponent(key), {
+                            method: 'POST',
+                            credentials: 'same-origin',
+                            headers: { 'RequestVerificationToken': token() }
+                        }).then(function (r) { return r.json(); }).then(function (j) {
+                            if (j.success) {
+                                if (typeof toastr !== 'undefined') toastr.success(j.message || 'Đã xóa PDF mẫu');
+                                var url = new URL(window.location.href);
+                                if (url.searchParams.get('sampleKey') === key) {
+                                    url.searchParams.delete('sampleKey');
+                                }
+                                window.location.href = url.toString();
+                            } else if (typeof toastr !== 'undefined') {
+                                toastr.error(j.message || 'Lỗi');
+                            }
+                        });
+                    });
+                }
+            });
+
+            if (!pdfUrl) return;
+
+            loadScript(compatibilityJsUrl).catch(function () { return null; })
+                .then(function () { return loadScript(pdfJsUrl); })
+                .then(function () {
+                    if (typeof PDFJS === 'undefined') {
+                        showPdfLibraryError('PDFJS undefined');
+                        return;
+                    }
+                    startOcrViewer();
+                })
+                .catch(function (err) {
+                    showPdfLibraryError(err && err.message ? err.message : 'load script failed');
+                });
+
+            function startOcrViewer() {
+            PDFJS.workerSrc = pdfWorkerUrl;
+            var fields = @Html.Raw(JsonSerializer.Serialize(fields));
+            var zones = @Html.Raw(JsonSerializer.Serialize(Model.Zones));
+            var saveUrl = @Html.Raw(JsonSerializer.Serialize(saveZoneUrl));
+            var deleteBaseUrl = saveUrl;
+            var currentPage = 1;
+            var pdfDoc = null;
+            var viewport = null;
+            var selected = null;
+            var drawing = false;
+            var start = null;
+            var draft = null;
+            var canvas = document.getElementById('ocrCanvas');
+            var layer = document.getElementById('ocrZoneLayer');
+            var context = document.getElementById('ocrContext');
+
+            var fieldSettingSelect = document.getElementById('ocrFieldSetting');
+
+            fields.forEach(function (f) {
+                var opt = document.createElement('option');
+                opt.value = f.settingId;
+                opt.textContent = f.title;
+                fieldSettingSelect.appendChild(opt);
+            });
+
+            function token() { return window.ShtlAjax.getRequestVerificationToken(); }
+            function pageZones() { return zones.filter(function (z) { return z.PageNumber === currentPage || z.pageNumber === currentPage; }); }
+            function val(z, p) { return z[p] !== undefined ? z[p] : z[p.charAt(0).toUpperCase() + p.slice(1)]; }
+            function selectedFieldTitle(z) {
+                var sid = val(z, 'fieldSettingId');
+                var f = fields.find(function (x) { return x.settingId === sid; });
+                return f ? f.title : 'Chưa gán trường';
+            }
+            function isFieldSettingUsed(fieldSettingId, exceptZone) {
+                if (!fieldSettingId) return false;
+                return zones.some(function (z) {
+                    if (exceptZone && z === exceptZone) return false;
+                    return val(z, 'fieldSettingId') === fieldSettingId;
+                });
+            }
+            function pickAvailableFieldSettingId(exceptZone) {
+                for (var i = 0; i < fields.length; i++) {
+                    if (!isFieldSettingUsed(fields[i].settingId, exceptZone)) {
+                        return fields[i].settingId;
+                    }
+                }
+                return 0;
+            }
+            function refreshFieldSettingOptions() {
+                var currentValue = parseInt(fieldSettingSelect.value, 10) || 0;
+                Array.prototype.forEach.call(fieldSettingSelect.options, function (opt) {
+                    var settingId = parseInt(opt.value, 10) || 0;
+                    var used = isFieldSettingUsed(settingId, selected);
+                    opt.disabled = used && settingId !== currentValue;
+                });
+            }
+            function getPos(e) {
+                var r = layer.getBoundingClientRect();
+                return { x: Math.max(0, Math.min(r.width, e.clientX - r.left)), y: Math.max(0, Math.min(r.height, e.clientY - r.top)) };
+            }
+            function normalizeRect(a, b) {
+                var x = Math.min(a.x, b.x), y = Math.min(a.y, b.y);
+                var w = Math.abs(a.x - b.x), h = Math.abs(a.y - b.y);
+                return { x: x, y: y, w: w, h: h };
+            }
+            function toZoneRect(rect) {
+                return {
+                    Id: 0,
+                    FieldSettingId: pickAvailableFieldSettingId(null),
+                    PageNumber: currentPage,
+                    XRatio: rect.x / layer.clientWidth,
+                    YRatio: rect.y / layer.clientHeight,
+                    WidthRatio: rect.w / layer.clientWidth,
+                    HeightRatio: rect.h / layer.clientHeight,
+                    Label: '',
+                    SampleText: '',
+                    Weight: zones.length
+                };
+            }
+            function drawZones() {
+                layer.innerHTML = '';
+                pageZones().forEach(function (z) {
+                    var el = document.createElement('div');
+                    el.className = 'ocr-zone' + (selected === z ? ' is-selected' : '');
+                    el.style.left = (val(z, 'xRatio') * 100) + '%';
+                    el.style.top = (val(z, 'yRatio') * 100) + '%';
+                    el.style.width = (val(z, 'widthRatio') * 100) + '%';
+                    el.style.height = (val(z, 'heightRatio') * 100) + '%';
+                    var label = document.createElement('div');
+                    label.className = 'ocr-zone-label';
+                    label.textContent = val(z, 'label') || selectedFieldTitle(z);
+                    el.appendChild(label);
+                    el.addEventListener('click', function (e) { e.stopPropagation(); selectZone(z); });
+                    el.addEventListener('contextmenu', function (e) { e.preventDefault(); e.stopPropagation(); selectZone(z); openContext(e.clientX, e.clientY); });
+                    layer.appendChild(el);
+                });
+                drawZoneList();
+            }
+            function drawZoneList() {
+                var list = document.getElementById('ocrZoneList');
+                var items = pageZones();
+                if (!items.length) {
+                    list.innerHTML = '<div class="text-muted small">Trang này chưa có vùng OCR.</div>';
+                    return;
+                }
+                list.innerHTML = items.map(function (z, i) {
+                    var selectedClass = selected === z ? ' active' : '';
+                    return '<div class="ocr-zone-row-item">'
+                        + '<button type="button" class="btn btn-light btn-sm text-left ocr-zone-row' + selectedClass + '" data-i="' + i + '">'
+                        + '<strong>' + selectedFieldTitle(z) + '</strong><br><span class="text-muted">Trang ' + val(z, 'pageNumber') + '</span></button>'
+                        + '<button type="button" class="btn btn-link text-danger btn-sm ocr-zone-delete" data-i="' + i + '" title="Xóa vùng"><i class="fas fa-trash"></i></button>'
+                        + '</div>';
+                }).join('');
+                Array.prototype.forEach.call(list.querySelectorAll('.ocr-zone-row'), function (btn) {
+                    btn.onclick = function () { selectZone(items[parseInt(btn.getAttribute('data-i'), 10)]); };
+                });
+                Array.prototype.forEach.call(list.querySelectorAll('.ocr-zone-delete'), function (btn) {
+                    btn.onclick = function (e) {
+                        e.stopPropagation();
+                        deleteZone(items[parseInt(btn.getAttribute('data-i'), 10)]);
+                    };
+                });
+            }
+            function selectZone(z) {
+                selected = z;
+                document.getElementById('ocrZoneId').value = val(z, 'id') || 0;
+                fieldSettingSelect.value = val(z, 'fieldSettingId') || '';
+                refreshFieldSettingOptions();
+                drawZones();
+            }
+            function deleteZone(z) {
+                if (!z) return;
+                var id = val(z, 'id') || 0;
+                if (!id) {
+                    zones = zones.filter(function (item) { return item !== z; });
+                    if (selected === z) selected = null;
+                    closeContext();
+                    drawZones();
+                    return;
+                }
+                fetch(deleteBaseUrl + '/' + id + '/delete', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'RequestVerificationToken': token() }
+                }).then(function (r) { return r.json(); }).then(function (j) {
+                    if (j.success) {
+                        zones = zones.filter(function (item) { return (val(item, 'id') || 0) !== id; });
+                        if (selected === z) selected = null;
+                        if (typeof toastr !== 'undefined') toastr.success(j.message || 'Đã xóa vùng OCR');
+                        closeContext();
+                        drawZones();
+                    } else if (typeof toastr !== 'undefined') toastr.error(j.message || 'Lỗi');
+                });
+            }
+            function openContext(x, y) {
+                var margin = 12;
+                context.style.display = 'block';
+                context.style.left = margin + 'px';
+                context.style.top = margin + 'px';
+                var rect = context.getBoundingClientRect();
+                var width = rect.width || 300;
+                var height = rect.height || 0;
+                var left = x;
+                var top = y;
+                if (left + width + margin > window.innerWidth) {
+                    left = window.innerWidth - width - margin;
+                }
+                if (left < margin) left = margin;
+                if (top + height + margin > window.innerHeight) {
+                    top = y - height;
+                }
+                if (top < margin) {
+                    top = window.innerHeight - height - margin;
+                }
+                if (top < margin) top = margin;
+                context.style.left = left + 'px';
+                context.style.top = top + 'px';
+            }
+            function closeContext() { context.style.display = 'none'; }
+            function renderPage(n) {
+                pdfDoc.getPage(n).then(function (page) {
+                    viewport = page.getViewport(1.25);
+                    canvas.width = viewport.width;
+                    canvas.height = viewport.height;
+                    layer.style.width = viewport.width + 'px';
+                    layer.style.height = viewport.height + 'px';
+                    document.getElementById('ocrPageNo').textContent = String(n);
+                    document.getElementById('ocrPageCount').textContent = String(pdfDoc.numPages);
+                    return page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
+                }).then(drawZones);
+            }
+
+            layer.addEventListener('mousedown', function (e) {
+                if (e.button !== 0) return;
+                closeContext();
+                drawing = true;
+                start = getPos(e);
+                draft = document.createElement('div');
+                draft.className = 'ocr-draft';
+                layer.appendChild(draft);
+                e.preventDefault();
+            });
+            window.addEventListener('mousemove', function (e) {
+                if (!drawing || !draft) return;
+                var r = normalizeRect(start, getPos(e));
+                draft.style.left = r.x + 'px';
+                draft.style.top = r.y + 'px';
+                draft.style.width = r.w + 'px';
+                draft.style.height = r.h + 'px';
+            });
+            window.addEventListener('mouseup', function (e) {
+                if (!drawing) return;
+                drawing = false;
+                var r = normalizeRect(start, getPos(e));
+                if (draft) draft.remove();
+                draft = null;
+                if (r.w < 8 || r.h < 8) return;
+                var z = toZoneRect(r);
+                if (!z.FieldSettingId) {
+                    if (typeof toastr !== 'undefined') {
+                        toastr.warning('Tất cả trường cấu hình đã được gán. Hãy xóa hoặc đổi trường của vùng khác trước khi tạo vùng mới.');
+                    }
+                    return;
+                }
+                zones.push(z);
+                selectZone(z);
+                openContext(e.clientX, e.clientY);
+            });
+
+            document.getElementById('ocrSaveZone').onclick = function () {
+                if (!selected) return;
+                var fieldSettingId = parseInt(fieldSettingSelect.value, 10) || 0;
+                if (!fieldSettingId) {
+                    if (typeof toastr !== 'undefined') toastr.error('Vui lòng chọn trường lưu cho vùng OCR.');
+                    return;
+                }
+                if (isFieldSettingUsed(fieldSettingId, selected)) {
+                    if (typeof toastr !== 'undefined') toastr.error('Trường cấu hình này đã được gán cho vùng OCR khác.');
+                    return;
+                }
+                selected.FieldSettingId = fieldSettingId;
+                selected.Label = val(selected, 'label') || '';
+                selected.SampleText = val(selected, 'sampleText') || '';
+                fetch(saveUrl, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token() },
+                    body: JSON.stringify({
+                        id: val(selected, 'id') || 0,
+                        fieldSettingId: selected.FieldSettingId,
+                        pageNumber: val(selected, 'pageNumber'),
+                        xRatio: val(selected, 'xRatio'),
+                        yRatio: val(selected, 'yRatio'),
+                        widthRatio: val(selected, 'widthRatio'),
+                        heightRatio: val(selected, 'heightRatio'),
+                        label: selected.Label,
+                        sampleText: selected.SampleText,
+                        weight: val(selected, 'weight') || 0
+                    })
+                }).then(function (r) { return r.json(); }).then(function (j) {
+                    if (j.success && j.data) {
+                        Object.assign(selected, j.data);
+                        if (typeof toastr !== 'undefined') toastr.success(j.message || 'Đã lưu vùng OCR');
+                        closeContext();
+                        drawZones();
+                    } else if (typeof toastr !== 'undefined') toastr.error(j.message || 'Lỗi');
+                });
+            };
+            document.getElementById('ocrCloseContext').onclick = closeContext;
+            document.getElementById('ocrClearSelection').onclick = function () { selected = null; closeContext(); drawZones(); };
+            document.getElementById('ocrPrevPage').onclick = function () { if (currentPage > 1) { currentPage--; selected = null; renderPage(currentPage); } };
+            document.getElementById('ocrNextPage').onclick = function () { if (pdfDoc && currentPage < pdfDoc.numPages) { currentPage++; selected = null; renderPage(currentPage); } };
+            window.addEventListener('keydown', function (e) {
+                if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+                if (!selected) return;
+                var tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+                if (tag === 'input' || tag === 'textarea' || tag === 'select' || (e.target && e.target.isContentEditable)) return;
+                e.preventDefault();
+                deleteZone(selected);
+            });
+
+            PDFJS.getDocument(pdfUrl).then(function (doc) {
+                pdfDoc = doc;
+                renderPage(currentPage);
+            }).catch(function () {
+                document.getElementById('ocrViewer').innerHTML = '<div class="p-3 text-danger small">Không tải được PDF mẫu. Kiểm tra quyền xem file hoặc trạng thái PDF.</div>';
+            });
+            }
+        })();
+    </script>
+}

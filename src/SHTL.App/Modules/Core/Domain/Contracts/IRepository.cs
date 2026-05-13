@@ -37,6 +37,8 @@ public interface IStorageService
     /// <summary>Đọc trực tiếp từ đĩa (ưu tiên cho phát PDF có Range). Null nếu không tồn tại hoặc path không hợp lệ.</summary>
     Stream? OpenRead(string relativePath);
     Task<bool> DeleteFileAsync(string path);
+    /// <summary>Đổi tên file đã xóa (ví dụ bia.pdf → bia_deleteat20260514_1223.pdf) thay vì xóa vật lý.</summary>
+    Task<bool> MarkDeletedAsync(string path, DateTime? deletedAtUtc = null);
     Task<string> GetPublicUrlAsync(string path);
     Task<string?> SaveThumbnailAsync(string sourcePath, string thumbPath);
 }

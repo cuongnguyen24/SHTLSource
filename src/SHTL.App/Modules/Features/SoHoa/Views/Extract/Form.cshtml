@@ -9,6 +9,7 @@
     ViewData["ExtractFormReadOnly"] = extractReadOnlyAfterCheck1Pass;
     ViewData["Title"] = extractReadOnlyAfterCheck1Pass ? ("Xem nhập liệu — " + doc.Name) : ("Nhập liệu — " + doc.Name);
     var submitUrl = Url.Action("Submit", "Extract", new { area = "sohoa" })!;
+    var applyOcrZonesUrl = Url.Action("ApplyOcrZones", "Extract", new { area = "sohoa", id = doc.Id })!;
     var previewUrl = Url.Content("~/scan/preview/" + doc.Id);
     var indexUrl = Url.Action("Index", "Extract", new { area = "sohoa" })!;
     var pdfViewerUrl = Url.Content("~/scan/pdf/" + doc.Id);
@@ -17,6 +18,9 @@
 
     string? Fv(FieldSettingViewModel f)
     {
+        if (!string.IsNullOrWhiteSpace(f.PostFieldKey) && Model.FieldValues.TryGetValue(f.PostFieldKey, out var postValue))
+            return postValue;
+
         if (!string.IsNullOrWhiteSpace(f.FieldName) && Model.FieldValues.TryGetValue(f.FieldName, out var x))
             return x;
 
@@ -202,6 +206,15 @@
                 </div>
             </div>
             <div class="d-flex flex-wrap" style="gap:8px;">
+                @if (!extractReadOnlyAfterCheck1Pass && doc.OcrStatus == OcrStatus.SearchablePdfReady)
+                {
+                    <form method="post" action="@applyOcrZonesUrl" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn-figma btn-figma-outline btn-sm">
+                            <i class="fas fa-magic mr-1"></i>Lấy dữ liệu từ OCR
+                        </button>
+                    </form>
+                }
                 <a href="@previewUrl" class="btn-figma btn-figma-secondary btn-sm" target="_blank" rel="noopener"><i class="fas fa-file-pdf mr-1"></i>Xem PDF</a>
                 <a href="@indexUrl" class="btn-figma btn-figma-secondary btn-sm">Danh sách</a>
                 <button type="button"

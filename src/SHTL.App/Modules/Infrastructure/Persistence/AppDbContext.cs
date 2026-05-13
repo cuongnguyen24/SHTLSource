@@ -41,6 +41,7 @@ public class AppDbContext : DbContext
     public DbSet<StgPatternType> StgPatternTypes => Set<StgPatternType>();
     public DbSet<StgDocFieldGroup> StgDocFieldGroups => Set<StgDocFieldGroup>();
     public DbSet<StgDocTypeSeparate> StgDocTypeSeparates => Set<StgDocTypeSeparate>();
+    public DbSet<StgDocTypeOcrZone> StgDocTypeOcrZones => Set<StgDocTypeOcrZone>();
     public DbSet<StgDocSoHoaOcrFix> StgDocSoHoaOcrFixes => Set<StgDocSoHoaOcrFix>();
     public DbSet<StgDocSoHoaOcrFixType> StgDocSoHoaOcrFixTypes => Set<StgDocSoHoaOcrFixType>();
     public DbSet<StgDocTypeOcrFix> StgDocTypeOcrFixes => Set<StgDocTypeOcrFix>();
@@ -108,6 +109,26 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<StgPatternType>().ToTable("stg_pattern_types");
         modelBuilder.Entity<StgDocFieldGroup>().ToTable("stg_doc_field_groups");
         modelBuilder.Entity<StgDocTypeSeparate>().ToTable("stg_doc_type_separates");
+        var ocrZone = modelBuilder.Entity<StgDocTypeOcrZone>();
+        ocrZone.ToTable("stg_doc_type_ocr_zones", table =>
+        {
+            table.HasCheckConstraint("ck_stg_doc_type_ocr_zones_page", "page_number > 0");
+            table.HasCheckConstraint(
+                "ck_stg_doc_type_ocr_zones_ratio",
+                "x_ratio >= 0 AND x_ratio <= 1 AND y_ratio >= 0 AND y_ratio <= 1 AND width_ratio > 0 AND width_ratio <= 1 AND height_ratio > 0 AND height_ratio <= 1");
+        });
+        ocrZone.Property(e => e.XRatio).HasColumnType("decimal(18,8)");
+        ocrZone.Property(e => e.YRatio).HasColumnType("decimal(18,8)");
+        ocrZone.Property(e => e.WidthRatio).HasColumnType("decimal(18,8)");
+        ocrZone.Property(e => e.HeightRatio).HasColumnType("decimal(18,8)");
+        ocrZone.Property(e => e.Label).HasMaxLength(255);
+        ocrZone.Property(e => e.SampleText).HasMaxLength(2000);
+        ocrZone.Property(e => e.Weight).HasDefaultValue(0);
+        ocrZone.Property(e => e.Created).HasDefaultValueSql("SYSUTCDATETIME()");
+        ocrZone.Property(e => e.CreatedBy).HasDefaultValue(0);
+        ocrZone.Property(e => e.UpdatedBy).HasDefaultValue(0);
+        ocrZone.HasIndex(e => new { e.DocTypeId, e.PageNumber, e.Weight });
+        ocrZone.HasIndex(e => e.FieldSettingId);
         modelBuilder.Entity<StgDocSoHoaOcrFix>().ToTable("stg_doc_sohoa_ocr_fixes");
         modelBuilder.Entity<StgDocSoHoaOcrFixType>().ToTable("stg_doc_sohoa_ocr_fix_types");
         modelBuilder.Entity<StgDocTypeOcrFix>().ToTable("stg_doc_type_ocr_fixes");

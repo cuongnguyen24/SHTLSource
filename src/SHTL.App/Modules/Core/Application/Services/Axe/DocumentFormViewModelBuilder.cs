@@ -14,19 +14,22 @@ public class DocumentFormViewModelBuilder : IDocumentFormViewModelBuilder
     private readonly IFormCellRepository _cellRepo;
     private readonly IUserRepository _userRepo;
     private readonly ICnfRepository _cnfRepo;
+    private readonly IDocTypeOcrZoneExtractionService _ocrZoneExtraction;
 
     public DocumentFormViewModelBuilder(
         IAxeDocTypeRepository docTypeRepo,
         IDocumentRepository docRepo,
         IFormCellRepository cellRepo,
         IUserRepository userRepo,
-        ICnfRepository cnfRepo)
+        ICnfRepository cnfRepo,
+        IDocTypeOcrZoneExtractionService ocrZoneExtraction)
     {
         _docTypeRepo = docTypeRepo;
         _docRepo = docRepo;
         _cellRepo = cellRepo;
         _userRepo = userRepo;
         _cnfRepo = cnfRepo;
+        _ocrZoneExtraction = ocrZoneExtraction;
     }
 
     public async Task<DocumentFormViewModel> BuildForCreateAsync(int docTypeId)
@@ -46,6 +49,8 @@ public class DocumentFormViewModelBuilder : IDocumentFormViewModelBuilder
 
     public async Task<DocumentFormViewModel> BuildForExtractAsync(long documentId)
     {
+        await _ocrZoneExtraction.TryPrefillDocumentFromConfiguredZonesAsync(documentId);
+
         var doc = await _docRepo.GetByIdAsync(documentId);
         if (doc == null) throw new InvalidOperationException($"Document {documentId} not found");
 
