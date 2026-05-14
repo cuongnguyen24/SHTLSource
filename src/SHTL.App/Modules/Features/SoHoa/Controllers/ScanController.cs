@@ -17,7 +17,6 @@ namespace SHTL.Modules.Features.SoHoa.Controllers;
 /// Quản lý danh sách tài liệu scan/upload và các thao tác trên bước scan.
 /// </summary>
 [Authorize]
-[AuthorizeModule(ModuleCode.ScanUpload)]
 public class ScanController : BaseController
 {
     private readonly IDocumentService _docService;
@@ -54,6 +53,7 @@ public class ScanController : BaseController
 
     // GET /scan - Danh sách tài liệu mới upload
     [HttpGet]
+    [AuthorizeModule(ModuleCode.ScanUpload)]
     public async Task<IActionResult> Index()
     {
         int? docTypeId = null;
@@ -77,6 +77,7 @@ public class ScanController : BaseController
     /// <summary>Xóa mềm bản ghi + xóa file/thumbnail trên storage (chỉ khi chưa qua bước Extract).</summary>
     [HttpPost("/scan/delete")]
     [ValidateAntiForgeryToken]
+    [AuthorizeModule(ModuleCode.ScanUpload)]
     public async Task<IActionResult> Delete([FromForm] long id)
     {
         var result = await _workflowService.SafeDeleteAsync(id, CurrentUser);
@@ -86,6 +87,7 @@ public class ScanController : BaseController
     /// <summary>Từ danh sách upload: đưa bản ghi đang Extract vào hàng đợi Scan (kiểm tra scan 1).</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [AuthorizeModule(ModuleCode.ScanUpload)]
     public async Task<IActionResult> QueueForCheckScan1([FromForm] long id)
     {
         var result = await _workflowService.QueueExtractForScanCheck1Async(id, CurrentUser);
@@ -160,6 +162,7 @@ public class ScanController : BaseController
 
     // GET /scan/detail/{id}
     [HttpGet]
+    [AuthorizeModule(ModuleCode.ScanUpload, ModuleCode.CheckScanFirst, ModuleCode.CheckScanSecond)]
     public async Task<IActionResult> Detail(long id)
     {
         var doc = await _docService.GetByIdAsync(id, CurrentUser);
@@ -169,6 +172,7 @@ public class ScanController : BaseController
 
     /// <summary>Trang xem PDF (toolbar + iframe/object), tương tự AXE scanner form.</summary>
     [HttpGet("/scan/preview/{id:long}")]
+    [AuthorizeModule(ModuleCode.ScanUpload, ModuleCode.CheckScanFirst, ModuleCode.CheckScanSecond)]
     public async Task<IActionResult> Preview(long id)
     {
         var doc = await _docService.GetByIdAsync(id, CurrentUser);
@@ -207,6 +211,7 @@ public class ScanController : BaseController
 
     /// <summary>Stream PDF inline (dùng trong iframe). Không đặt tên action là File để tránh trùng Controller.File().</summary>
     [HttpGet("/scan/pdf/{id:long}")]
+    [AuthorizeModule(ModuleCode.ScanUpload, ModuleCode.CheckScanFirst, ModuleCode.CheckScanSecond)]
     public async Task<IActionResult> Pdf(long id)
     {
         var doc = await _docService.GetByIdAsync(id, CurrentUser);
@@ -299,6 +304,7 @@ public class ScanController : BaseController
     }
 
     [HttpGet("/scan/download/{id:long}")]
+    [AuthorizeModule(ModuleCode.ScanUpload, ModuleCode.CheckScanFirst, ModuleCode.CheckScanSecond)]
     public async Task<IActionResult> Download(long id)
     {
         var doc = await _docService.GetByIdAsync(id, CurrentUser);
@@ -347,6 +353,7 @@ public class ScanController : BaseController
         => DateTime.TryParse(s, out var d) ? d : null;
 
     [HttpGet("/sohoa/scan/plugin-sync-status")]
+    [AuthorizeModule(ModuleCode.ScanUpload)]
     public async Task<IActionResult> PluginSyncStatus(CancellationToken cancellationToken)
     {
         var enabled = _configuration.GetValue<bool?>("PluginSync:Enabled") ?? false;
@@ -373,6 +380,7 @@ public class ScanController : BaseController
     }
 
     [HttpGet("/sohoa/scan/plugin-sync-config")]
+    [AuthorizeModule(ModuleCode.ScanUpload)]
     public async Task<IActionResult> PluginSyncConfig(CancellationToken cancellationToken)
     {
         var syncTypes = await _syncTypeRepository.ListAsync(null);

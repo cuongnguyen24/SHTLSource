@@ -16,7 +16,7 @@ using SHTL.Modules.Shared.Contracts.Dtos;
 namespace SHTL.Modules.Features.SoHoa.Controllers;
 
 [Authorize]
-[AuthorizeModule(ModuleCode.ExportData, ModuleCode.ExportConfig)]
+[AuthorizeModule(ModuleCode.ExportData)]
 public class ExportController : BaseController
 {
     private readonly IExportJobRepository _exportRepo;

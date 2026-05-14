@@ -1,4 +1,6 @@
 using SHTL.Modules.Core.Domain.Contracts;
+using SHTL.Modules.Core.Domain.Enums;
+using System.Globalization;
 using System.Security.Claims;
 
 namespace SHTL.Modules.Infrastructure.Identity;
@@ -26,7 +28,25 @@ public class CurrentUser : ICurrentUser
         => _principal.FindAll(ClaimTypes.Role).Select(c => c.Value);
 
     public bool HasPermission(string module)
-        => _principal.HasClaim("permission", module) || IsAdmin;
+    {
+        if (IsAdmin)
+            return true;
+        if (string.IsNullOrWhiteSpace(module))
+            return false;
+
+        var trimmed = module.Trim();
+        if (_principal.HasClaim("permission", trimmed))
+            return true;
+
+        if (Enum.TryParse<ModuleCode>(trimmed, true, out var byName))
+            return ModuleAuthorization.HasModule(_principal, byName);
+
+        if (int.TryParse(trimmed, NumberStyles.Integer, CultureInfo.InvariantCulture, out var code)
+            && Enum.IsDefined(typeof(ModuleCode), code))
+            return ModuleAuthorization.HasModule(_principal, (ModuleCode)code);
+
+        return false;
+    }
 
     private static int? ParseIntClaim(ClaimsPrincipal p, string type)
     {

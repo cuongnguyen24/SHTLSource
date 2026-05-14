@@ -584,7 +584,7 @@ WHERE folder_name = @VirtualFolder;
                         ON cba.id = cbd.assignment_id
                     INNER JOIN dbo.stg_construction_batches cb
                         ON cb.id = cbd.batch_id
-                    WHERE cbd.document_id = id
+                    WHERE cbd.document_id = stg_documents.id
                       AND cba.user_id = @CurrentUserId
                       AND cba.[status] = 1
                       AND cb.[status] IN (1,2)

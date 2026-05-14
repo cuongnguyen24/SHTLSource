@@ -16,30 +16,54 @@
     <div class="flex-grow-1 overflow-auto p-2" style="scrollbar-width: thin;">
         <nav><ul class="nav flex-column p-0">
             <li class="nav-item"><a class="nav-link nav-link-figma d-flex align-items-center" asp-area="sohoa" asp-controller="Home" asp-action="Index" title="Tổng quan"><i class="fas fa-tachometer-alt fa-fw mr-2"></i><span class="nav-item-text">Tổng quan</span></a></li>
-            <li class="nav-item"><a class="nav-link nav-link-figma d-flex align-items-center" asp-area="sohoa" asp-controller="Scan" asp-action="Index" title="Scan / Upload"><i class="fas fa-upload fa-fw mr-2"></i><span class="nav-item-text">Scan / Upload</span></a></li>
-            @if (ViewBag.ShowCheckFirstScan is not false)
+            @if (ViewBag.ShowScanUpload == true)
+            {
+                <li class="nav-item"><a class="nav-link nav-link-figma d-flex align-items-center" asp-area="sohoa" asp-controller="Scan" asp-action="Index" title="Scan / Upload"><i class="fas fa-upload fa-fw mr-2"></i><span class="nav-item-text">Scan / Upload</span></a></li>
+            }
+            @if (ViewBag.ShowCheckFirstScan == true)
             {
                 <li class="nav-item"><a class="nav-link nav-link-figma pl-3 d-flex align-items-center" asp-area="sohoa" asp-controller="Scan" asp-action="CheckScan1List" title="Kiểm tra scan 1"><i class="fas fa-search fa-fw mr-2"></i><span class="nav-item-text">Kiểm tra scan 1</span></a></li>
             }
-            @if (ViewBag.ShowCheckSecondScan is not false)
+            @if (ViewBag.ShowCheckSecondScan == true)
             {
                 <li class="nav-item"><a class="nav-link nav-link-figma pl-3 d-flex align-items-center" asp-area="sohoa" asp-controller="Scan" asp-action="CheckScan2List" title="Kiểm tra scan 2"><i class="fas fa-search-plus fa-fw mr-2"></i><span class="nav-item-text">Kiểm tra scan 2</span></a></li>
             }
-            <li class="nav-item"><a class="nav-link nav-link-figma d-flex align-items-center" asp-area="sohoa" asp-controller="SyncUpload" asp-action="Index" title="Upload đồng bộ"><i class="fas fa-cloud-upload-alt fa-fw mr-2"></i><span class="nav-item-text">Upload đồng bộ</span></a></li>
-            <li class="nav-item"><a class="nav-link nav-link-figma d-flex align-items-center" asp-area="sohoa" asp-controller="Extract" asp-action="Index" title="Nhập liệu"><i class="fas fa-keyboard fa-fw mr-2"></i><span class="nav-item-text">Nhập liệu</span></a></li>
-            @if (ViewBag.ShowCheck1 is not false)
+            @if (ViewBag.ShowSyncUpload == true)
+            {
+                <li class="nav-item"><a class="nav-link nav-link-figma d-flex align-items-center" asp-area="sohoa" asp-controller="SyncUpload" asp-action="Index" title="Upload đồng bộ"><i class="fas fa-cloud-upload-alt fa-fw mr-2"></i><span class="nav-item-text">Upload đồng bộ</span></a></li>
+            }
+            @if (ViewBag.ShowExtract == true)
+            {
+                <li class="nav-item"><a class="nav-link nav-link-figma d-flex align-items-center" asp-area="sohoa" asp-controller="Extract" asp-action="Index" title="Nhập liệu"><i class="fas fa-keyboard fa-fw mr-2"></i><span class="nav-item-text">Nhập liệu</span></a></li>
+            }
+            @if (ViewBag.ShowCheck1 == true)
             {
                 <li class="nav-item"><a class="nav-link nav-link-figma d-flex align-items-center" asp-area="sohoa" asp-controller="Check" asp-action="Check1" title="Kiểm tra lần 1"><i class="fas fa-check-double fa-fw mr-2"></i><span class="nav-item-text">Kiểm tra lần 1</span></a></li>
             }
-            @if (ViewBag.ShowCheck2 is not false)
+            @if (ViewBag.ShowCheck2 == true)
             {
                 <li class="nav-item"><a class="nav-link nav-link-figma d-flex align-items-center" asp-area="sohoa" asp-controller="Check" asp-action="Check2" title="Kiểm tra lần 2"><i class="fas fa-check-double fa-fw mr-2"></i><span class="nav-item-text">Kiểm tra lần 2</span></a></li>
             }
-            <li class="nav-item"><a class="nav-link nav-link-figma d-flex align-items-center" asp-area="sohoa" asp-controller="Export" asp-action="Index" title="Export"><i class="fas fa-file-export fa-fw mr-2"></i><span class="nav-item-text">Export</span></a></li>
-            <li class="nav-item"><a class="nav-link nav-link-figma pl-3 d-flex align-items-center" asp-area="sohoa" asp-controller="ExportType" asp-action="Index" title="Cấu hình loại xuất"><i class="fas fa-cogs fa-fw mr-2"></i><span class="nav-item-text">Cấu hình loại xuất</span></a></li>
-            <li class="nav-item"><span class="nav-link text-muted small text-uppercase sidebar-section-heading">Danh mục</span></li>
-            <li class="nav-item"><a class="nav-link nav-link-figma pl-3 d-flex align-items-center" asp-area="sohoa" asp-controller="LoaiTaiLieu" asp-action="Index" title="Loại tài liệu"><i class="fas fa-tags fa-fw mr-2"></i><span class="nav-item-text">Loại tài liệu</span></a></li>
-            <li class="nav-item"><a class="nav-link nav-link-figma pl-3 d-flex align-items-center" asp-area="sohoa" asp-controller="LoaiDongBo" asp-action="Index" title="Loại đồng bộ"><i class="fas fa-sync-alt fa-fw mr-2"></i><span class="nav-item-text">Loại đồng bộ</span></a></li>
+            @if (ViewBag.ShowExport == true)
+            {
+                <li class="nav-item"><a class="nav-link nav-link-figma d-flex align-items-center" asp-area="sohoa" asp-controller="Export" asp-action="Index" title="Export"><i class="fas fa-file-export fa-fw mr-2"></i><span class="nav-item-text">Export</span></a></li>
+            }
+            @if (ViewBag.ShowExportConfig == true)
+            {
+                <li class="nav-item"><a class="nav-link nav-link-figma pl-3 d-flex align-items-center" asp-area="sohoa" asp-controller="ExportType" asp-action="Index" title="Cấu hình loại xuất"><i class="fas fa-cogs fa-fw mr-2"></i><span class="nav-item-text">Cấu hình loại xuất</span></a></li>
+            }
+            @if (ViewBag.ShowLoaiTaiLieu == true || ViewBag.ShowLoaiDongBo == true)
+            {
+                <li class="nav-item"><span class="nav-link text-muted small text-uppercase sidebar-section-heading">Danh mục</span></li>
+            }
+            @if (ViewBag.ShowLoaiTaiLieu == true)
+            {
+                <li class="nav-item"><a class="nav-link nav-link-figma pl-3 d-flex align-items-center" asp-area="sohoa" asp-controller="LoaiTaiLieu" asp-action="Index" title="Loại tài liệu"><i class="fas fa-tags fa-fw mr-2"></i><span class="nav-item-text">Loại tài liệu</span></a></li>
+            }
+            @if (ViewBag.ShowLoaiDongBo == true)
+            {
+                <li class="nav-item"><a class="nav-link nav-link-figma pl-3 d-flex align-items-center" asp-area="sohoa" asp-controller="LoaiDongBo" asp-action="Index" title="Loại đồng bộ"><i class="fas fa-sync-alt fa-fw mr-2"></i><span class="nav-item-text">Loại đồng bộ</span></a></li>
+            }
             <li class="nav-item mt-2"><a class="nav-link nav-link-figma d-flex align-items-center" asp-area="dashboard" asp-controller="Home" asp-action="Index" title="Về trang chủ"><i class="fas fa-arrow-left fa-fw mr-2"></i><span class="nav-item-text">Về trang chủ</span></a></li>
         </ul></nav>
     </div>

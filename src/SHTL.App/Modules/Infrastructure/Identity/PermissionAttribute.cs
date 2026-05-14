@@ -21,18 +21,6 @@ public class AuthorizeModuleAttribute : Attribute, IAuthorizationFilter
         _requireAll = false;
     }
 
-    private static bool HasPermissionClaim(ClaimsPrincipal user, ModuleCode m)
-    {
-        var name = m.ToString();
-        var numeric = ((int)m).ToString(System.Globalization.CultureInfo.InvariantCulture);
-        if (user.HasClaim("permission", name) || user.HasClaim("permission", numeric))
-            return true;
-
-        // Phân quyền theo vai trò: nếu user có 1 vai trò mà vai trò đó được map tới module này → cho phép.
-        var roleCodes = user.FindAll(ClaimTypes.Role).Select(c => c.Value);
-        return roleCodes.Any(rc => RoleModuleMap.RoleHasModule(rc, m));
-    }
-
     public void OnAuthorization(AuthorizationFilterContext context)
     {
         var user = context.HttpContext.User;
@@ -46,12 +34,12 @@ public class AuthorizeModuleAttribute : Attribute, IAuthorizationFilter
             return;
         }
 
-        var isAdmin = user.IsInRole("admin");
-        if (isAdmin) return;
+        if (user.IsInRole("admin"))
+            return;
 
         var hasAccess = _requireAll
-            ? _modules.All(m => HasPermissionClaim(user, m))
-            : _modules.Any(m => HasPermissionClaim(user, m));
+            ? _modules.All(m => ModuleAuthorization.HasModule(user, m))
+            : ModuleAuthorization.HasAnyModule(user, _modules);
 
         if (!hasAccess)
         {
@@ -81,7 +69,6 @@ public class AuthorizeAdminAttribute : Attribute, IAuthorizationFilter
         {
             var req = context.HttpContext.Request;
             var returnUrl = $"{req.PathBase}{req.Path}{req.QueryString}";
-            // Nếu request đang ở area "admin" → dùng trang AccessDenied trong khu vực admin.
             var area = (context.RouteData.Values["area"] as string ?? string.Empty);
             var targetArea = string.Equals(area, "admin", StringComparison.OrdinalIgnoreCase)
                 ? "admin"
