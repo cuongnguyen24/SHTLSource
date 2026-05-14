@@ -132,4 +132,5 @@ public class DocumentFilterRequest : PageRequest
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
     public long? FolderId { get; set; }
+    public bool EnforceOnlyAssigned { get; set; } = true;
 }

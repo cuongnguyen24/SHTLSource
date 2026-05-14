@@ -68,7 +68,7 @@ public class CheckController : BaseController
     {
         try
         {
-            var vm = await _formBuilder.BuildForCheck1Async(id);
+            var vm = await _formBuilder.BuildForCheck1Async(id, CurrentUser.Id, CurrentUser.IsAdmin);
             SetPageHeader($"Kiểm tra lần 1 - Hồ sơ #{id}", "check1");
             return View(vm);
         }
@@ -102,7 +102,7 @@ public class CheckController : BaseController
     {
         try
         {
-            var vm = await _formBuilder.BuildForCheck2Async(id);
+            var vm = await _formBuilder.BuildForCheck2Async(id, CurrentUser.Id, CurrentUser.IsAdmin);
             SetPageHeader($"Kiểm tra lần 2 - Hồ sơ #{id}", "check2");
             return View(vm);
         }

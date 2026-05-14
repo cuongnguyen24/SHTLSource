@@ -1,0 +1,147 @@
+@using SHTL.Modules.Core.Domain.Entities.Acc
+@using SHTL.Modules.Core.Domain.Enums
+@model SHTL.Modules.Shared.Contracts.Dtos.ConstructionBatchDetailsDto
+@{
+    ViewData["Title"] = "Chi tiết bộ hồ sơ";
+    var users = ViewBag.ActiveUsers as List<User> ?? new List<User>();
+}
+@section Breadcrumb {
+    <li class="breadcrumb-item"><a asp-area="dashboard" asp-controller="Home" asp-action="Index">Trang chủ</a></li>
+    <li class="breadcrumb-item"><a asp-area="dashboard" asp-controller="Construction" asp-action="Index">Tiến độ thi công</a></li>
+    <li class="breadcrumb-item"><a asp-area="dashboard" asp-controller="Construction" asp-action="Batches">Bộ hồ sơ</a></li>
+    <li class="breadcrumb-item active">@Model.Batch.Code</li>
+}
+
+<div class="layout-expanded">
+    <div class="frame-figma mb-3">
+        <div class="frame-header">
+            <div class="d-flex align-items-center">
+                <div class="mr-3 d-flex align-items-center justify-content-center" style="width:32px;height:32px;background:var(--primary-light);color:var(--primary);border-radius:6px;">
+                    <i class="fas fa-layer-group"></i>
+                </div>
+                <div>
+                    <h6 class="mb-0 font-weight-bold" style="color:var(--primary);">@Model.Batch.Name</h6>
+                    <div class="text-muted small">Mã @Model.Batch.Code - trạng thái <strong>@Model.Batch.Status</strong></div>
+                </div>
+            </div>
+            <form method="post" asp-area="dashboard" asp-controller="Construction" asp-action="UpdateBatchStatus" asp-route-id="@Model.Batch.Id" class="d-flex align-items-center" style="gap:6px;">
+                @Html.AntiForgeryToken()
+                <select name="status" class="form-control form-control-sm">
+                    @foreach (var s in Enum.GetValues<ConstructionBatchStatus>())
+                    {
+                        <option value="@s" selected="@(s == Model.Batch.Status ? "selected" : null)">@s</option>
+                    }
+                </select>
+                <button class="btn-figma btn-figma-primary btn-sm" type="submit">Cập nhật</button>
+            </form>
+        </div>
+    </div>
+    <div class="card-figma mb-3">
+        <div class="card-content-figma d-flex justify-content-between flex-wrap" style="gap:10px;">
+            <div>
+                <div class="small text-muted">Thông tin chung</div>
+                <div class="font-weight-bold">Tổng tài liệu: @Model.Batch.TotalDocuments - Hoàn thành: @Model.Batch.CompletedDocuments</div>
+            </div>
+            <div class="small text-muted">Thông tin phân công được cập nhật theo thời gian thực.</div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-5 mb-3">
+            <div class="card-figma h-100">
+                <div class="card-header-figma"><h3 class="card-title-figma mb-0">Phân công xử lý</h3></div>
+                <div class="card-content-figma">
+                    <form method="post" asp-area="dashboard" asp-controller="Construction" asp-action="AssignBatch" asp-route-id="@Model.Batch.Id">
+                        @Html.AntiForgeryToken()
+                        <div class="form-group">
+                            <label>Người xử lý</label>
+                            <select name="userIds" class="form-control" multiple size="8">
+                                @foreach (var u in users)
+                                {
+                                    <option value="@u.Id">@u.FullName (@u.UserName)</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Bước xử lý</label>
+                            <select name="steps" class="form-control" multiple size="6">
+                                <option value="@WorkflowStep.Scan">@WorkflowStep.Scan</option>
+                                <option value="@WorkflowStep.CheckScan1">@WorkflowStep.CheckScan1</option>
+                                <option value="@WorkflowStep.CheckScan2">@WorkflowStep.CheckScan2</option>
+                                <option value="@WorkflowStep.Extract">@WorkflowStep.Extract</option>
+                                <option value="@WorkflowStep.Check1">@WorkflowStep.Check1</option>
+                                <option value="@WorkflowStep.Check2">@WorkflowStep.Check2</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-success btn-sm" type="submit">Lưu phân công</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-7 mb-3">
+            <div class="card-figma h-100">
+                <div class="card-header-figma"><h3 class="card-title-figma mb-0">Tiến độ theo bước</h3></div>
+                <div class="card-content-figma p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Bước</th><th>Tổng</th><th>Chờ</th><th>Đang làm</th><th>Xong</th><th>Trả lại</th><th>Lỗi</th><th>%</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            @if (!Model.StepProgress.Any())
+                            {
+                                <tr><td colspan="8" class="text-center text-muted p-3">Chưa có dữ liệu bước xử lý.</td></tr>
+                            }
+                            else
+                            {
+                                foreach (var s in Model.StepProgress)
+                                {
+                                    <tr>
+                                        <td>@s.Step</td><td>@s.Total</td><td>@s.Pending</td><td>@s.InProgress</td>
+                                        <td>@s.Done</td><td>@s.Returned</td><td>@s.Failed</td><td>@s.CompletionPercent.ToString("0.##")%</td>
+                                    </tr>
+                                }
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-figma">
+        <div class="card-header-figma"><h3 class="card-title-figma mb-0">Danh sách phân công hiện tại</h3></div>
+        <div class="card-content-figma p-0">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light">
+                        <tr><th>Người dùng</th><th>Họ tên</th><th>Bước</th><th>Trạng thái</th><th>Thời điểm</th></tr>
+                    </thead>
+                    <tbody>
+                    @if (!Model.Assignments.Any())
+                    {
+                        <tr><td colspan="5" class="text-center text-muted p-3">Chưa có phân công.</td></tr>
+                    }
+                    else
+                    {
+                        foreach (var a in Model.Assignments)
+                        {
+                            <tr>
+                                <td>@a.UserName</td>
+                                <td>@a.FullName</td>
+                                <td>@a.Step</td>
+                                <td>@a.Status</td>
+                                <td>@a.AssignedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss")</td>
+                            </tr>
+                        }
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

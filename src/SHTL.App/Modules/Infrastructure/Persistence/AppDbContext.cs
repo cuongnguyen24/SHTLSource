@@ -45,6 +45,12 @@ public class AppDbContext : DbContext
     public DbSet<StgDocSoHoaOcrFix> StgDocSoHoaOcrFixes => Set<StgDocSoHoaOcrFix>();
     public DbSet<StgDocSoHoaOcrFixType> StgDocSoHoaOcrFixTypes => Set<StgDocSoHoaOcrFixType>();
     public DbSet<StgDocTypeOcrFix> StgDocTypeOcrFixes => Set<StgDocTypeOcrFix>();
+    public DbSet<ConstructionBatch> ConstructionBatches => Set<ConstructionBatch>();
+    public DbSet<ConstructionBatchAssignment> ConstructionBatchAssignments => Set<ConstructionBatchAssignment>();
+    public DbSet<ConstructionBatchDocument> ConstructionBatchDocuments => Set<ConstructionBatchDocument>();
+    public DbSet<ConstructionAttendance> ConstructionAttendances => Set<ConstructionAttendance>();
+    public DbSet<ConstructionUserDailyKpi> ConstructionUserDailyKpis => Set<ConstructionUserDailyKpi>();
+    public DbSet<ConstructionPayrollEntry> ConstructionPayrollEntries => Set<ConstructionPayrollEntry>();
 
     public DbSet<ActionLog> ActionLogs => Set<ActionLog>();
     public DbSet<ErrorLog> ErrorLogs => Set<ErrorLog>();
@@ -132,6 +138,12 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<StgDocSoHoaOcrFix>().ToTable("stg_doc_sohoa_ocr_fixes");
         modelBuilder.Entity<StgDocSoHoaOcrFixType>().ToTable("stg_doc_sohoa_ocr_fix_types");
         modelBuilder.Entity<StgDocTypeOcrFix>().ToTable("stg_doc_type_ocr_fixes");
+        modelBuilder.Entity<ConstructionBatch>().ToTable("stg_construction_batches");
+        modelBuilder.Entity<ConstructionBatchAssignment>().ToTable("stg_construction_batch_assignments");
+        modelBuilder.Entity<ConstructionBatchDocument>().ToTable("stg_construction_batch_documents");
+        modelBuilder.Entity<ConstructionAttendance>().ToTable("stg_construction_attendances");
+        modelBuilder.Entity<ConstructionUserDailyKpi>().ToTable("stg_construction_user_daily_kpis");
+        modelBuilder.Entity<ConstructionPayrollEntry>().ToTable("stg_construction_payroll_entries");
 
         modelBuilder.Entity<ActionLog>().ToTable("log_action_logs");
         modelBuilder.Entity<ErrorLog>().ToTable("log_error_logs");

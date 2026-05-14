@@ -108,7 +108,7 @@ public class ExtractController : BaseController
             ViewBag.RequireCheckFirstScan = scanConfig.requireFirst;
             ViewBag.RequireCheckSecondScan = scanConfig.requireSecond;
 
-            var vm = await _formBuilder.BuildForExtractAsync(id);
+            var vm = await _formBuilder.BuildForExtractAsync(id, CurrentUser.Id, CurrentUser.IsAdmin);
             return View(vm);
         }
         catch (InvalidOperationException)

@@ -47,8 +47,10 @@ public class DocumentFormViewModelBuilder : IDocumentFormViewModelBuilder
             Enumerable.Empty<FormCell>(), new Dictionary<int, string>());
     }
 
-    public async Task<DocumentFormViewModel> BuildForExtractAsync(long documentId)
+    public async Task<DocumentFormViewModel> BuildForExtractAsync(long documentId, int currentUserId, bool isAdminUser)
     {
+        if (!await _docRepo.HasUserAccessAsync(documentId, currentUserId, isAdminUser))
+            throw new InvalidOperationException("Access denied");
         await _ocrZoneExtraction.TryPrefillDocumentFromConfiguredZonesAsync(documentId);
 
         var doc = await _docRepo.GetByIdAsync(documentId);
@@ -72,11 +74,11 @@ public class DocumentFormViewModelBuilder : IDocumentFormViewModelBuilder
             recordInfoKeys, sameRecordDocs);
     }
 
-    public Task<DocumentFormViewModel> BuildForCheck1Async(long documentId)
-        => BuildForExtractAsync(documentId);
+    public Task<DocumentFormViewModel> BuildForCheck1Async(long documentId, int currentUserId, bool isAdminUser)
+        => BuildForExtractAsync(documentId, currentUserId, isAdminUser);
 
-    public Task<DocumentFormViewModel> BuildForCheck2Async(long documentId)
-        => BuildForExtractAsync(documentId);
+    public Task<DocumentFormViewModel> BuildForCheck2Async(long documentId, int currentUserId, bool isAdminUser)
+        => BuildForExtractAsync(documentId, currentUserId, isAdminUser);
 
     private DocumentFormViewModel BuildViewModel(
         DocTypeFullDto docType,

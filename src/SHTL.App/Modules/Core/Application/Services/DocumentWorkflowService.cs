@@ -69,6 +69,8 @@ public class DocumentWorkflowService : IDocumentWorkflowService
 
     public async Task<ApiResult> QueueExtractForScanCheck1Async(long documentId, ICurrentUser user)
     {
+        var accessError = await ValidateAccessAsync(documentId, user);
+        if (accessError is not null) return accessError;
         var doc = await _docRepo.GetByIdAsync(documentId);
         if (doc is null) return ApiResult.Fail("Tài liệu không tồn tại");
         if (doc.CurrentStep != WorkflowStep.Extract)
@@ -90,6 +92,8 @@ public class DocumentWorkflowService : IDocumentWorkflowService
 
     public async Task<ApiResult> CheckScan1Async(CheckScanRequest req, ICurrentUser user)
     {
+        var accessError = await ValidateAccessAsync(req.DocumentId, user);
+        if (accessError is not null) return accessError;
         var doc = await _docRepo.GetByIdAsync(req.DocumentId);
         if (doc is null) return ApiResult.Fail("Tài liệu không tồn tại");
         var (requireFirst, requireSecondScan) = await LoadScanCheckConfigAsync();
@@ -134,6 +138,8 @@ public class DocumentWorkflowService : IDocumentWorkflowService
 
     public async Task<ApiResult> CheckScan2Async(CheckScanRequest req, ICurrentUser user)
     {
+        var accessError = await ValidateAccessAsync(req.DocumentId, user);
+        if (accessError is not null) return accessError;
         var doc = await _docRepo.GetByIdAsync(req.DocumentId);
         if (doc is null) return ApiResult.Fail("Tài liệu không tồn tại");
         if (!doc.IsCheckedScan1)
@@ -159,6 +165,8 @@ public class DocumentWorkflowService : IDocumentWorkflowService
 
     public async Task<ApiResult> ZoneAsync(WorkflowActionRequest req, ICurrentUser user)
     {
+        var accessError = await ValidateAccessAsync(req.DocumentId, user);
+        if (accessError is not null) return accessError;
         var doc = await _docRepo.GetByIdAsync(req.DocumentId);
         if (doc is null) return ApiResult.Fail("Tài liệu không tồn tại");
         if (!doc.IsCheckedScan2)
@@ -184,6 +192,8 @@ public class DocumentWorkflowService : IDocumentWorkflowService
 
     public async Task<ApiResult> SubmitExtractAsync(ExtractRequest req, ICurrentUser user)
     {
+        var accessError = await ValidateAccessAsync(req.DocumentId, user);
+        if (accessError is not null) return accessError;
         var doc = await _docRepo.GetByIdAsync(req.DocumentId);
         if (doc is null) return ApiResult.Fail("Tài liệu không tồn tại");
 
@@ -338,6 +348,8 @@ public class DocumentWorkflowService : IDocumentWorkflowService
 
     public async Task<ApiResult> CheckFinalAsync(WorkflowActionRequest req, ICurrentUser user)
     {
+        var accessError = await ValidateAccessAsync(req.DocumentId, user);
+        if (accessError is not null) return accessError;
         var doc = await _docRepo.GetByIdAsync(req.DocumentId);
         if (doc is null) return ApiResult.Fail("Tài liệu không tồn tại");
         if (doc.CurrentStep != WorkflowStep.CheckFinal)
@@ -361,6 +373,8 @@ public class DocumentWorkflowService : IDocumentWorkflowService
 
     public async Task<ApiResult> CheckLogicAsync(WorkflowActionRequest req, ICurrentUser user)
     {
+        var accessError = await ValidateAccessAsync(req.DocumentId, user);
+        if (accessError is not null) return accessError;
         var doc = await _docRepo.GetByIdAsync(req.DocumentId);
         if (doc is null) return ApiResult.Fail("Tài liệu không tồn tại");
         if (doc.CurrentStep != WorkflowStep.CheckLogic)
@@ -383,6 +397,8 @@ public class DocumentWorkflowService : IDocumentWorkflowService
 
     public async Task<ApiResult> RequestExportAsync(long documentId, string exportType, ICurrentUser user)
     {
+        var accessError = await ValidateAccessAsync(documentId, user);
+        if (accessError is not null) return accessError;
         var doc = await _docRepo.GetByIdAsync(documentId);
         if (doc is null) return ApiResult.Fail("Tài liệu không tồn tại");
         if (doc.CurrentStep != WorkflowStep.Export)
@@ -412,6 +428,8 @@ public class DocumentWorkflowService : IDocumentWorkflowService
 
     public async Task<ApiResult> SafeDeleteAsync(long documentId, ICurrentUser user)
     {
+        var accessError = await ValidateAccessAsync(documentId, user);
+        if (accessError is not null) return accessError;
         var doc = await _docRepo.GetByIdAsync(documentId);
         if (doc is null) return ApiResult.Fail("Tài liệu không tồn tại");
 
@@ -463,6 +481,8 @@ public class DocumentWorkflowService : IDocumentWorkflowService
         CheckReviewRequest req, ICurrentUser user,
         WorkflowStep expectedStep, WorkflowStep nextStep, WorkflowStep returnStep, string actionName)
     {
+        var accessError = await ValidateAccessAsync(req.DocumentId, user);
+        if (accessError is not null) return accessError;
         var doc = await _docRepo.GetByIdAsync(req.DocumentId);
         if (doc is null) return ApiResult.Fail("Tài liệu không tồn tại");
         if (doc.CurrentStep != expectedStep)
@@ -623,5 +643,12 @@ public class DocumentWorkflowService : IDocumentWorkflowService
 
         var normalized = value.Trim().ToLowerInvariant();
         return normalized is "1" or "true" or "on" or "yes";
+    }
+
+    private async Task<ApiResult?> ValidateAccessAsync(long documentId, ICurrentUser user)
+    {
+        if (await _docRepo.HasUserAccessAsync(documentId, user.Id, user.IsAdmin))
+            return null;
+        return ApiResult.Fail("Bạn không có quyền thao tác tài liệu này.");
     }
 }

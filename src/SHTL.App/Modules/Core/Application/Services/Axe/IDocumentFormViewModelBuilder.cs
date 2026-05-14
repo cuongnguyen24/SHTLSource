@@ -9,9 +9,9 @@ public interface IDocumentFormViewModelBuilder
 {
     Task<DocumentFormViewModel> BuildForCreateAsync(int docTypeId);
 
-    Task<DocumentFormViewModel> BuildForExtractAsync(long documentId);
+    Task<DocumentFormViewModel> BuildForExtractAsync(long documentId, int currentUserId, bool isAdminUser);
 
-    Task<DocumentFormViewModel> BuildForCheck1Async(long documentId);
+    Task<DocumentFormViewModel> BuildForCheck1Async(long documentId, int currentUserId, bool isAdminUser);
 
-    Task<DocumentFormViewModel> BuildForCheck2Async(long documentId);
+    Task<DocumentFormViewModel> BuildForCheck2Async(long documentId, int currentUserId, bool isAdminUser);
 }

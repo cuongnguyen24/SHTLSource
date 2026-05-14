@@ -30,6 +30,7 @@ public interface IDocumentRepository
 
     /// <summary>Tài liệu kế tiếp trong cùng hàng đợi (ORDER BY id DESC), có id nhỏ hơn bản ghi vừa xử lý.</summary>
     Task<long?> GetNextQueueIdAfterAsync(DocumentFilterParams filter, long completedId);
+    Task<bool> HasUserAccessAsync(long documentId, int userId, bool isAdmin);
 
     /// <summary>
     /// Tài liệu đang hoạt động thuộc “thư mục ảo” (cùng cách gom folder như báo cáo tiến độ thư mục).
@@ -53,6 +54,9 @@ public class DocumentFilterParams
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
     public long? FolderId { get; set; }
+    public bool EnforceOnlyAssigned { get; set; } = true;
+    public int? CurrentUserId { get; set; }
+    public bool IsAdminUser { get; set; }
 }
 
 public class DocumentRepository : BaseRepository, IDocumentRepository
@@ -283,6 +287,34 @@ public class DocumentRepository : BaseRepository, IDocumentRepository
         p.Add("CompletedId", completedId);
         var sql = $"SELECT TOP 1 id FROM dbo.stg_documents {where} AND id < @CompletedId ORDER BY id DESC";
         return await QueryFirstOrDefaultAsync<long?>(conn, sql, p);
+    }
+
+    public async Task<bool> HasUserAccessAsync(long documentId, int userId, bool isAdmin)
+    {
+        if (isAdmin) return true;
+        if (userId <= 0) return false;
+        var conn = await OpenConnectionAsync();
+        const string sql = @"
+SELECT CASE WHEN EXISTS (
+    SELECT 1
+    FROM dbo.stg_documents d
+    WHERE d.id = @DocumentId
+      AND d.status != 2
+      AND (
+            d.created_by = @UserId
+            OR EXISTS (
+                SELECT 1
+                FROM dbo.stg_construction_batch_documents cbd
+                INNER JOIN dbo.stg_construction_batch_assignments cba ON cba.id = cbd.assignment_id
+                INNER JOIN dbo.stg_construction_batches cb ON cb.id = cbd.batch_id
+                WHERE cbd.document_id = d.id
+                  AND cba.user_id = @UserId
+                  AND cba.[status] = 1
+                  AND cb.[status] IN (1,2)
+            )
+      )
+) THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END;";
+        return await ExecuteScalarAsync<bool>(conn, sql, new { DocumentId = documentId, UserId = userId });
     }
 
     public async Task<IEnumerable<Document>> GetByFolderAsync(long folderId, int pageIndex, int pageSize)
@@ -541,6 +573,25 @@ WHERE folder_name = @VirtualFolder;
         if (f.FolderId.HasValue) { conditions.Add("folder_id = @FolderId"); p.Add("FolderId", f.FolderId.Value); }
         if (f.StartDate.HasValue) { conditions.Add("created >= @StartDate"); p.Add("StartDate", f.StartDate.Value); }
         if (f.EndDate.HasValue) { conditions.Add("created < @EndDate"); p.Add("EndDate", f.EndDate.Value.AddDays(1)); }
+        if (f.EnforceOnlyAssigned && !f.IsAdminUser && f.CurrentUserId.HasValue && f.CurrentUserId.Value > 0)
+        {
+            conditions.Add(@"(
+                created_by = @CurrentUserId
+                OR EXISTS (
+                    SELECT 1
+                    FROM dbo.stg_construction_batch_documents cbd
+                    INNER JOIN dbo.stg_construction_batch_assignments cba
+                        ON cba.id = cbd.assignment_id
+                    INNER JOIN dbo.stg_construction_batches cb
+                        ON cb.id = cbd.batch_id
+                    WHERE cbd.document_id = id
+                      AND cba.user_id = @CurrentUserId
+                      AND cba.[status] = 1
+                      AND cb.[status] IN (1,2)
+                )
+            )");
+            p.Add("CurrentUserId", f.CurrentUserId.Value);
+        }
 
         return ($"WHERE {string.Join(" AND ", conditions)}", p);
     }

@@ -1,0 +1,84 @@
+@model SHTL.Modules.Shared.Contracts.Dtos.ConstructionDistributeFormsDialogViewModel
+@{
+    var filter = ViewContext.HttpContext.Request.Query["q"].ToString();
+}
+<div class="modal fade" id="distributeFormsModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document" style="max-width:720px;">
+        <div class="modal-content" style="border-radius:12px; overflow:hidden;">
+            <div class="modal-header text-white" style="background:var(--primary); border:0;">
+                <h5 class="modal-title font-weight-bold mb-0">Phân phiếu — @Model.StepLabel</h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <form method="post" asp-area="dashboard" asp-controller="Construction" asp-action="DistributeForms">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="FolderPath" value="@Model.FolderPath" />
+                <input type="hidden" name="Step" value="@((byte)Model.Step)" />
+                <input type="hidden" name="Filter" value="@filter" />
+                <div class="modal-body">
+                    <div class="form-group row align-items-center">
+                        <label class="col-sm-5 col-form-label">Tổng số lượng phiếu còn tồn tại</label>
+                        <div class="col-sm-7">
+                            <input type="text" class="form-control" value="@Model.AvailableCount" readonly />
+                        </div>
+                    </div>
+                    <div class="form-group row align-items-center">
+                        <label class="col-sm-5 col-form-label">Tổng số lượng phiếu phân chia</label>
+                        <div class="col-sm-7">
+                            <input type="number" class="form-control" name="Quantity" min="1" max="@Model.AvailableCount" value="@(Model.AvailableCount > 0 ? Model.AvailableCount : 0)" required />
+                        </div>
+                    </div>
+                    <div class="form-group row align-items-center">
+                        <label class="col-sm-5 col-form-label">Người dùng</label>
+                        <div class="col-sm-7">
+                            <select class="form-control" name="UserId" id="distributeUserSelect" required>
+                                <option value="">Chọn người dùng</option>
+                                @foreach (var u in Model.Users)
+                                {
+                                    <option value="@u.Id" data-dept-id="@u.DeptId">@u.FullName (@u.UserName)</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group row align-items-center mb-0">
+                        <label class="col-sm-5 col-form-label">Phòng ban (tùy chọn)</label>
+                        <div class="col-sm-7">
+                            <select class="form-control" name="DeptId" id="distributeDeptSelect">
+                                <option value="">Chọn phòng ban</option>
+                                @foreach (var d in Model.Depts)
+                                {
+                                    <option value="@d.Id">@d.Name</option>
+                                }
+                            </select>
+                            <small class="text-muted">Lọc danh sách người dùng theo phòng ban.</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn-figma btn-figma-secondary" data-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn-figma btn-figma-primary" @(Model.AvailableCount <= 0 ? "disabled" : null)>Phân phiếu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<script>
+    (function () {
+        var deptSelect = document.getElementById('distributeDeptSelect');
+        var userSelect = document.getElementById('distributeUserSelect');
+        if (!deptSelect || !userSelect) return;
+
+        var allOptions = Array.prototype.slice.call(userSelect.querySelectorAll('option[data-dept-id]'));
+        deptSelect.addEventListener('change', function () {
+            var deptId = this.value || '';
+            allOptions.forEach(function (opt) {
+                var show = !deptId || opt.getAttribute('data-dept-id') === deptId;
+                opt.hidden = !show;
+                opt.disabled = !show;
+            });
+            if (userSelect.value) {
+                var selected = userSelect.selectedOptions[0];
+                if (selected && selected.disabled) userSelect.value = '';
+            }
+        });
+    })();
+</script>

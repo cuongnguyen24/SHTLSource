@@ -1,0 +1,197 @@
+@model SHTL.Modules.Shared.Contracts.Dtos.ConstructionFolderBatchPageViewModel
+@using SHTL.Modules.Core.Domain.Enums
+@{
+    ViewData["Title"] = "Phân công theo thư mục";
+    string BuildFolderUrl(string path) => Url.Action("Batches", "Construction", new { area = "dashboard", folder = path, q = Model.Filter })!;
+}
+@section Breadcrumb {
+    <li class="breadcrumb-item"><a asp-area="dashboard" asp-controller="Home" asp-action="Index">Trang chủ</a></li>
+    <li class="breadcrumb-item"><a asp-area="dashboard" asp-controller="Construction" asp-action="Index">Tiến độ thi công</a></li>
+    <li class="breadcrumb-item"><a asp-area="dashboard" asp-controller="Construction" asp-action="Batches">Phân công theo thư mục</a></li>
+    @if (Model.BreadcrumbSegments.Any())
+    {
+        var prefix = string.Empty;
+        foreach (var segment in Model.BreadcrumbSegments)
+        {
+            prefix = string.IsNullOrEmpty(prefix) ? segment : $"{prefix}/{segment}";
+            <li class="breadcrumb-item"><a href="@BuildFolderUrl(prefix)">@segment</a></li>
+        }
+    }
+    else
+    {
+        <li class="breadcrumb-item active">Danh sách thư mục</li>
+    }
+}
+@section Styles {
+    <style>
+        .batch-folder-table th, .batch-folder-table td { white-space: nowrap; vertical-align: middle; font-size: 12px; }
+        .batch-folder-table thead th { text-align: center; }
+        .batch-folder-table .folder-cell { min-width: 220px; }
+        .cell-with-action { display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-width: 48px; }
+        .btn-distribute { line-height: 1; opacity: 0.8; padding: 0 4px; }
+        .btn-distribute:hover { opacity: 1; }
+    </style>
+}
+
+<div class="layout-expanded">
+    <div class="frame-figma mb-3">
+        <div class="frame-header">
+            <div>
+                <h6 class="mb-0 font-weight-bold" style="color:var(--primary);">Phân công theo thư mục tài liệu</h6>
+                <div class="text-muted small">Cập nhật lúc @Model.GeneratedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss")</div>
+            </div>
+            <form method="get" class="d-flex align-items-end flex-wrap" style="gap:8px;">
+                @if (!string.IsNullOrEmpty(Model.CurrentFolderPath))
+                {
+                    <input type="hidden" name="folder" value="@Model.CurrentFolderPath" />
+                }
+                <div class="search-input-figma" style="min-width:280px;">
+                    <label class="small text-muted mb-1 d-block">Lọc thư mục</label>
+                    <input type="text" name="q" value="@Model.Filter" placeholder="Tên thư mục..." />
+                    <i class="fas fa-search search-icon"></i>
+                </div>
+                <button type="submit" class="btn-figma btn-figma-primary">Lọc</button>
+                <a class="btn-figma btn-figma-outline" asp-area="dashboard" asp-controller="Construction" asp-action="Batches">Làm mới</a>
+                @if (!string.IsNullOrEmpty(Model.ParentFolderPath))
+                {
+                    <a class="btn-figma btn-figma-outline" href="@BuildFolderUrl(Model.ParentFolderPath)"><i class="fas fa-level-up-alt mr-1"></i>Thư mục cha</a>
+                }
+            </form>
+        </div>
+    </div>
+
+    <div class="card-figma">
+        <div class="card-header-figma">
+            <h3 class="card-title-figma mb-0"><i class="fas fa-folder-open mr-2"></i>Bảng phân công theo thư mục</h3>
+        </div>
+        <div class="card-content-figma p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped batch-folder-table mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>STT</th>
+                            <th class="folder-cell">Thư mục</th>
+                            <th>Tổng tài liệu</th>
+                            <th>Chưa Checkscan1</th>
+                            <th>Chưa Checkscan2</th>
+                            <th>Chưa nhập liệu</th>
+                            <th>Chưa Check1</th>
+                            <th>Chưa Check2</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @if (!Model.Rows.Any())
+                    {
+                        <tr><td colspan="8" class="text-center text-muted p-4">Không có dữ liệu.</td></tr>
+                    }
+                    else
+                    {
+                        var i = 1;
+                        foreach (var r in Model.Rows)
+                        {
+                            <tr>
+                                <td class="text-center">@i</td>
+                                <td class="folder-cell">
+                                    @if (r.IsPdfFile)
+                                    {
+                                        <span><i class="fas fa-file-pdf text-danger mr-1"></i>@r.FolderName</span>
+                                    }
+                                    else if (r.HasChildren)
+                                    {
+                                        <a href="@BuildFolderUrl(r.FullPath)" class="text-decoration-none">
+                                            <i class="fas fa-folder text-warning mr-1"></i>@r.FolderName
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <span><i class="fas fa-folder text-warning mr-1"></i>@r.FolderName</span>
+                                    }
+                                </td>
+                                <td class="text-center font-weight-bold">@r.TotalDocuments</td>
+                                <td class="text-center">
+                                    <span class="cell-with-action">
+                                        <span>@r.PendingCheckScan1</span>
+                                        @if (r.PendingCheckScan1 > 0)
+                                        {
+                                            <button type="button" class="btn btn-link btn-sm text-primary btn-distribute" title="Phân phiếu" data-folder="@r.FullPath" data-step="@((byte)WorkflowStep.CheckScan1)"><i class="fas fa-user-plus"></i></button>
+                                        }
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="cell-with-action">
+                                        <span>@r.PendingCheckScan2</span>
+                                        @if (r.PendingCheckScan2 > 0)
+                                        {
+                                            <button type="button" class="btn btn-link btn-sm text-primary btn-distribute" title="Phân phiếu" data-folder="@r.FullPath" data-step="@((byte)WorkflowStep.CheckScan2)"><i class="fas fa-user-plus"></i></button>
+                                        }
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="cell-with-action">
+                                        <span>@r.PendingExtract</span>
+                                        @if (r.PendingExtract > 0)
+                                        {
+                                            <button type="button" class="btn btn-link btn-sm text-primary btn-distribute" title="Phân phiếu" data-folder="@r.FullPath" data-step="@((byte)WorkflowStep.Extract)"><i class="fas fa-user-plus"></i></button>
+                                        }
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="cell-with-action">
+                                        <span>@r.PendingCheck1</span>
+                                        @if (r.PendingCheck1 > 0)
+                                        {
+                                            <button type="button" class="btn btn-link btn-sm text-primary btn-distribute" title="Phân phiếu" data-folder="@r.FullPath" data-step="@((byte)WorkflowStep.Check1)"><i class="fas fa-user-plus"></i></button>
+                                        }
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="cell-with-action">
+                                        <span>@r.PendingCheck2</span>
+                                        @if (r.PendingCheck2 > 0)
+                                        {
+                                            <button type="button" class="btn btn-link btn-sm text-primary btn-distribute" title="Phân phiếu" data-folder="@r.FullPath" data-step="@((byte)WorkflowStep.Check2)"><i class="fas fa-user-plus"></i></button>
+                                        }
+                                    </span>
+                                </td>
+                            </tr>
+                            i++;
+                        }
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="distributeModalHost"></div>
+
+@section Scripts {
+    <script>
+        (function () {
+            var dialogUrl = '@Url.Action("DistributeFormsDialog", "Construction", new { area = "dashboard" })';
+            var host = document.getElementById('distributeModalHost');
+
+            document.addEventListener('click', function (event) {
+                var btn = event.target.closest('.btn-distribute');
+                if (!btn) return;
+
+                var folder = btn.getAttribute('data-folder') || '';
+                var step = btn.getAttribute('data-step') || '';
+                if (!folder || !step) return;
+
+                fetch(dialogUrl + '?folder=' + encodeURIComponent(folder) + '&step=' + encodeURIComponent(step), {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                    .then(function (res) { return res.text(); })
+                    .then(function (html) {
+                        host.innerHTML = html;
+                        var modal = host.querySelector('.modal');
+                        if (modal && window.jQuery) {
+                            window.jQuery(modal).modal('show');
+                        }
+                    });
+            });
+        })();
+    </script>
+}

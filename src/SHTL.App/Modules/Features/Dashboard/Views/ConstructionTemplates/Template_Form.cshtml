@@ -1,0 +1,45 @@
+@{
+    ViewData["Title"] = "Template Form";
+}
+<div class="layout-expanded">
+    <div class="frame-figma mb-3">
+        <div class="frame-header">
+            <div class="d-flex align-items-center">
+                <div class="mr-3 d-flex align-items-center justify-content-center" style="width:32px;height:32px;background:var(--primary-light);color:var(--primary);border-radius:6px;">
+                    <i class="fas fa-edit"></i>
+                </div>
+                <div>
+                    <h6 class="mb-0 font-weight-bold" style="color:var(--primary);">Template Form Header</h6>
+                    <div class="text-muted small">Mau form CRUD theo card-figma.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-figma">
+        <div class="card-content-figma">
+            <form>
+                <div class="form-group">
+                    <label>Truong 1</label>
+                    <input class="form-control form-control-sm" type="text" placeholder="Nhap du lieu..." />
+                </div>
+                <div class="form-group">
+                    <label>Truong 2</label>
+                    <textarea class="form-control form-control-sm" rows="3"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label>Ngay</label>
+                        <input class="form-control form-control-sm" type="date" />
+                    </div>
+                    <div class="form-group col-md-6">
+                        <label>So luong</label>
+                        <input class="form-control form-control-sm" type="number" min="0" />
+                    </div>
+                </div>
+                <button class="btn-figma btn-figma-primary" type="button">Luu</button>
+                <button class="btn btn-outline-secondary" type="button">Huy</button>
+            </form>
+        </div>
+    </div>
+</div>

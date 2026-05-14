@@ -27,6 +27,9 @@ public static class AppServiceExtensions
         services.AddScoped<IFolderProgressReportService, FolderProgressReportService>();
         services.AddScoped<IFolderDocumentsPurgeService, FolderDocumentsPurgeService>();
         services.AddScoped<IFolderOcrRetryService, FolderOcrRetryService>();
+        services.AddScoped<IConstructionBatchService, ConstructionBatchService>();
+        services.AddScoped<IConstructionFolderBatchService, ConstructionFolderBatchService>();
+        services.AddScoped<IConstructionKpiPayrollService, ConstructionKpiPayrollService>();
         services.AddScoped<IDocCatalogService, DocCatalogService>();
         services.AddScoped<IAxeDocTypeAdminService, AxeDocTypeAdminService>();
         services.AddScoped<IAxeSyncTypeAdminService, AxeSyncTypeAdminService>();
