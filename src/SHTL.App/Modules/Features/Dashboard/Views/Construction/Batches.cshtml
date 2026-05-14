@@ -29,6 +29,8 @@
         .cell-with-action { display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-width: 48px; }
         .btn-distribute { line-height: 1; opacity: 0.8; padding: 0 4px; }
         .btn-distribute:hover { opacity: 1; }
+        .btn-reclaim { line-height: 1; opacity: 0.8; padding: 0 4px; }
+        .btn-reclaim:hover { opacity: 1; }
     </style>
 }
 
@@ -133,7 +135,15 @@
                                         }
                                     </span>
                                 </td>
-                                <td class="text-center">@r.InProgressCheckScan1</td>
+                                <td class="text-center">
+                                    <span class="cell-with-action">
+                                        <span>@r.InProgressCheckScan1</span>
+                                        @if (r.InProgressCheckScan1 > 0)
+                                        {
+                                            <button type="button" class="btn btn-link btn-sm text-warning btn-reclaim" title="Lấy lại phiếu" data-folder="@r.FullPath" data-step="@((byte)WorkflowStep.CheckScan1)"><i class="fas fa-undo"></i></button>
+                                        }
+                                    </span>
+                                </td>
                                 <td class="text-center">@r.CompletedCheckScan1</td>
                                 <td class="text-center">
                                     <span class="cell-with-action">
@@ -144,7 +154,15 @@
                                         }
                                     </span>
                                 </td>
-                                <td class="text-center">@r.InProgressCheckScan2</td>
+                                <td class="text-center">
+                                    <span class="cell-with-action">
+                                        <span>@r.InProgressCheckScan2</span>
+                                        @if (r.InProgressCheckScan2 > 0)
+                                        {
+                                            <button type="button" class="btn btn-link btn-sm text-warning btn-reclaim" title="Lấy lại phiếu" data-folder="@r.FullPath" data-step="@((byte)WorkflowStep.CheckScan2)"><i class="fas fa-undo"></i></button>
+                                        }
+                                    </span>
+                                </td>
                                 <td class="text-center">@r.CompletedCheckScan2</td>
                                 <td class="text-center">
                                     <span class="cell-with-action">
@@ -155,7 +173,15 @@
                                         }
                                     </span>
                                 </td>
-                                <td class="text-center">@r.InProgressExtract</td>
+                                <td class="text-center">
+                                    <span class="cell-with-action">
+                                        <span>@r.InProgressExtract</span>
+                                        @if (r.InProgressExtract > 0)
+                                        {
+                                            <button type="button" class="btn btn-link btn-sm text-warning btn-reclaim" title="Lấy lại phiếu" data-folder="@r.FullPath" data-step="@((byte)WorkflowStep.Extract)"><i class="fas fa-undo"></i></button>
+                                        }
+                                    </span>
+                                </td>
                                 <td class="text-center">@r.CompletedExtract</td>
                                 <td class="text-center">
                                     <span class="cell-with-action">
@@ -166,7 +192,15 @@
                                         }
                                     </span>
                                 </td>
-                                <td class="text-center">@r.InProgressCheck1</td>
+                                <td class="text-center">
+                                    <span class="cell-with-action">
+                                        <span>@r.InProgressCheck1</span>
+                                        @if (r.InProgressCheck1 > 0)
+                                        {
+                                            <button type="button" class="btn btn-link btn-sm text-warning btn-reclaim" title="Lấy lại phiếu" data-folder="@r.FullPath" data-step="@((byte)WorkflowStep.Check1)"><i class="fas fa-undo"></i></button>
+                                        }
+                                    </span>
+                                </td>
                                 <td class="text-center">@r.CompletedCheck1</td>
                                 <td class="text-center">
                                     <span class="cell-with-action">
@@ -177,7 +211,15 @@
                                         }
                                     </span>
                                 </td>
-                                <td class="text-center">@r.InProgressCheck2</td>
+                                <td class="text-center">
+                                    <span class="cell-with-action">
+                                        <span>@r.InProgressCheck2</span>
+                                        @if (r.InProgressCheck2 > 0)
+                                        {
+                                            <button type="button" class="btn btn-link btn-sm text-warning btn-reclaim" title="Lấy lại phiếu" data-folder="@r.FullPath" data-step="@((byte)WorkflowStep.Check2)"><i class="fas fa-undo"></i></button>
+                                        }
+                                    </span>
+                                </td>
                                 <td class="text-center">@r.CompletedCheck2</td>
                             </tr>
                             i++;
@@ -196,28 +238,78 @@
     <script>
         (function () {
             var dialogUrl = '@Url.Action("DistributeFormsDialog", "Construction", new { area = "dashboard" })';
+            var reclaimUrl = '@Url.Action("ReclaimForms", "Construction", new { area = "dashboard" })';
             var host = document.getElementById('distributeModalHost');
 
             document.addEventListener('click', function (event) {
-                var btn = event.target.closest('.btn-distribute');
-                if (!btn) return;
+                // Xử lý phân phiếu
+                var btnDistribute = event.target.closest('.btn-distribute');
+                if (btnDistribute) {
+                    var folder = btnDistribute.getAttribute('data-folder') || '';
+                    var step = btnDistribute.getAttribute('data-step') || '';
+                    if (!folder || !step) return;
 
-                var folder = btn.getAttribute('data-folder') || '';
-                var step = btn.getAttribute('data-step') || '';
-                if (!folder || !step) return;
+                    fetch(dialogUrl + '?folder=' + encodeURIComponent(folder) + '&step=' + encodeURIComponent(step), {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    })
+                        .then(function (res) { return res.text(); })
+                        .then(function (html) {
+                            host.innerHTML = html;
+                            var modal = host.querySelector('.modal');
+                            if (modal && window.jQuery) {
+                                window.jQuery(modal).modal('show');
+                            }
+                        });
+                    return;
+                }
 
-                fetch(dialogUrl + '?folder=' + encodeURIComponent(folder) + '&step=' + encodeURIComponent(step), {
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                })
-                    .then(function (res) { return res.text(); })
-                    .then(function (html) {
-                        host.innerHTML = html;
-                        var modal = host.querySelector('.modal');
-                        if (modal && window.jQuery) {
-                            window.jQuery(modal).modal('show');
-                        }
-                    });
+                // Xử lý lấy lại phiếu
+                var btnReclaim = event.target.closest('.btn-reclaim');
+                if (btnReclaim) {
+                    var folder = btnReclaim.getAttribute('data-folder') || '';
+                    var step = btnReclaim.getAttribute('data-step') || '';
+                    if (!folder || !step) return;
+
+                    if (!confirm('Bạn có chắc chắn muốn lấy lại tất cả phiếu đang phân trong thư mục này không?')) {
+                        return;
+                    }
+
+                    var form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = reclaimUrl;
+                    
+                    var token = document.querySelector('input[name="__RequestVerificationToken"]');
+                    if (token) {
+                        var tokenInput = document.createElement('input');
+                        tokenInput.type = 'hidden';
+                        tokenInput.name = '__RequestVerificationToken';
+                        tokenInput.value = token.value;
+                        form.appendChild(tokenInput);
+                    }
+
+                    var folderInput = document.createElement('input');
+                    folderInput.type = 'hidden';
+                    folderInput.name = 'folder';
+                    folderInput.value = folder;
+                    form.appendChild(folderInput);
+
+                    var stepInput = document.createElement('input');
+                    stepInput.type = 'hidden';
+                    stepInput.name = 'step';
+                    stepInput.value = step;
+                    form.appendChild(stepInput);
+
+                    var filterInput = document.createElement('input');
+                    filterInput.type = 'hidden';
+                    filterInput.name = 'q';
+                    filterInput.value = '@Model.Filter';
+                    form.appendChild(filterInput);
+
+                    document.body.appendChild(form);
+                    form.submit();
+                }
             });
         })();
     </script>
+    @Html.AntiForgeryToken()
 }

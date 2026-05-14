@@ -294,25 +294,13 @@ public class DocumentRepository : BaseRepository, IDocumentRepository
         if (isAdmin) return true;
         if (userId <= 0) return false;
         var conn = await OpenConnectionAsync();
-        const string sql = @"
+        var sql = $@"
 SELECT CASE WHEN EXISTS (
     SELECT 1
     FROM dbo.stg_documents d
     WHERE d.id = @DocumentId
       AND d.status != 2
-      AND (
-            d.created_by = @UserId
-            OR EXISTS (
-                SELECT 1
-                FROM dbo.stg_construction_batch_documents cbd
-                INNER JOIN dbo.stg_construction_batch_assignments cba ON cba.id = cbd.assignment_id
-                INNER JOIN dbo.stg_construction_batches cb ON cb.id = cbd.batch_id
-                WHERE cbd.document_id = d.id
-                  AND cba.user_id = @UserId
-                  AND cba.[status] = 1
-                  AND cb.[status] IN (1,2)
-            )
-      )
+      AND {BuildAssignedUserAccessSql("d.", "UserId")}
 ) THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END;";
         return await ExecuteScalarAsync<bool>(conn, sql, new { DocumentId = documentId, UserId = userId });
     }
@@ -575,8 +563,27 @@ WHERE folder_name = @VirtualFolder;
         if (f.EndDate.HasValue) { conditions.Add("created < @EndDate"); p.Add("EndDate", f.EndDate.Value.AddDays(1)); }
         if (f.EnforceOnlyAssigned && !f.IsAdminUser && f.CurrentUserId.HasValue && f.CurrentUserId.Value > 0)
         {
-            conditions.Add(@"(
-                created_by = @CurrentUserId
+            conditions.Add(BuildAssignedUserAccessSql(string.Empty, "CurrentUserId"));
+            p.Add("CurrentUserId", f.CurrentUserId.Value);
+        }
+
+        return ($"WHERE {string.Join(" AND ", conditions)}", p);
+    }
+
+    private static string BuildAssignedUserAccessSql(string tableReference, string userIdParameter)
+    {
+        var documentId = string.IsNullOrEmpty(tableReference)
+            ? "stg_documents.id"
+            : $"{tableReference}id";
+
+        return $@"(
+                {tableReference}created_by = @{userIdParameter}
+                OR {tableReference}checked_scan1by = @{userIdParameter}
+                OR {tableReference}checked_scan2by = @{userIdParameter}
+                OR {tableReference}extracted_by = @{userIdParameter}
+                OR {tableReference}checked1by = @{userIdParameter}
+                OR {tableReference}checked2by = @{userIdParameter}
+                OR {tableReference}locked_by_user_id = @{userIdParameter}
                 OR EXISTS (
                     SELECT 1
                     FROM dbo.stg_construction_batch_documents cbd
@@ -584,15 +591,11 @@ WHERE folder_name = @VirtualFolder;
                         ON cba.id = cbd.assignment_id
                     INNER JOIN dbo.stg_construction_batches cb
                         ON cb.id = cbd.batch_id
-                    WHERE cbd.document_id = stg_documents.id
-                      AND cba.user_id = @CurrentUserId
+                    WHERE cbd.document_id = {documentId}
+                      AND cba.user_id = @{userIdParameter}
                       AND cba.[status] = 1
                       AND cb.[status] IN (1,2)
                 )
-            )");
-            p.Add("CurrentUserId", f.CurrentUserId.Value);
-        }
-
-        return ($"WHERE {string.Join(" AND ", conditions)}", p);
+            )";
     }
 }

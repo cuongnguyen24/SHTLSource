@@ -16,6 +16,7 @@ public interface IConstructionFolderBatchService
     Task<ConstructionFolderBatchPageViewModel> GetFolderPageAsync(string? folderPath, string? filter);
     Task<ConstructionDistributeFormsDialogViewModel> GetDistributeDialogAsync(string folderPath, WorkflowStep step, ICurrentUser currentUser);
     Task<ApiResult<int>> DistributeFormsAsync(ConstructionDistributeFormsRequest request, ICurrentUser currentUser);
+    Task<ApiResult<int>> ReclaimFormsAsync(string folderPath, WorkflowStep step, ICurrentUser currentUser);
 }
 
 public sealed class ConstructionFolderBatchService : IConstructionFolderBatchService
@@ -299,6 +300,23 @@ public sealed class ConstructionFolderBatchService : IConstructionFolderBatchSer
         return ApiResult<int>.Ok(affected, $"Đã phân {affected} phiếu cho {assignee.FullName}.");
     }
 
+    public async Task<ApiResult<int>> ReclaimFormsAsync(string folderPath, WorkflowStep step, ICurrentUser currentUser)
+    {
+        var normalizedFolder = NormalizeFolderPath(folderPath);
+        if (string.IsNullOrWhiteSpace(normalizedFolder))
+            return ApiResult<int>.Fail("Thư mục không hợp lệ.");
+
+        var inProgress = await CountInProgressAsync(normalizedFolder, step);
+        if (inProgress <= 0)
+            return ApiResult<int>.Fail("Không có phiếu nào đang được xử lý trong thư mục này.");
+
+        var affected = await ReclaimDocumentsAsync(normalizedFolder, step, currentUser.Id);
+        if (affected <= 0)
+            return ApiResult<int>.Fail("Không lấy lại được phiếu nào. Vui lòng thử lại.");
+
+        return ApiResult<int>.Ok(affected, $"Đã lấy lại {affected} phiếu về trạng thái chưa phân.");
+    }
+
     private async Task<int> CountAvailableAsync(string folderPath, WorkflowStep step)
     {
         var conn = await _db.GetOpenConnectionAsync();
@@ -338,12 +356,54 @@ SET {updateSet}
 FROM dbo.stg_documents d
 INNER JOIN (
     SELECT TOP (@Take) id
-    FROM dbo.stg_documents
-    WHERE status = 1
+    FROM dbo.stg_documents d
+    WHERE d.status = 1
       AND ({BuildFolderMatchSql()})
       AND {whereSql}
     ORDER BY id
 ) x ON x.id = d.id;";
+
+        return await conn.ExecuteAsync(sql, param);
+    }
+
+    private async Task<int> CountInProgressAsync(string folderPath, WorkflowStep step)
+    {
+        var conn = await _db.GetOpenConnectionAsync();
+        var (whereSql, param) = BuildInProgressWhere(step);
+        param.Add("FolderPath", folderPath);
+        var sql = $@"
+SELECT COUNT(1)
+FROM dbo.stg_documents d
+WHERE d.status = 1
+  AND ({BuildFolderMatchSql()})
+  AND {whereSql};";
+        return await conn.ExecuteScalarAsync<int>(sql, param);
+    }
+
+    private async Task<int> ReclaimDocumentsAsync(string folderPath, WorkflowStep step, int reclaimedBy)
+    {
+        var conn = await _db.GetOpenConnectionAsync();
+        var (whereSql, param) = BuildInProgressWhere(step);
+        param.Add("FolderPath", folderPath);
+        param.Add("ReclaimedBy", reclaimedBy);
+
+        var updateSet = step switch
+        {
+            WorkflowStep.CheckScan1 => "checked_scan1by = 0, checked_scan1at = NULL, locked_by_step = 1, locked_by_user_id = 0, locked_at = NULL, updated = SYSUTCDATETIME(), updated_by = @ReclaimedBy",
+            WorkflowStep.CheckScan2 => "checked_scan2by = 0, checked_scan2at = NULL, locked_by_step = 2, locked_by_user_id = 0, locked_at = NULL, updated = SYSUTCDATETIME(), updated_by = @ReclaimedBy",
+            WorkflowStep.Extract => "extracted_by = 0, locked_by_step = 5, locked_by_user_id = 0, locked_at = NULL, updated = SYSUTCDATETIME(), updated_by = @ReclaimedBy",
+            WorkflowStep.Check1 => "checked1by = 0, locked_by_step = 6, locked_by_user_id = 0, locked_at = NULL, updated = SYSUTCDATETIME(), updated_by = @ReclaimedBy",
+            WorkflowStep.Check2 => "checked2by = 0, locked_by_step = 7, locked_by_user_id = 0, locked_at = NULL, updated = SYSUTCDATETIME(), updated_by = @ReclaimedBy",
+            _ => throw new InvalidOperationException("Bước phân phiếu không hợp lệ.")
+        };
+
+        var sql = $@"
+UPDATE d
+SET {updateSet}
+FROM dbo.stg_documents d
+WHERE d.status = 1
+  AND ({BuildFolderMatchSql()})
+  AND {whereSql};";
 
         return await conn.ExecuteAsync(sql, param);
     }
@@ -358,6 +418,21 @@ INNER JOIN (
             WorkflowStep.Extract => "extracted_by = 0 AND is_extracted = 0 AND current_step IN (6, 7, 8)",
             WorkflowStep.Check1 => "checked1by = 0 AND is_checked1 = 0 AND current_step IN (7, 8)",
             WorkflowStep.Check2 => "checked2by = 0 AND is_checked2 = 0 AND current_step IN (8, 9)",
+            _ => throw new InvalidOperationException("Bước phân phiếu không hợp lệ.")
+        };
+        return (sql, p);
+    }
+
+    private static (string whereSql, DynamicParameters param) BuildInProgressWhere(WorkflowStep step)
+    {
+        var p = new DynamicParameters();
+        var sql = step switch
+        {
+            WorkflowStep.CheckScan1 => "checked_scan1by > 0 AND is_checked_scan1 = 0 AND current_step IN (1, 2)",
+            WorkflowStep.CheckScan2 => "checked_scan2by > 0 AND is_checked_scan2 = 0 AND (is_checked_scan1 = 1 OR current_step >= 3)",
+            WorkflowStep.Extract => "extracted_by > 0 AND is_extracted = 0 AND current_step IN (6, 7, 8)",
+            WorkflowStep.Check1 => "checked1by > 0 AND is_checked1 = 0 AND current_step IN (7, 8)",
+            WorkflowStep.Check2 => "checked2by > 0 AND is_checked2 = 0 AND current_step IN (8, 9)",
             _ => throw new InvalidOperationException("Bước phân phiếu không hợp lệ.")
         };
         return (sql, p);

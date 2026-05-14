@@ -85,6 +85,24 @@ public class ConstructionController : Controller
         return RedirectToAction(nameof(Batches), new { folder = request.FolderPath, q = request.Filter });
     }
 
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ReclaimForms([FromForm] string folder, [FromForm] WorkflowStep step, [FromForm] string? q = null)
+    {
+        if (string.IsNullOrWhiteSpace(folder))
+            return BadRequest("Thư mục không hợp lệ.");
+
+        var currentUser = HttpContext.RequestServices.GetRequiredService<ICurrentUser>();
+        var result = await _folderBatchService.ReclaimFormsAsync(folder, step, currentUser);
+        
+        if (!result.Success)
+            TempData["Error"] = result.Message;
+        else
+            TempData["Success"] = result.Message;
+
+        return RedirectToAction(nameof(Batches), new { folder, q });
+    }
+
     [HttpGet]
     public IActionResult CreateBatch()
         => View("~/Modules/Features/Dashboard/Views/Construction/CreateBatch.cshtml", new ConstructionCreateBatchRequest());
