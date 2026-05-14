@@ -1,0 +1,79 @@
+@model SHTL.Modules.Shared.Contracts.Dtos.ConstructionPayrollDashboardViewModel
+@{
+    ViewData["Title"] = "Payroll";
+}
+@section Breadcrumb {
+    <li class="breadcrumb-item"><a asp-area="dashboard" asp-controller="Construction" asp-action="Index">Tiến độ thi công</a></li>
+    <li class="breadcrumb-item active">Payroll</li>
+}
+
+<div class="layout-expanded">
+    <div class="frame-figma mb-3">
+        <div class="frame-header">
+            <div class="d-flex align-items-center">
+                <div class="mr-3 d-flex align-items-center justify-content-center" style="width:32px;height:32px;background:var(--primary-light);color:var(--primary);border-radius:6px;">
+                    <i class="fas fa-money-check-alt"></i>
+                </div>
+                <div>
+                    <h6 class="mb-0 font-weight-bold" style="color:var(--primary);">Bảng lương thi công</h6>
+                    <div class="text-muted small">Tổng hợp lương theo KPI, sản lượng và giờ công theo tháng.</div>
+                </div>
+            </div>
+            <div class="d-flex flex-wrap align-items-end" style="gap:8px;">
+                <form method="get" class="d-flex align-items-end" style="gap:8px;">
+                    <div><label class="small text-muted mb-1 d-block">Năm</label><input class="form-control form-control-sm" type="number" name="year" value="@Model.Year" /></div>
+                    <div><label class="small text-muted mb-1 d-block">Tháng</label><input class="form-control form-control-sm" type="number" min="1" max="12" name="month" value="@Model.Month" /></div>
+                    <button class="btn-figma btn-figma-primary" type="submit">Lọc</button>
+                </form>
+                <form method="post" asp-action="RecalculatePayroll" class="d-flex" style="gap:6px;">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="year" value="@Model.Year" />
+                <input type="hidden" name="month" value="@Model.Month" />
+                    <button class="btn btn-warning btn-sm" type="submit">Tính lại lương tháng</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-figma">
+        <div class="card-content-figma p-0">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light">
+                        <tr><th>User</th><th>Họ tên</th><th>Lương cơ bản</th><th>Theo sản lượng</th><th>Thưởng chất lượng</th><th>Khấu trừ công</th><th>Thực lĩnh</th><th>Trạng thái</th><th>Chốt</th></tr>
+                    </thead>
+                    <tbody>
+                    @if (!Model.Entries.Any())
+                    {
+                        <tr><td colspan="9" class="text-center text-muted p-3">Chưa có dữ liệu bảng lương.</td></tr>
+                    }
+                    else
+                    {
+                        foreach (var p in Model.Entries)
+                        {
+                            <tr>
+                                <td>@p.UserName</td><td>@p.FullName</td>
+                                <td>@p.BaseSalary.ToString("N0")</td><td>@p.QuantityAmount.ToString("N0")</td>
+                                <td>@p.QualityBonus.ToString("N0")</td><td>@p.AttendanceDeduction.ToString("N0")</td>
+                                <td class="font-weight-bold">@p.TotalSalary.ToString("N0")</td><td>@p.Status</td>
+                                <td>
+                                    @if (p.Status == SHTL.Modules.Core.Domain.Enums.ConstructionPayrollStatus.Draft)
+                                    {
+                                        <form method="post" asp-action="ApprovePayroll" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@p.Id" />
+                                            <input type="hidden" name="year" value="@Model.Year" />
+                                            <input type="hidden" name="month" value="@Model.Month" />
+                                            <button class="btn btn-sm btn-success" type="submit">Chốt</button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

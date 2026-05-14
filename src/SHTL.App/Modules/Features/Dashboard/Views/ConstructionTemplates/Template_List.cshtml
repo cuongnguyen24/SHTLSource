@@ -1,0 +1,60 @@
+@{
+    ViewData["Title"] = "Mẫu danh sách";
+}
+@section Breadcrumb {
+    <li class="breadcrumb-item"><a asp-area="dashboard" asp-controller="Construction" asp-action="Index">Tiến độ thi công</a></li>
+    <li class="breadcrumb-item active">Mẫu danh sách</li>
+}
+<div class="layout-expanded">
+    <div class="frame-figma mb-3">
+        <div class="frame-header">
+            <div class="d-flex align-items-center">
+                <div class="mr-3 d-flex align-items-center justify-content-center" style="width:32px;height:32px;background:var(--primary-light);color:var(--primary);border-radius:6px;">
+                    <i class="fas fa-list"></i>
+                </div>
+                <div>
+                    <h6 class="mb-0 font-weight-bold" style="color:var(--primary);">Template List Header</h6>
+                    <div class="text-muted small">Mo ta ngan cho danh sach.</div>
+                </div>
+            </div>
+            <button class="btn-figma btn-figma-primary btn-sm" type="button">
+                <i class="fas fa-plus mr-1"></i>Action
+            </button>
+        </div>
+    </div>
+
+    <div class="frame-figma frame-figma-combined">
+        <div class="frame-filter">
+            <form class="d-flex align-items-end flex-wrap" style="gap:8px;">
+                <div class="search-input-figma" style="min-width:280px;">
+                    <label class="small text-muted mb-1 d-block">Tu khoa</label>
+                    <input type="text" placeholder="Nhap tu khoa..." />
+                    <i class="fas fa-search search-icon"></i>
+                </div>
+                <button type="button" class="btn-figma btn-figma-primary">Loc</button>
+            </form>
+        </div>
+        <div class="p-3">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Ma</th>
+                            <th>Ten</th>
+                            <th>Trang thai</th>
+                            <th style="width:120px;">Thao tac</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>TMP-001</td>
+                            <td>Dong du lieu mau</td>
+                            <td><span class="badge badge-light border">Active</span></td>
+                            <td><button class="btn btn-sm btn-outline-primary" type="button">Chi tiet</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

@@ -18,7 +18,12 @@ namespace SHTL.Modules.Features.SoHoa.Controllers;
 /// Màn hình nhập liệu (extract) - người dùng điền giá trị vào các field.
 /// </summary>
 [Authorize]
-[AuthorizeModule(ModuleCode.ExtractDigit, ModuleCode.ExtractAlphabet, ModuleCode.ExtractForm)]
+[AuthorizeModule(
+    ModuleCode.ExtractDigit,
+    ModuleCode.ExtractAlphabet,
+    ModuleCode.ExtractCharacter,
+    ModuleCode.ExtractTick,
+    ModuleCode.ExtractForm)]
 public class ExtractController : BaseController
 {
     private readonly IDocumentService _docService;
@@ -108,7 +113,7 @@ public class ExtractController : BaseController
             ViewBag.RequireCheckFirstScan = scanConfig.requireFirst;
             ViewBag.RequireCheckSecondScan = scanConfig.requireSecond;
 
-            var vm = await _formBuilder.BuildForExtractAsync(id);
+            var vm = await _formBuilder.BuildForExtractAsync(id, CurrentUser.Id, CurrentUser.IsAdmin);
             return View(vm);
         }
         catch (InvalidOperationException)

@@ -53,7 +53,10 @@ public class DocumentService : IDocumentService
             CreatedBy = req.CreatedBy,
             StartDate = req.StartDate,
             EndDate = req.EndDate,
-            FolderId = req.FolderId
+            FolderId = req.FolderId,
+            EnforceOnlyAssigned = req.EnforceOnlyAssigned,
+            CurrentUserId = user.Id,
+            IsAdminUser = user.IsAdmin
         };
         var items = await _docRepo.GetListAsync(filter, req.PageIndex, req.PageSize);
         var count = await _docRepo.CountAsync(filter);
@@ -96,6 +99,8 @@ public class DocumentService : IDocumentService
 
     public async Task<DocumentDto?> GetByIdAsync(long id, ICurrentUser user)
     {
+        if (!await _docRepo.HasUserAccessAsync(id, user.Id, user.IsAdmin))
+            return null;
         var doc = await _docRepo.GetByIdAsync(id);
         if (doc is null) return null;
         var docTypeMap = (await _docTypeRepo.ListDocTypesBriefAsync())
@@ -136,6 +141,8 @@ public class DocumentService : IDocumentService
 
     public async Task<ApiResult> UpdateMetadataAsync(DocumentUpdateRequest req, ICurrentUser user)
     {
+        if (!await _docRepo.HasUserAccessAsync(req.Id, user.Id, user.IsAdmin))
+            return ApiResult.Fail("Bạn không có quyền truy cập tài liệu này.");
         var doc = await _docRepo.GetByIdAsync(req.Id);
         if (doc is null) return ApiResult.Fail("Tài liệu không tồn tại");
 

@@ -153,6 +153,24 @@
                                 <li class="text-muted mx-1" style="font-size: 11px; opacity: 0.5;">/</li>
                                 @RenderSection("Breadcrumb")
                             }
+                            else if (ViewData["Breadcrumbs"] is IEnumerable<BreadcrumbItem> breadcrumbItems)
+                            {
+                                <li class="text-muted mx-1" style="font-size: 11px; opacity: 0.5;">/</li>
+                                @foreach (var item in breadcrumbItems)
+                                {
+                                    if (!string.IsNullOrWhiteSpace(item.Url))
+                                    {
+                                        <li class="breadcrumb-item d-flex align-items-center">
+                                            <a href="@item.Url" class="text-muted" style="text-decoration: none; font-weight: 400;">@item.Text</a>
+                                        </li>
+                                        <li class="text-muted mx-1" style="font-size: 11px; opacity: 0.5;">/</li>
+                                    }
+                                    else
+                                    {
+                                        <li class="breadcrumb-item active d-flex align-items-center text-muted" style="font-weight: 500;">@item.Text</li>
+                                    }
+                                }
+                            }
                         </ol>
                     </nav>
                 </div>

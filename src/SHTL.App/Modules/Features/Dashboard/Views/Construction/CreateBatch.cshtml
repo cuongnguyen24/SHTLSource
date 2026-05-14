@@ -1,0 +1,53 @@
+@model SHTL.Modules.Shared.Contracts.Dtos.ConstructionCreateBatchRequest
+@{
+    ViewData["Title"] = "Tạo bộ hồ sơ";
+}
+@section Breadcrumb {
+    <li class="breadcrumb-item"><a asp-area="dashboard" asp-controller="Construction" asp-action="Index">Tiến độ thi công</a></li>
+    <li class="breadcrumb-item"><a asp-area="dashboard" asp-controller="Construction" asp-action="Batches">Phân công theo thư mục</a></li>
+    <li class="breadcrumb-item active">Tạo mới</li>
+}
+
+<div class="layout-expanded">
+    <div class="frame-figma mb-3">
+        <div class="frame-header">
+            <div class="d-flex align-items-center">
+                <div class="mr-3 d-flex align-items-center justify-content-center" style="width:32px;height:32px;background:var(--primary-light);color:var(--primary);border-radius:6px;">
+                    <i class="fas fa-plus-circle"></i>
+                </div>
+                <div>
+                    <h6 class="mb-0 font-weight-bold" style="color:var(--primary);">Tạo bộ hồ sơ thi công</h6>
+                    <div class="text-muted small">Khởi tạo một bộ hồ sơ mới để phân việc theo batch.</div>
+                </div>
+            </div>
+            <a class="btn-figma btn-figma-outline btn-sm" asp-area="dashboard" asp-controller="Construction" asp-action="Batches">Quay lại danh sách</a>
+        </div>
+    </div>
+    <div class="card-figma">
+        <div class="card-content-figma">
+            <form method="post">
+                @Html.AntiForgeryToken()
+                <div class="form-group">
+                    <label>Tên bộ hồ sơ</label>
+                    <input asp-for="Name" class="form-control form-control-sm" required />
+                </div>
+                <div class="form-group">
+                    <label>Mô tả</label>
+                    <textarea asp-for="Description" class="form-control form-control-sm" rows="3"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label>Folder ID nguồn (tuỳ chọn)</label>
+                        <input asp-for="FolderId" class="form-control form-control-sm" type="number" min="1" />
+                    </div>
+                    <div class="form-group col-md-6">
+                        <label>Hạn hoàn thành</label>
+                        <input asp-for="DueAt" class="form-control form-control-sm" type="datetime-local" />
+                    </div>
+                </div>
+                <button class="btn-figma btn-figma-primary" type="submit">Tạo bộ hồ sơ</button>
+                <a class="btn btn-outline-secondary" asp-area="dashboard" asp-controller="Construction" asp-action="Batches">Quay lại</a>
+            </form>
+        </div>
+    </div>
+</div>

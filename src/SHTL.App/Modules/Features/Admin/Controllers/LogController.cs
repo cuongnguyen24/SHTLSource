@@ -16,7 +16,7 @@ public class LogController : BaseAdminController
     private void SetLogPage(string title, string icon)
     {
         SetPageHeader(title, icon,
-            new BreadcrumbItem { Text = "Tổng quan", Url = Url.Action("Index", "Home") },
+            new BreadcrumbItem { Text = "Tổng quan", Url = Url.Action("Index", "Home", new { area = "admin" }) },
             new BreadcrumbItem { Text = title });
     }
 
@@ -29,7 +29,7 @@ public class LogController : BaseAdminController
         ViewBag.Date = date;
         ViewBag.DateTo = dateTo;
         ViewBag.Search = req.Search;
-        SetLogPage("Log đăng nhập", "sign-in-alt");
+        SetLogPage("Đăng nhập", "sign-in-alt");
         ViewData["SearchQuery"] = req.Search;
         ViewData["LogListHint"] = "Chỉ hiển thị các yêu cầu liên quan đăng nhập (đường dẫn chứa login, signin, account…).";
         return View("Access", list);
@@ -44,7 +44,7 @@ public class LogController : BaseAdminController
         ViewBag.Date = date;
         ViewBag.DateTo = dateTo;
         ViewBag.Search = req.Search;
-        SetLogPage("Log truy cập", "door-open");
+        SetLogPage("Truy cập", "door-open");
         ViewData["SearchQuery"] = req.Search;
         ViewData["LogListHint"] = "Mọi yêu cầu HTTP được ghi nhận (trừ file tĩnh và một số đường dẫn hệ thống).";
         return View(list);
@@ -69,7 +69,7 @@ public class LogController : BaseAdminController
         var list = await _logService.GetActionLogsAsync(req.PageIndex, req.PageSize, date, req.Search);
         ViewBag.Date = date;
         ViewBag.Search = req.Search;
-        SetLogPage("Log thao tác", "history");
+        SetLogPage("Thao tác", "history");
         ViewData["SearchQuery"] = req.Search;
         return View(list);
     }

@@ -14,7 +14,8 @@
     var scan2ListUrl = Url.Action("CheckScan2List", "Scan", new { area = "sohoa" })!;
 }
 @section Breadcrumb {
-    <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="Scan" asp-action="Index">Scan</a></li>
+    <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="Home" asp-action="Index">Tổng quan</a></li>
+    <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="Scan" asp-action="Index">Scan / Upload</a></li>
     <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="Scan" asp-action="Detail" asp-route-id="@Model.Id">Chi tiết</a></li>
     <li class="breadcrumb-item active">PDF</li>
 }

@@ -753,6 +753,410 @@ namespace SHTL.Modules.Infrastructure.Persistence.Migrations
                     b.ToTable("log_error_logs", "dbo");
                 });
 
+            modelBuilder.Entity("SHTL.Modules.Core.Domain.Entities.Stg.ConstructionAttendance", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime?>("CheckInAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("check_in_at");
+
+                    b.Property<DateTime?>("CheckOutAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("check_out_at");
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created");
+
+                    b.Property<int>("CreatedBy")
+                        .HasColumnType("int")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("notes");
+
+                    b.Property<DateTime?>("Updated")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("updated");
+
+                    b.Property<int>("UpdatedBy")
+                        .HasColumnType("int")
+                        .HasColumnName("updated_by");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int")
+                        .HasColumnName("user_id");
+
+                    b.Property<DateTime>("WorkDate")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("work_date");
+
+                    b.Property<decimal>("WorkHours")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("work_hours");
+
+                    b.HasKey("Id")
+                        .HasName("pk_stg_construction_attendances");
+
+                    b.ToTable("stg_construction_attendances", "dbo");
+                });
+
+            modelBuilder.Entity("SHTL.Modules.Core.Domain.Entities.Stg.ConstructionBatch", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<int?>("AssignedToDeptId")
+                        .HasColumnType("int")
+                        .HasColumnName("assigned_to_dept_id");
+
+                    b.Property<int?>("AssignedToUserId")
+                        .HasColumnType("int")
+                        .HasColumnName("assigned_to_user_id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("completed_at");
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created");
+
+                    b.Property<int>("CreatedBy")
+                        .HasColumnType("int")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("description");
+
+                    b.Property<DateTime?>("DueAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("due_at");
+
+                    b.Property<long?>("FolderId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("folder_id");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("name");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("started_at");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("status");
+
+                    b.Property<int>("TotalDocuments")
+                        .HasColumnType("int")
+                        .HasColumnName("total_documents");
+
+                    b.Property<DateTime?>("Updated")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("updated");
+
+                    b.Property<int>("UpdatedBy")
+                        .HasColumnType("int")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id")
+                        .HasName("pk_stg_construction_batches");
+
+                    b.ToTable("stg_construction_batches", "dbo");
+                });
+
+            modelBuilder.Entity("SHTL.Modules.Core.Domain.Entities.Stg.ConstructionBatchAssignment", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("AssignedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("assigned_at");
+
+                    b.Property<int>("AssignedBy")
+                        .HasColumnType("int")
+                        .HasColumnName("assigned_by");
+
+                    b.Property<long>("BatchId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("batch_id");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("completed_at");
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created");
+
+                    b.Property<int>("CreatedBy")
+                        .HasColumnType("int")
+                        .HasColumnName("created_by");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("status");
+
+                    b.Property<byte>("Step")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("step");
+
+                    b.Property<DateTime?>("Updated")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("updated");
+
+                    b.Property<int>("UpdatedBy")
+                        .HasColumnType("int")
+                        .HasColumnName("updated_by");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_stg_construction_batch_assignments");
+
+                    b.ToTable("stg_construction_batch_assignments", "dbo");
+                });
+
+            modelBuilder.Entity("SHTL.Modules.Core.Domain.Entities.Stg.ConstructionBatchDocument", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<long?>("AssignmentId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("assignment_id");
+
+                    b.Property<long>("BatchId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("batch_id");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("completed_at");
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created");
+
+                    b.Property<int>("CreatedBy")
+                        .HasColumnType("int")
+                        .HasColumnName("created_by");
+
+                    b.Property<byte>("CurrentStep")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("current_step");
+
+                    b.Property<long>("DocumentId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("document_id");
+
+                    b.Property<bool>("IsOwnedByUploader")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_owned_by_uploader");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("started_at");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime?>("Updated")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("updated");
+
+                    b.Property<int>("UpdatedBy")
+                        .HasColumnType("int")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id")
+                        .HasName("pk_stg_construction_batch_documents");
+
+                    b.ToTable("stg_construction_batch_documents", "dbo");
+                });
+
+            modelBuilder.Entity("SHTL.Modules.Core.Domain.Entities.Stg.ConstructionPayrollEntry", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime?>("ApprovedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("approved_at");
+
+                    b.Property<int>("ApprovedBy")
+                        .HasColumnType("int")
+                        .HasColumnName("approved_by");
+
+                    b.Property<decimal>("AttendanceDeduction")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("attendance_deduction");
+
+                    b.Property<decimal>("BaseSalary")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("base_salary");
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created");
+
+                    b.Property<int>("CreatedBy")
+                        .HasColumnType("int")
+                        .HasColumnName("created_by");
+
+                    b.Property<int>("Month")
+                        .HasColumnType("int")
+                        .HasColumnName("month");
+
+                    b.Property<decimal>("QualityBonus")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("quality_bonus");
+
+                    b.Property<decimal>("QuantityAmount")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("quantity_amount");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("status");
+
+                    b.Property<decimal>("TotalSalary")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("total_salary");
+
+                    b.Property<DateTime?>("Updated")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("updated");
+
+                    b.Property<int>("UpdatedBy")
+                        .HasColumnType("int")
+                        .HasColumnName("updated_by");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int")
+                        .HasColumnName("user_id");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("int")
+                        .HasColumnName("year");
+
+                    b.HasKey("Id")
+                        .HasName("pk_stg_construction_payroll_entries");
+
+                    b.ToTable("stg_construction_payroll_entries", "dbo");
+                });
+
+            modelBuilder.Entity("SHTL.Modules.Core.Domain.Entities.Stg.ConstructionUserDailyKpi", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<decimal>("AvgMinutesPerDocument")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("avg_minutes_per_document");
+
+                    b.Property<long?>("BatchId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("batch_id");
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created");
+
+                    b.Property<int>("CreatedBy")
+                        .HasColumnType("int")
+                        .HasColumnName("created_by");
+
+                    b.Property<int>("DocumentsFailed")
+                        .HasColumnType("int")
+                        .HasColumnName("documents_failed");
+
+                    b.Property<int>("DocumentsPassed")
+                        .HasColumnType("int")
+                        .HasColumnName("documents_passed");
+
+                    b.Property<int>("DocumentsProcessed")
+                        .HasColumnType("int")
+                        .HasColumnName("documents_processed");
+
+                    b.Property<int>("DocumentsReturned")
+                        .HasColumnType("int")
+                        .HasColumnName("documents_returned");
+
+                    b.Property<decimal>("QualityScore")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("quality_score");
+
+                    b.Property<byte>("Step")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("step");
+
+                    b.Property<DateTime?>("Updated")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("updated");
+
+                    b.Property<int>("UpdatedBy")
+                        .HasColumnType("int")
+                        .HasColumnName("updated_by");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int")
+                        .HasColumnName("user_id");
+
+                    b.Property<DateTime>("WorkDate")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("work_date");
+
+                    b.Property<decimal>("WorkHours")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("work_hours");
+
+                    b.HasKey("Id")
+                        .HasName("pk_stg_construction_user_daily_kpis");
+
+                    b.ToTable("stg_construction_user_daily_kpis", "dbo");
+                });
+
             modelBuilder.Entity("SHTL.Modules.Core.Domain.Entities.Stg.Document", b =>
                 {
                     b.Property<long>("Id")

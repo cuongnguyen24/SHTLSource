@@ -1,0 +1,84 @@
+@model SHTL.Modules.Shared.Contracts.Dtos.ConstructionKpiDashboardViewModel
+@{
+    ViewData["Title"] = "KPI ngày & Chấm công";
+}
+@section Breadcrumb {
+    <li class="breadcrumb-item"><a asp-area="dashboard" asp-controller="Construction" asp-action="Index">Tiến độ thi công</a></li>
+    <li class="breadcrumb-item active">KPI ngày</li>
+}
+
+<div class="layout-expanded">
+    <div class="frame-figma mb-3">
+        <div class="frame-header">
+            <div class="d-flex align-items-center">
+                <div class="mr-3 d-flex align-items-center justify-content-center" style="width:32px;height:32px;background:var(--primary-light);color:var(--primary);border-radius:6px;">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div>
+                    <h6 class="mb-0 font-weight-bold" style="color:var(--primary);">KPI ngày & chấm công</h6>
+                    <div class="text-muted small">Theo dõi sản lượng, chất lượng và thời gian làm việc theo ngày.</div>
+                </div>
+            </div>
+            <div class="d-flex flex-wrap align-items-end" style="gap:8px;">
+                <form method="get" class="d-flex flex-wrap align-items-end" style="gap:8px;">
+                    <div><label class="small text-muted mb-1 d-block">Từ ngày</label><input class="form-control form-control-sm" type="date" name="from" value="@Model.FromDate.ToString("yyyy-MM-dd")" /></div>
+                    <div><label class="small text-muted mb-1 d-block">Đến ngày</label><input class="form-control form-control-sm" type="date" name="to" value="@Model.ToDate.ToString("yyyy-MM-dd")" /></div>
+                    <button class="btn-figma btn-figma-primary" type="submit">Lọc</button>
+                </form>
+                <form method="post" asp-action="CheckIn">@Html.AntiForgeryToken()<button class="btn btn-success btn-sm" type="submit">Check-in</button></form>
+                <form method="post" asp-action="CheckOut">@Html.AntiForgeryToken()<button class="btn btn-outline-success btn-sm" type="submit">Check-out</button></form>
+                <form method="post" asp-action="RecalculateKpi" class="d-flex align-items-end" style="gap:6px;">
+                @Html.AntiForgeryToken()
+                    <input class="form-control form-control-sm" type="date" name="workDate" value="@Model.ToDate.ToString("yyyy-MM-dd")" />
+                    <button class="btn btn-warning btn-sm" type="submit">Tính lại KPI</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-figma mb-3">
+        <div class="card-header-figma"><h3 class="card-title-figma mb-0">Chấm công</h3></div>
+        <div class="card-content-figma p-0">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light"><tr><th>Ngày</th><th>User</th><th>Họ tên</th><th>Giờ công</th><th>Có mặt</th></tr></thead>
+                    <tbody>
+                    @if (!Model.Attendance.Any()) { <tr><td colspan="5" class="text-center text-muted p-3">Chưa có dữ liệu.</td></tr> }
+                    else
+                    {
+                        foreach (var a in Model.Attendance)
+                        {
+                            <tr><td>@a.WorkDate.ToString("dd/MM/yyyy")</td><td>@a.UserName</td><td>@a.FullName</td><td>@a.WorkHours</td><td>@(a.IsPresent ? "Có" : "Không")</td></tr>
+                        }
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-figma">
+        <div class="card-header-figma"><h3 class="card-title-figma mb-0">KPI theo ngày</h3></div>
+        <div class="card-content-figma p-0">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light"><tr><th>Ngày</th><th>User</th><th>Bước</th><th>Xử lý</th><th>Đạt</th><th>Lỗi</th><th>Trả lại</th><th>Chất lượng</th><th>Phút/tài liệu</th></tr></thead>
+                    <tbody>
+                    @if (!Model.Kpis.Any()) { <tr><td colspan="9" class="text-center text-muted p-3">Chưa có dữ liệu KPI.</td></tr> }
+                    else
+                    {
+                        foreach (var k in Model.Kpis)
+                        {
+                            <tr>
+                                <td>@k.WorkDate.ToString("dd/MM/yyyy")</td><td>@k.UserName</td><td>@k.Step</td><td>@k.DocumentsProcessed</td>
+                                <td>@k.DocumentsPassed</td><td>@k.DocumentsFailed</td><td>@k.DocumentsReturned</td>
+                                <td>@k.QualityScore.ToString("0.##")%</td><td>@k.AvgMinutesPerDocument.ToString("0.##")</td>
+                            </tr>
+                        }
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

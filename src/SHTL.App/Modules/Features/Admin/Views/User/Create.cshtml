@@ -9,7 +9,8 @@
     var availableRoles = allRoles.Where(r => !userRoleIds.Contains(r.Id)).ToList();
 }
 @section Breadcrumb {
-    <li class="breadcrumb-item"><a asp-action="Index" asp-controller="User">Người dùng</a></li>
+    <li class="breadcrumb-item"><a asp-area="admin" asp-controller="Home" asp-action="Index">Tổng quan</a></li>
+    <li class="breadcrumb-item"><a asp-area="admin" asp-controller="User" asp-action="Index">Người dùng</a></li>
     <li class="breadcrumb-item active">Tạo mới</li>
 }
 @section Styles {

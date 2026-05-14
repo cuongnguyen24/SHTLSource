@@ -74,4 +74,52 @@ public static class SyncPathFormatParser
             .Select(x => Uri.UnescapeDataString(x))
             .ToList();
     }
+
+    /// <summary>Số cấp thư mục trong format (không tính phần tên file ở cuối).</summary>
+    public static int GetFolderSegmentCount(string? format)
+    {
+        if (string.IsNullOrWhiteSpace(format))
+            return 1;
+
+        var parts = format.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return Math.Max(1, parts.Length - 1);
+    }
+
+    /// <summary>Chọn số cấp thư mục theo format khớp tiền tố thư mục hiện tại.</summary>
+    public static int ResolveFolderSegmentCount(IReadOnlyList<string?> formats, string parentPath)
+    {
+        var counts = formats
+            .Where(f => !string.IsNullOrWhiteSpace(f))
+            .Select(GetFolderSegmentCount)
+            .ToList();
+        if (counts.Count == 0)
+            return 1;
+
+        var firstSeg = parentPath.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .FirstOrDefault();
+        if (string.IsNullOrEmpty(firstSeg))
+            return counts.Max();
+
+        var matched = formats
+            .Where(f => !string.IsNullOrWhiteSpace(f))
+            .Where(f =>
+            {
+                var head = f!.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault();
+                return !string.IsNullOrEmpty(head)
+                       && !head.StartsWith("{", StringComparison.Ordinal)
+                       && string.Equals(head, firstSeg, StringComparison.OrdinalIgnoreCase);
+            })
+            .Select(GetFolderSegmentCount)
+            .ToList();
+
+        return matched.Count > 0 ? matched.Max() : counts.Max();
+    }
+
+    public static bool LooksLikePdfFileName(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return false;
+
+        return string.Equals(Path.GetExtension(name.Trim()), ".pdf", StringComparison.OrdinalIgnoreCase);
+    }
 }
