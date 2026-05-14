@@ -1,2 +1,8 @@
-@{ ViewData["Title"] = "Privacy"; }
+@{
+    ViewData["Title"] = "Quyền riêng tư";
+}
+@section Breadcrumb {
+    <li class="breadcrumb-item"><a asp-area="admin" asp-controller="Home" asp-action="Index">Tổng quan</a></li>
+    <li class="breadcrumb-item active">Quyền riêng tư</li>
+}
 <p class="text-muted">Chính sách (Admin).</p>

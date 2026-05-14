@@ -9,7 +9,8 @@
     var downloadUrl = Url.Content("~/scan/download/" + Model.Id);
 }
 @section Breadcrumb {
-    <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="Scan" asp-action="Index">Scan</a></li>
+    <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="Home" asp-action="Index">Tổng quan</a></li>
+    <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="Scan" asp-action="Index">Scan / Upload</a></li>
     <li class="breadcrumb-item active">Chi tiết #@Model.Id</li>
 }
 

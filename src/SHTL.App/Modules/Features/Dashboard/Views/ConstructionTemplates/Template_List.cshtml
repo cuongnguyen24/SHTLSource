@@ -1,5 +1,9 @@
 @{
-    ViewData["Title"] = "Template List";
+    ViewData["Title"] = "Mẫu danh sách";
+}
+@section Breadcrumb {
+    <li class="breadcrumb-item"><a asp-area="dashboard" asp-controller="Construction" asp-action="Index">Tiến độ thi công</a></li>
+    <li class="breadcrumb-item active">Mẫu danh sách</li>
 }
 <div class="layout-expanded">
     <div class="frame-figma mb-3">

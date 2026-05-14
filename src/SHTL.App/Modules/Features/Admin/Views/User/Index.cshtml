@@ -5,7 +5,7 @@
     var meId = (int)(ViewData["MeUserId"] ?? 0);
 }
 @section Breadcrumb {
-    <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home">Tổng quan</a></li>
+    <li class="breadcrumb-item"><a asp-area="admin" asp-controller="Home" asp-action="Index">Tổng quan</a></li>
     <li class="breadcrumb-item active">Người dùng</li>
 }
 <div class="layout-expanded">

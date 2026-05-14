@@ -99,6 +99,16 @@ public sealed class ConstructionFolderBatchRowViewModel
     public int PendingExtract { get; set; }
     public int PendingCheck1 { get; set; }
     public int PendingCheck2 { get; set; }
+    public int InProgressCheckScan1 { get; set; }
+    public int InProgressCheckScan2 { get; set; }
+    public int InProgressExtract { get; set; }
+    public int InProgressCheck1 { get; set; }
+    public int InProgressCheck2 { get; set; }
+    public int CompletedCheckScan1 { get; set; }
+    public int CompletedCheckScan2 { get; set; }
+    public int CompletedExtract { get; set; }
+    public int CompletedCheck1 { get; set; }
+    public int CompletedCheck2 { get; set; }
 }
 
 public sealed class ConstructionDistributeFormsDialogViewModel

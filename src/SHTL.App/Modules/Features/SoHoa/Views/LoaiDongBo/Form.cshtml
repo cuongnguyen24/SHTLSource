@@ -4,6 +4,7 @@
     ViewData["Title"] = isNew ? "Tạo kiểu đồng bộ" : "Sửa kiểu đồng bộ";
 }
 @section Breadcrumb {
+    <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="Home" asp-action="Index">Tổng quan</a></li>
     <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="LoaiDongBo" asp-action="Index">Loại đồng bộ</a></li>
     <li class="breadcrumb-item active">@(isNew ? "Tạo mới" : "Sửa")</li>
 }

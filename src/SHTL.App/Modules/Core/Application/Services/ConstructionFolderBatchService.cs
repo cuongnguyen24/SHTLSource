@@ -141,7 +141,32 @@ public sealed class ConstructionFolderBatchService : IConstructionFolderBatchSer
                     SUM(CASE
                         WHEN checked2by = 0 AND is_checked2 = 0
                              AND current_step IN (8, 9)
-                        THEN 1 ELSE 0 END) AS PendingCheck2
+                        THEN 1 ELSE 0 END) AS PendingCheck2,
+                    SUM(CASE
+                        WHEN checked_scan1by > 0 AND is_checked_scan1 = 0
+                             AND current_step IN (1, 2)
+                        THEN 1 ELSE 0 END) AS InProgressCheckScan1,
+                    SUM(CASE
+                        WHEN checked_scan2by > 0 AND is_checked_scan2 = 0
+                             AND (is_checked_scan1 = 1 OR current_step >= 3)
+                        THEN 1 ELSE 0 END) AS InProgressCheckScan2,
+                    SUM(CASE
+                        WHEN extracted_by > 0 AND is_extracted = 0
+                             AND current_step IN (6, 7, 8)
+                        THEN 1 ELSE 0 END) AS InProgressExtract,
+                    SUM(CASE
+                        WHEN checked1by > 0 AND is_checked1 = 0
+                             AND current_step IN (7, 8)
+                        THEN 1 ELSE 0 END) AS InProgressCheck1,
+                    SUM(CASE
+                        WHEN checked2by > 0 AND is_checked2 = 0
+                             AND current_step IN (8, 9)
+                        THEN 1 ELSE 0 END) AS InProgressCheck2,
+                    SUM(CASE WHEN is_checked_scan1 = 1 THEN 1 ELSE 0 END) AS CompletedCheckScan1,
+                    SUM(CASE WHEN is_checked_scan2 = 1 THEN 1 ELSE 0 END) AS CompletedCheckScan2,
+                    SUM(CASE WHEN is_extracted = 1 THEN 1 ELSE 0 END) AS CompletedExtract,
+                    SUM(CASE WHEN is_checked1 = 1 THEN 1 ELSE 0 END) AS CompletedCheck1,
+                    SUM(CASE WHEN is_checked2 = 1 THEN 1 ELSE 0 END) AS CompletedCheck2
                 FROM child_rows
                 WHERE child_name IS NOT NULL
                   AND LTRIM(RTRIM(child_name)) <> N''
@@ -163,7 +188,17 @@ public sealed class ConstructionFolderBatchService : IConstructionFolderBatchSer
                 g.PendingCheckScan2,
                 g.PendingExtract,
                 g.PendingCheck1,
-                g.PendingCheck2
+                g.PendingCheck2,
+                g.InProgressCheckScan1,
+                g.InProgressCheckScan2,
+                g.InProgressExtract,
+                g.InProgressCheck1,
+                g.InProgressCheck2,
+                g.CompletedCheckScan1,
+                g.CompletedCheckScan2,
+                g.CompletedExtract,
+                g.CompletedCheck1,
+                g.CompletedCheck2
             FROM grouped g
             WHERE @Filter = N'' OR g.FolderName LIKE N'%' + @Filter + N'%' OR g.FullPath LIKE N'%' + @Filter + N'%'
             ORDER BY g.TotalDocuments DESC, g.FolderName ASC;
@@ -372,7 +407,32 @@ SELECT
     SUM(CASE
         WHEN checked2by = 0 AND is_checked2 = 0
              AND current_step IN (8, 9)
-        THEN 1 ELSE 0 END) AS PendingCheck2
+        THEN 1 ELSE 0 END) AS PendingCheck2,
+    SUM(CASE
+        WHEN checked_scan1by > 0 AND is_checked_scan1 = 0
+             AND current_step IN (1, 2)
+        THEN 1 ELSE 0 END) AS InProgressCheckScan1,
+    SUM(CASE
+        WHEN checked_scan2by > 0 AND is_checked_scan2 = 0
+             AND (is_checked_scan1 = 1 OR current_step >= 3)
+        THEN 1 ELSE 0 END) AS InProgressCheckScan2,
+    SUM(CASE
+        WHEN extracted_by > 0 AND is_extracted = 0
+             AND current_step IN (6, 7, 8)
+        THEN 1 ELSE 0 END) AS InProgressExtract,
+    SUM(CASE
+        WHEN checked1by > 0 AND is_checked1 = 0
+             AND current_step IN (7, 8)
+        THEN 1 ELSE 0 END) AS InProgressCheck1,
+    SUM(CASE
+        WHEN checked2by > 0 AND is_checked2 = 0
+             AND current_step IN (8, 9)
+        THEN 1 ELSE 0 END) AS InProgressCheck2,
+    SUM(CASE WHEN is_checked_scan1 = 1 THEN 1 ELSE 0 END) AS CompletedCheckScan1,
+    SUM(CASE WHEN is_checked_scan2 = 1 THEN 1 ELSE 0 END) AS CompletedCheckScan2,
+    SUM(CASE WHEN is_extracted = 1 THEN 1 ELSE 0 END) AS CompletedExtract,
+    SUM(CASE WHEN is_checked1 = 1 THEN 1 ELSE 0 END) AS CompletedCheck1,
+    SUM(CASE WHEN is_checked2 = 1 THEN 1 ELSE 0 END) AS CompletedCheck2
 FROM (
     SELECT
         NULLIF(LTRIM(RTRIM({fieldColumn})), N'') AS child_name,
@@ -470,6 +530,16 @@ ORDER BY TotalDocuments DESC, child_name ASC;";
                 existing.PendingExtract = Math.Max(existing.PendingExtract, row.PendingExtract);
                 existing.PendingCheck1 = Math.Max(existing.PendingCheck1, row.PendingCheck1);
                 existing.PendingCheck2 = Math.Max(existing.PendingCheck2, row.PendingCheck2);
+                existing.InProgressCheckScan1 = Math.Max(existing.InProgressCheckScan1, row.InProgressCheckScan1);
+                existing.InProgressCheckScan2 = Math.Max(existing.InProgressCheckScan2, row.InProgressCheckScan2);
+                existing.InProgressExtract = Math.Max(existing.InProgressExtract, row.InProgressExtract);
+                existing.InProgressCheck1 = Math.Max(existing.InProgressCheck1, row.InProgressCheck1);
+                existing.InProgressCheck2 = Math.Max(existing.InProgressCheck2, row.InProgressCheck2);
+                existing.CompletedCheckScan1 = Math.Max(existing.CompletedCheckScan1, row.CompletedCheckScan1);
+                existing.CompletedCheckScan2 = Math.Max(existing.CompletedCheckScan2, row.CompletedCheckScan2);
+                existing.CompletedExtract = Math.Max(existing.CompletedExtract, row.CompletedExtract);
+                existing.CompletedCheck1 = Math.Max(existing.CompletedCheck1, row.CompletedCheck1);
+                existing.CompletedCheck2 = Math.Max(existing.CompletedCheck2, row.CompletedCheck2);
                 existing.HasChildren = existing.HasChildren || row.HasChildren;
             }
             else
