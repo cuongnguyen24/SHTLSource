@@ -1,11 +1,19 @@
 @model PaginatedResult<DocumentDto>
 @using SHTL.Modules.Core.Domain.Enums
 @using SHTL.Modules.Shared.Contracts
+@using SHTL.Modules.Shared.Contracts.Dtos
 @{
     ViewData["Title"] = "Nhập liệu (Extract)";
-    var stepStr = Context.Request.Query["step"].FirstOrDefault() ?? "Extract";
+    var req = ViewBag.Request as DocumentFilterRequest ?? new DocumentFilterRequest { Step = WorkflowStep.Extract };
+    var q = Context.Request.Query["q"].FirstOrDefault() ?? string.Empty;
     var requireCheckFirstScan = (bool?)ViewBag.RequireCheckFirstScan ?? true;
     var requireCheckSecondScan = (bool?)ViewBag.RequireCheckSecondScan ?? true;
+    var docTypes = Model.Items
+        .Where(x => x.DocTypeId > 0)
+        .GroupBy(x => new { x.DocTypeId, Name = x.DocTypeName ?? $"Loại {x.DocTypeId}" })
+        .Select(g => new { g.Key.DocTypeId, g.Key.Name })
+        .OrderBy(x => x.Name)
+        .ToList();
 }
 @section Breadcrumb {
     <li class="breadcrumb-item"><a asp-area="sohoa" asp-controller="Home" asp-action="Index">Tổng quan</a></li>
@@ -15,6 +23,44 @@
     <style>
         .extract-table tbody tr:hover { background-color: #f9f9f9; cursor: pointer; }
         .extract-table tbody tr.is-selected { background-color: #eef6ff; }
+        .extract-filter-grid {
+            display: grid;
+            grid-template-columns: minmax(280px, 1.6fr) minmax(220px, 1fr) minmax(220px, 1fr) auto;
+            gap: 10px;
+            align-items: end;
+        }
+        .extract-filter-item label { margin-bottom: 6px; }
+        .extract-filter-item .extract-search-wrap input,
+        .extract-filter-item .form-control {
+            height: 38px;
+        }
+        .extract-filter-item .extract-search-wrap {
+            width: 100%;
+            min-width: 0;
+            position: relative;
+        }
+        .extract-filter-item .extract-search-wrap input {
+            width: 100%;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+            padding: 0 38px 0 12px;
+            line-height: 38px;
+            background: #fff;
+        }
+        .extract-filter-item .extract-search-wrap .search-icon {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+            pointer-events: none;
+        }
+        @@media (max-width: 1200px) {
+            .extract-filter-grid { grid-template-columns: 1fr 1fr; }
+        }
+        @@media (max-width: 768px) {
+            .extract-filter-grid { grid-template-columns: 1fr; }
+        }
         .status-pill {
             display: inline-block;
             padding: 2px 8px;
@@ -34,7 +80,7 @@
                 <div class="mr-3 d-flex align-items-center justify-content-center" style="width:32px;height:32px;background:var(--primary-light);color:var(--primary);border-radius:6px;"><i class="fas fa-keyboard"></i></div>
                 <div>
                     <h6 class="mb-0 font-weight-bold" style="color:var(--primary);">Hàng chờ nhập liệu</h6>
-                    <div class="text-muted small">Lọc theo bước workflow; mở form để nhập trường động và ô OCR.</div>
+                    <div class="text-muted small">Tìm theo tên/đường dẫn; lọc theo loại tài liệu và trạng thái nhập liệu.</div>
                 </div>
             </div>
             <div class="d-flex flex-wrap" style="gap:8px;">
@@ -46,26 +92,50 @@
 
     <div class="frame-figma frame-figma-combined">
         <div class="frame-filter">
-            <form method="get" class="d-flex align-items-end flex-wrap" style="gap:10px;">
-                <div class="search-input-figma" style="min-width:200px;">
-                    <label class="small text-muted mb-1 d-block">Từ khóa</label>
-                    <input type="text" name="q" value="@Context.Request.Query["q"]" placeholder="Tên, số…" />
-                    <i class="fas fa-search search-icon"></i>
+            <form method="get" class="extract-filter-grid">
+                <div class="extract-filter-item">
+                    <label class="small text-muted d-block">Từ khóa</label>
+                    <div class="extract-search-wrap">
+                        <input type="text" name="q" value="@q" placeholder="Tên, đường dẫn" />
+                        <i class="fas fa-search search-icon"></i>
+                    </div>
                 </div>
-                <div>
-                    <label class="small text-muted mb-1 d-block">Bước</label>
-                    <select name="step" class="form-control form-control-sm" style="min-width:160px;">
-                        @foreach (var opt in new[] { "Extract", "Zone", "Ocr", "Scan" })
+                <div class="extract-filter-item">
+                    <label class="small text-muted d-block">Loại tài liệu</label>
+                    <select name="docTypeId" class="form-control form-control-sm">
+                        <option value="">Tất cả loại tài liệu</option>
+                        @foreach (var dt in docTypes)
                         {
-                            if (stepStr.Equals(opt, StringComparison.OrdinalIgnoreCase))
-                            { <option value="@opt" selected="selected">@opt</option> }
+                            if (req.DocTypeId == dt.DocTypeId)
+                            { <option value="@dt.DocTypeId" selected="selected">@dt.Name</option> }
                             else
-                            { <option value="@opt">@opt</option> }
+                            { <option value="@dt.DocTypeId">@dt.Name</option> }
                         }
                     </select>
                 </div>
+                <div class="extract-filter-item">
+                    <label class="small text-muted d-block">Trạng thái</label>
+                    <select name="status" class="form-control form-control-sm">
+                        @if (req.ExtractInputStatus is null)
+                        { <option value="" selected="selected">Tất cả trạng thái</option> }
+                        else
+                        { <option value="">Tất cả trạng thái</option> }
+                        @if (req.ExtractInputStatus == 1)
+                        { <option value="1" selected="selected">Chưa đủ điều kiện</option> }
+                        else
+                        { <option value="1">Chưa đủ điều kiện</option> }
+                        @if (req.ExtractInputStatus == 2)
+                        { <option value="2" selected="selected">Chưa nhập</option> }
+                        else
+                        { <option value="2">Chưa nhập</option> }
+                        @if (req.ExtractInputStatus == 3)
+                        { <option value="3" selected="selected">Đã nhập</option> }
+                        else
+                        { <option value="3">Đã nhập</option> }
+                    </select>
+                </div>
                 <input type="hidden" name="size" value="@Model.PageSize" />
-                <button type="submit" class="btn-figma btn-figma-primary">Lọc</button>
+                <button type="submit" class="btn-figma btn-figma-primary">Tìm kiếm</button>
             </form>
         </div>
         <div class="p-3">

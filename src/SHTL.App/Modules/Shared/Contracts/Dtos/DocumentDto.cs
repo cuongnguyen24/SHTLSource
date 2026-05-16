@@ -128,6 +128,13 @@ public class DocumentFilterRequest : PageRequest
     public CheckQueueListScope CheckQueueListScope { get; set; }
     public bool IncludeExtractedInCheck1 { get; set; }
     public int? DocTypeId { get; set; }
+    /// <summary>
+    /// Lọc trạng thái nhập liệu ở màn Extract:
+    /// 1 = Chưa đủ điều kiện, 2 = Chưa nhập, 3 = Đã nhập.
+    /// </summary>
+    public int? ExtractInputStatus { get; set; }
+    public bool RequireCheckFirstScan { get; set; }
+    public bool RequireCheckSecondScan { get; set; }
     public int? CreatedBy { get; set; }
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }

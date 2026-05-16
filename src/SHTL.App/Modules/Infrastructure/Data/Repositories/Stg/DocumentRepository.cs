@@ -50,6 +50,9 @@ public class DocumentFilterParams
     public bool IncludeExtractedInCheck1 { get; set; }
     public DocumentStatus? Status { get; set; }
     public int? DocTypeId { get; set; }
+    public int? ExtractInputStatus { get; set; }
+    public bool RequireCheckFirstScan { get; set; }
+    public bool RequireCheckSecondScan { get; set; }
     public int? CreatedBy { get; set; }
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
@@ -492,8 +495,8 @@ WHERE folder_name = @VirtualFolder;
 
         if (!string.IsNullOrWhiteSpace(f.Search))
         {
-            conditions.Add("(search_meta LIKE @Search OR name LIKE @Search)");
-            p.Add("Search", $"%{f.Search}%");
+            conditions.Add("(name LIKE @Search OR file_name LIKE @Search OR file_path LIKE @Search)");
+            p.Add("Search", $"%{f.Search.Trim()}%");
         }
         if (f.ForScanCheck1Board)
         {
@@ -557,6 +560,25 @@ WHERE folder_name = @VirtualFolder;
         }
         if (f.Status.HasValue) { conditions.Add("status = @Status"); p.Add("Status", (byte)f.Status.Value); }
         if (f.DocTypeId.HasValue) { conditions.Add("doc_type_id = @DocTypeId"); p.Add("DocTypeId", f.DocTypeId.Value); }
+        if (f.ExtractInputStatus.HasValue)
+        {
+            var firstReadySql = f.RequireCheckFirstScan ? "is_checked_scan1 = 1" : "1=1";
+            var secondReadySql = f.RequireCheckSecondScan ? "is_checked_scan2 = 1" : "1=1";
+            var readySql = $"({firstReadySql} AND {secondReadySql})";
+            var notReadySql = $"(NOT ({readySql}))";
+            switch (f.ExtractInputStatus.Value)
+            {
+                case 1: // Chưa đủ điều kiện
+                    conditions.Add(notReadySql);
+                    break;
+                case 2: // Chưa nhập
+                    conditions.Add($"{readySql} AND is_extracted = 0");
+                    break;
+                case 3: // Đã nhập
+                    conditions.Add("is_extracted = 1");
+                    break;
+            }
+        }
         if (f.CreatedBy.HasValue) { conditions.Add("created_by = @CreatedBy"); p.Add("CreatedBy", f.CreatedBy.Value); }
         if (f.FolderId.HasValue) { conditions.Add("folder_id = @FolderId"); p.Add("FolderId", f.FolderId.Value); }
         if (f.StartDate.HasValue) { conditions.Add("created >= @StartDate"); p.Add("StartDate", f.StartDate.Value); }

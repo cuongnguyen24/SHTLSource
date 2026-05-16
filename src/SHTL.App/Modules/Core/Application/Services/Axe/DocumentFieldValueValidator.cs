@@ -181,8 +181,7 @@ public static class DocumentFieldValueValidator
     public static bool TryParseStgDate(string raw, out DateTime parsed)
     {
         var formats = new[] { "dd/MM/yyyy", "d/M/yyyy", "yyyy-MM-dd", "yyyy/MM/dd", "dd-MM-yyyy", "dd.MM.yyyy" };
-        return DateTime.TryParseExact(raw, formats, Invariant, DateTimeStyles.None, out parsed)
-            || DateTime.TryParse(raw, Invariant, DateTimeStyles.None, out parsed);
+        return DateTime.TryParseExact(raw, formats, Invariant, DateTimeStyles.None, out parsed);
     }
 
     private static bool IsDateLikeField(StgDocFieldSettingDto setting, StgDocFieldDto? field, string title)
@@ -193,6 +192,7 @@ public static class DocumentFieldValueValidator
         if (name.Equals("dc_issued", StringComparison.OrdinalIgnoreCase)
             || name.Equals("issued", StringComparison.OrdinalIgnoreCase))
             return true;
+        if (ContainsDateToken(name)) return true;
 
         var datatype = field?.Datatype ?? string.Empty;
         if (datatype.Contains("date", StringComparison.OrdinalIgnoreCase)
@@ -203,12 +203,44 @@ public static class DocumentFieldValueValidator
         if (format.Contains("dd/MM/yyyy", StringComparison.OrdinalIgnoreCase)
             || format.Contains("dd-MM-yyyy", StringComparison.OrdinalIgnoreCase)
             || format.Contains("dd.MM.yyyy", StringComparison.OrdinalIgnoreCase)
-            || format.Contains("yyyy-MM-dd", StringComparison.OrdinalIgnoreCase))
+            || format.Contains("yyyy-MM-dd", StringComparison.OrdinalIgnoreCase)
+            || ContainsDateToken(format))
             return true;
 
-        if (!string.IsNullOrWhiteSpace(title) && title.Contains("ngày", StringComparison.OrdinalIgnoreCase))
+        if (ContainsDateToken(title))
             return true;
 
         return false;
+    }
+
+    private static bool ContainsDateToken(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return false;
+
+        var normalized = value.Trim();
+        return normalized.Contains("date", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("time", StringComparison.OrdinalIgnoreCase)
+            || HasToken(normalized, "start")
+            || HasToken(normalized, "end")
+            || normalized.Contains("ngày", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("ngay", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("thời gian", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("thoi gian", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("bắt đầu", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("bat dau", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("kết thúc", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("ket thuc", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool HasToken(string value, string token)
+    {
+        if (value.Equals(token, StringComparison.OrdinalIgnoreCase)) return true;
+
+        return value.Contains("_" + token, StringComparison.OrdinalIgnoreCase)
+            || value.Contains(token + "_", StringComparison.OrdinalIgnoreCase)
+            || value.Contains("-" + token, StringComparison.OrdinalIgnoreCase)
+            || value.Contains(token + "-", StringComparison.OrdinalIgnoreCase)
+            || value.Contains(" " + token, StringComparison.OrdinalIgnoreCase)
+            || value.Contains(token + " ", StringComparison.OrdinalIgnoreCase);
     }
 }
