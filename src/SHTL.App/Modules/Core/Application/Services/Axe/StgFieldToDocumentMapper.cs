@@ -47,6 +47,58 @@ public static class StgFieldToDocumentMapper
     }
 
     /// <summary>
+    /// Các khóa có thể xuất hiện trong <c>stgFieldValues</c> khi gửi Extract (đồng bộ alias fallback trên Form).
+    /// Dùng khi validate để không bỏ sót giá trị do lệch tên khóa hoặc legacy alias (vd. <c>std_date</c> vs <c>field21</c>).
+    /// </summary>
+    public static IReadOnlyList<string> GetStgSubmitLookupKeys(int fieldId, string? rawName)
+    {
+        var list = new List<string>();
+        void AddDistinct(string? s)
+        {
+            if (string.IsNullOrWhiteSpace(s)) return;
+            var t = s.Trim();
+            if (!list.Exists(x => string.Equals(x, t, StringComparison.OrdinalIgnoreCase)))
+                list.Add(t);
+        }
+
+        AddDistinct(ResolvePostFieldKey(rawName, fieldId));
+        AddDistinct(rawName);
+        foreach (var a in GetLegacyStgAliasKeysForFieldId(fieldId))
+            AddDistinct(a);
+
+        return list;
+    }
+
+    private static IEnumerable<string> GetLegacyStgAliasKeysForFieldId(int fieldId)
+    {
+        return fieldId switch
+        {
+            1 => new[] { "dc_title", "name" },
+            2 => new[] { "dc_symbol", "symbol_no", "symbolno" },
+            3 => new[] { "issuer", "dc_issued_by", "issued_by", "issuedby" },
+            4 => new[] { "receiver", "dc_receiver" },
+            5 => new[] { "subject", "describe" },
+            6 => new[] { "levelno", "dc_box", "level_no" },
+            7 => new[] { "boxno", "dc_num1", "box_no", "hop_so" },
+            8 => new[] { "recordno", "dc_record", "record_no", "ho_so_so" },
+            9 => new[] { "recordtitle", "fc_title", "record_title" },
+            10 => new[] { "poster", "author" },
+            11 => new[] { "signer" },
+            12 => new[] { "slotno", "slot_no" },
+            13 => new[] { "shelfno", "shelf_no" },
+            14 => new[] { "noted", "dc_noted" },
+            15 => new[] { "fc_dec1", "field23" },
+            16 => new[] { "fc_date1", "field22" },
+            17 => new[] { "std_text", "field15" },
+            18 => new[] { "std_num", "field16" },
+            19 => new[] { "std_dec", "field23" },
+            20 => new[] { "std_date", "field21" },
+            >= 101 and <= 125 => new[] { $"field{fieldId - 100}" },
+            _ => Array.Empty<string>()
+        };
+    }
+
+    /// <summary>
     /// Extract giá trị từ Document entity thành dictionary theo field name
     /// </summary>
     public static Dictionary<string, string?> ExtractValues(Document doc)
@@ -201,7 +253,7 @@ public static class StgFieldToDocumentMapper
                 break;
             case "dc_issued":
             case "issued":
-                if (DateTime.TryParse(value, out var issued))
+                if (DocumentFieldValueValidator.TryParseStgDate(value ?? "", out var issued))
                     doc.Issued = issued;
                 break;
             case "dc_issued_year":
@@ -289,11 +341,11 @@ public static class StgFieldToDocumentMapper
                     doc.Field20 = f20;
                 break;
             case "field21":
-                if (DateTime.TryParse(value, out var f21))
+                if (DocumentFieldValueValidator.TryParseStgDate(value ?? "", out var f21))
                     doc.Field21 = f21;
                 break;
             case "field22":
-                if (DateTime.TryParse(value, out var f22))
+                if (DocumentFieldValueValidator.TryParseStgDate(value ?? "", out var f22))
                     doc.Field22 = f22;
                 break;
             case "field23":
@@ -349,12 +401,12 @@ public static class StgFieldToDocumentMapper
             case "dc_date1":
             case "fc_start":
             case "std_date":
-                if (DateTime.TryParse(value, out var d1))
+                if (DocumentFieldValueValidator.TryParseStgDate(value ?? "", out var d1))
                     doc.Field21 = d1;
                 break;
             case "fc_end":
             case "fc_date1":
-                if (DateTime.TryParse(value, out var d2))
+                if (DocumentFieldValueValidator.TryParseStgDate(value ?? "", out var d2))
                     doc.Field22 = d2;
                 break;
             case "fc_dec1":
@@ -366,6 +418,23 @@ public static class StgFieldToDocumentMapper
                 doc.RecordNo = value;
                 break;
         }
+    }
+
+    /// <summary>
+    /// Khóa trong <c>stgFieldValues</c> mà <see cref="ApplyValue"/> map vào cột kiểu ngày trên entity (Field21/Field22/Issued).
+    /// Dùng để validate payload kể cả khi cấu hình loại tài liệu thiếu/thiếu <c>i_type</c> = date.
+    /// </summary>
+    public static bool StgPostKeyMapsToDateColumn(string? key)
+    {
+        if (string.IsNullOrWhiteSpace(key)) return false;
+        return key.Trim().ToLowerInvariant() switch
+        {
+            "dc_issued" or "issued"
+                or "field21" or "field22"
+                or "dc_date1" or "fc_start" or "std_date"
+                or "fc_end" or "fc_date1" => true,
+            _ => false,
+        };
     }
 
     /// <summary>

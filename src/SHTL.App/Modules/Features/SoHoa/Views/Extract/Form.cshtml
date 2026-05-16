@@ -409,7 +409,9 @@
                                                     <td>@c.Page</td>
                                                     <td class="small text-muted text-truncate" style="max-width:180px;" title="@showVal">@showVal</td>
                                                     <td style="min-width:200px;">
-                                                        <input type="text" class="form-control form-control-sm ext-cell" data-cell-id="@c.Id" value="@c.ExtractedValue" placeholder="@c.Value" @(extractReadOnlyAfterCheck1Pass ? "readonly" : null) />
+                                                        <input type="text" class="form-control form-control-sm ext-cell" data-cell-id="@c.Id"
+                                                               data-cell-label="Ô @(c.Title ?? c.Field ?? ("#" + c.Id))" maxlength="2000"
+                                                               value="@c.ExtractedValue" placeholder="@c.Value" @(extractReadOnlyAfterCheck1Pass ? "readonly" : null) />
                                                     </td>
                                                 </tr>
                                             }
@@ -581,8 +583,6 @@
             function toastErrorLong(msg) {
                 if (typeof toastr !== 'undefined') {
                     toastr.error(msg, '', { timeOut: 90000, closeButton: true, tapToDismiss: true, newestOnTop: true });
-                } else {
-                    alert(msg);
                 }
             }
 

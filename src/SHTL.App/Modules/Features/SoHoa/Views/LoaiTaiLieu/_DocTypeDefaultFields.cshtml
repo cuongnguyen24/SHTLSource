@@ -333,8 +333,8 @@
                     <div class="col-md-6">
                         <label>Min / Max giá trị</label>
                         <div class="d-flex" style="gap: 8px;">
-                            <input type="text" class="form-control" id="modalMinValue" placeholder="Min" />
-                            <input type="text" class="form-control" id="modalMaxValue" placeholder="Max" />
+                            <input type="number" step="any" inputmode="decimal" class="form-control" id="modalMinValue" placeholder="Min" />
+                            <input type="number" step="any" inputmode="decimal" class="form-control" id="modalMaxValue" placeholder="Max" />
                         </div>
                     </div>
                     <div class="col-md-6">
@@ -407,6 +407,8 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    const toastError = (msg) => { if (typeof toastr !== 'undefined') toastr.error(msg); };
+    const toastSuccess = (msg) => { if (typeof toastr !== 'undefined') toastr.success(msg); };
     // Initialize Bootstrap tooltips
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
@@ -419,11 +421,33 @@ document.addEventListener('DOMContentLoaded', function() {
         hint.classList.toggle('d-none', inputType !== 'select');
     }
 
+    function applyMinMaxValueByInputType(inputType) {
+        const minInput = document.getElementById('modalMinValue');
+        const maxInput = document.getElementById('modalMaxValue');
+        if (!minInput || !maxInput) return;
+        const isNumberType = inputType === 'number';
+        minInput.disabled = !isNumberType;
+        maxInput.disabled = !isNumberType;
+        if (!isNumberType) {
+            minInput.value = '';
+            maxInput.value = '';
+        }
+    }
+
     const inputTypeSelect = document.getElementById('modalInputType');
     if (inputTypeSelect) {
         inputTypeSelect.addEventListener('change', function() {
             toggleDescriptionHint(this.value);
+            applyMinMaxValueByInputType(this.value);
         });
+    }
+
+    function normalizeNumberValue(raw) {
+        const value = (raw || '').trim();
+        if (!value) return { valid: true, value: '' };
+        const n = Number(value);
+        if (!Number.isFinite(n)) return { valid: false, value: '' };
+        return { valid: true, value: String(n) };
     }
 
     // Toggle field enabled/disabled state
@@ -472,6 +496,7 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('modalReadOnly').checked = (document.querySelector(`[name="${prefix}ReadOnly_${fieldId}"]`)?.value || '').toLowerCase() === 'true';
             document.getElementById('modalUpperCase').checked = (document.querySelector(`[name="${prefix}UpperCase_${fieldId}"]`)?.value || '').toLowerCase() === 'true';
             document.getElementById('modalCapitalize').checked = (document.querySelector(`[name="${prefix}Capitalize_${fieldId}"]`)?.value || '').toLowerCase() === 'true';
+            applyMinMaxValueByInputType(safeInputType);
             
             $('#fieldConfigModal').modal('show');
         });
@@ -483,6 +508,48 @@ document.addEventListener('DOMContentLoaded', function() {
         const prefix = 'DF_';
         const row = document.querySelector(`.default-field-row[data-field-id="${fieldId}"]`);
         const configBtn = document.querySelector(`.field-config-btn[data-field-id="${fieldId}"]`);
+        const minValueInput = document.getElementById('modalMinValue');
+        const maxValueInput = document.getElementById('modalMaxValue');
+        const minValueCheck = normalizeNumberValue(minValueInput.value);
+        const maxValueCheck = normalizeNumberValue(maxValueInput.value);
+        const minLenInput = document.getElementById('modalMinLen');
+        const maxLenInput = document.getElementById('modalMaxLen');
+        const selectedInputType = document.getElementById('modalInputType').value;
+        const isNumberType = selectedInputType === 'number';
+
+        if (isNumberType && !minValueCheck.valid) {
+            toastError('Min giá trị chỉ được nhập số.');
+            minValueInput.focus();
+            return;
+        }
+
+        if (isNumberType && !maxValueCheck.valid) {
+            toastError('Max giá trị chỉ được nhập số.');
+            maxValueInput.focus();
+            return;
+        }
+
+        if (isNumberType) {
+            minValueInput.value = minValueCheck.value;
+            maxValueInput.value = maxValueCheck.value;
+        } else {
+            minValueInput.value = '';
+            maxValueInput.value = '';
+        }
+
+        if (isNumberType && minValueInput.value !== '' && maxValueInput.value !== '' && Number(minValueInput.value) > Number(maxValueInput.value)) {
+            toastError('Min giá trị phải nhỏ hơn hoặc bằng Max giá trị.');
+            minValueInput.focus();
+            return;
+        }
+
+        const minLen = minLenInput.value === '' ? null : Number(minLenInput.value);
+        const maxLen = maxLenInput.value === '' ? null : Number(maxLenInput.value);
+        if (minLen !== null && maxLen !== null && minLen > maxLen) {
+            toastError('Min độ dài phải nhỏ hơn hoặc bằng Max độ dài.');
+            minLenInput.focus();
+            return;
+        }
         
         // Form chứa field (form đầu tiên trong DOM là logout ở header — không dùng querySelector('form'))
         const form = row?.closest('form') ?? document.querySelector('#page-content-scroll form[method="post"]');
@@ -493,10 +560,10 @@ document.addEventListener('DOMContentLoaded', function() {
             [`${prefix}Description_${fieldId}`]: document.getElementById('modalDescription').value,
             [`${prefix}DefaultValue_${fieldId}`]: document.getElementById('modalDefaultValue').value,
             [`${prefix}Pattern_${fieldId}`]: document.getElementById('modalPattern').value,
-            [`${prefix}MinValue_${fieldId}`]: document.getElementById('modalMinValue').value,
-            [`${prefix}MaxValue_${fieldId}`]: document.getElementById('modalMaxValue').value,
-            [`${prefix}MinLen_${fieldId}`]: document.getElementById('modalMinLen').value,
-            [`${prefix}MaxLen_${fieldId}`]: document.getElementById('modalMaxLen').value
+            [`${prefix}MinValue_${fieldId}`]: minValueInput.value,
+            [`${prefix}MaxValue_${fieldId}`]: maxValueInput.value,
+            [`${prefix}MinLen_${fieldId}`]: minLenInput.value,
+            [`${prefix}MaxLen_${fieldId}`]: maxLenInput.value
         };
         
         Object.keys(fields).forEach(name => {
@@ -544,7 +611,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         $('#fieldConfigModal').modal('hide');
-        alert('Đã lưu cấu hình!');
+        toastSuccess('Đã lưu cấu hình!');
     });
 });
 </script>

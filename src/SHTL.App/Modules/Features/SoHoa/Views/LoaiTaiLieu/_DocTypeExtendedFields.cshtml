@@ -270,8 +270,8 @@
                     <div class="col-md-6">
                         <label>Min / Max giá trị</label>
                         <div class="d-flex" style="gap: 8px;">
-                            <input type="text" class="form-control" id="extModalMinValue" placeholder="Min" />
-                            <input type="text" class="form-control" id="extModalMaxValue" placeholder="Max" />
+                            <input type="number" step="any" inputmode="decimal" class="form-control" id="extModalMinValue" placeholder="Min" />
+                            <input type="number" step="any" inputmode="decimal" class="form-control" id="extModalMaxValue" placeholder="Max" />
                         </div>
                     </div>
                     <div class="col-md-6">
@@ -344,6 +344,8 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    const toastError = (msg) => { if (typeof toastr !== 'undefined') toastr.error(msg); };
+    const toastSuccess = (msg) => { if (typeof toastr !== 'undefined') toastr.success(msg); };
     // Initialize Bootstrap tooltips
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
@@ -356,11 +358,33 @@ document.addEventListener('DOMContentLoaded', function() {
         hint.classList.toggle('d-none', inputType !== 'select');
     }
 
+    function applyExtMinMaxValueByInputType(inputType) {
+        const minInput = document.getElementById('extModalMinValue');
+        const maxInput = document.getElementById('extModalMaxValue');
+        if (!minInput || !maxInput) return;
+        const isNumberType = inputType === 'number';
+        minInput.disabled = !isNumberType;
+        maxInput.disabled = !isNumberType;
+        if (!isNumberType) {
+            minInput.value = '';
+            maxInput.value = '';
+        }
+    }
+
     const extInputTypeSelect = document.getElementById('extModalInputType');
     if (extInputTypeSelect) {
         extInputTypeSelect.addEventListener('change', function() {
             toggleExtDescriptionHint(this.value);
+            applyExtMinMaxValueByInputType(this.value);
         });
+    }
+
+    function normalizeNumberValue(raw) {
+        const value = (raw || '').trim();
+        if (!value) return { valid: true, value: '' };
+        const n = Number(value);
+        if (!Number.isFinite(n)) return { valid: false, value: '' };
+        return { valid: true, value: String(n) };
     }
 
     // Toggle field enabled/disabled state
@@ -409,6 +433,7 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('extModalReadOnly').checked = (document.querySelector(`[name="${prefix}ReadOnly_${fieldId}"]`)?.value || '').toLowerCase() === 'true';
             document.getElementById('extModalUpperCase').checked = (document.querySelector(`[name="${prefix}UpperCase_${fieldId}"]`)?.value || '').toLowerCase() === 'true';
             document.getElementById('extModalCapitalize').checked = (document.querySelector(`[name="${prefix}Capitalize_${fieldId}"]`)?.value || '').toLowerCase() === 'true';
+            applyExtMinMaxValueByInputType(safeInputType);
             
             $('#extFieldConfigModal').modal('show');
         });
@@ -420,6 +445,48 @@ document.addEventListener('DOMContentLoaded', function() {
         const prefix = 'EF_';
         const row = document.querySelector(`.extended-field-row[data-field-id="${fieldId}"]`);
         const configBtn = document.querySelector(`.field-config-btn-ext[data-field-id="${fieldId}"]`);
+        const minValueInput = document.getElementById('extModalMinValue');
+        const maxValueInput = document.getElementById('extModalMaxValue');
+        const minValueCheck = normalizeNumberValue(minValueInput.value);
+        const maxValueCheck = normalizeNumberValue(maxValueInput.value);
+        const minLenInput = document.getElementById('extModalMinLen');
+        const maxLenInput = document.getElementById('extModalMaxLen');
+        const selectedInputType = document.getElementById('extModalInputType').value;
+        const isNumberType = selectedInputType === 'number';
+
+        if (isNumberType && !minValueCheck.valid) {
+            toastError('Min giá trị chỉ được nhập số.');
+            minValueInput.focus();
+            return;
+        }
+
+        if (isNumberType && !maxValueCheck.valid) {
+            toastError('Max giá trị chỉ được nhập số.');
+            maxValueInput.focus();
+            return;
+        }
+
+        if (isNumberType) {
+            minValueInput.value = minValueCheck.value;
+            maxValueInput.value = maxValueCheck.value;
+        } else {
+            minValueInput.value = '';
+            maxValueInput.value = '';
+        }
+
+        if (isNumberType && minValueInput.value !== '' && maxValueInput.value !== '' && Number(minValueInput.value) > Number(maxValueInput.value)) {
+            toastError('Min giá trị phải nhỏ hơn hoặc bằng Max giá trị.');
+            minValueInput.focus();
+            return;
+        }
+
+        const minLen = minLenInput.value === '' ? null : Number(minLenInput.value);
+        const maxLen = maxLenInput.value === '' ? null : Number(maxLenInput.value);
+        if (minLen !== null && maxLen !== null && minLen > maxLen) {
+            toastError('Min độ dài phải nhỏ hơn hoặc bằng Max độ dài.');
+            minLenInput.focus();
+            return;
+        }
         
         const form = row?.closest('form') ?? document.querySelector('#page-content-scroll form[method="post"]');
         if (!form) return;
@@ -429,10 +496,10 @@ document.addEventListener('DOMContentLoaded', function() {
             [`${prefix}Description_${fieldId}`]: document.getElementById('extModalDescription').value,
             [`${prefix}DefaultValue_${fieldId}`]: document.getElementById('extModalDefaultValue').value,
             [`${prefix}Pattern_${fieldId}`]: document.getElementById('extModalPattern').value,
-            [`${prefix}MinValue_${fieldId}`]: document.getElementById('extModalMinValue').value,
-            [`${prefix}MaxValue_${fieldId}`]: document.getElementById('extModalMaxValue').value,
-            [`${prefix}MinLen_${fieldId}`]: document.getElementById('extModalMinLen').value,
-            [`${prefix}MaxLen_${fieldId}`]: document.getElementById('extModalMaxLen').value
+            [`${prefix}MinValue_${fieldId}`]: minValueInput.value,
+            [`${prefix}MaxValue_${fieldId}`]: maxValueInput.value,
+            [`${prefix}MinLen_${fieldId}`]: minLenInput.value,
+            [`${prefix}MaxLen_${fieldId}`]: maxLenInput.value
         };
         
         Object.keys(fields).forEach(name => {
@@ -480,7 +547,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         $('#extFieldConfigModal').modal('hide');
-        alert('Đã lưu cấu hình!');
+        toastSuccess('Đã lưu cấu hình!');
     });
 });
 </script>

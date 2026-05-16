@@ -3,6 +3,7 @@
     var f = Model.Field;
     var val = Model.Value ?? "";
     var postKey = !string.IsNullOrEmpty(f.PostFieldKey) ? f.PostFieldKey : f.FieldName;
+    var mapsToStgDateColumn = StgFieldToDocumentMapper.StgPostKeyMapsToDateColumn(postKey);
     var safe = (string.IsNullOrEmpty(postKey) ? "f" + f.FieldId : postKey).Replace(".", "_").Replace("[", "").Replace("]", "");
     var id = "ext_" + safe;
     var name = f.FieldName;
@@ -12,8 +13,15 @@
     var it = (f.InputType ?? "text").ToLowerInvariant();
     var isNum = it == "number" || (f.Datatype?.Contains("number", StringComparison.OrdinalIgnoreCase) ?? false);
     var isDate = it == "date" || (f.Datatype?.Contains("date", StringComparison.OrdinalIgnoreCase) ?? false) || (f.Datatype?.Contains("time", StringComparison.OrdinalIgnoreCase) ?? false);
+    var looksLikeDateFormat = (f.Format?.Contains("dd/MM/yyyy", StringComparison.OrdinalIgnoreCase) ?? false)
+        || (f.Format?.Contains("dd-MM-yyyy", StringComparison.OrdinalIgnoreCase) ?? false)
+        || (f.Format?.Contains("dd.MM.yyyy", StringComparison.OrdinalIgnoreCase) ?? false);
+    var forceDateInput = isDate || looksLikeDateFormat || mapsToStgDateColumn;
     var isSelect = it == "select";
     var rowsTa = Math.Max(2, f.Row > 0 ? f.Row : 3);
+    var requiredAttr = f.IsRequired ? "true" : "false";
+    var minLenAttr = f.MinLen > 0 ? f.MinLen : 0;
+    var maxLenAttr = f.MaxLen > 0 ? f.MaxLen : 0;
 
     // Khi kiểu = select, parse PatternCustom theo dòng để làm options.
     var selectOptions = isSelect
@@ -34,7 +42,7 @@
         if (DateTime.TryParse(raw, out var d)) return d.ToString("dd/MM/yyyy");
         return raw;
     }
-    var dateDisplay = isDate ? FormatDateValue(val) : val;
+    var dateDisplay = forceDateInput ? FormatDateValue(val) : val;
 }
 <div class="form-group ext-field-group" data-input-type="@it">
     <div class="d-flex align-items-center justify-content-between mb-1">
@@ -65,7 +73,7 @@
         {
             <input type="text" inputmode="decimal" class="form-control bg-light ext-number" id="@id" data-stg-field="@postKey" value="@val" readonly />
         }
-        else if (isDate)
+        else if (forceDateInput)
         {
             <input type="text" class="form-control bg-light ext-date" id="@id" data-stg-field="@postKey" value="@dateDisplay" readonly placeholder="dd/MM/yyyy" />
         }
@@ -81,6 +89,7 @@
     else if (it == "textarea")
     {
         <textarea class="form-control ext-field ext-textarea" id="@id" data-stg-field="@postKey" rows="@rowsTa"
+                  data-field-label="@f.Title" data-input-type="textarea" data-required="@requiredAttr" data-min-len="@minLenAttr" data-max-len="@maxLenAttr"
                   style="resize: vertical; min-height: @(rowsTa * 24)px;"
                   @(f.MaxLen > 0 ? $"maxlength=\"{f.MaxLen}\"" : null)>@val</textarea>
     }
@@ -88,7 +97,8 @@
     {
         var hasMatch = !string.IsNullOrEmpty(val) && selectOptions.Any(o => string.Equals(o, val, StringComparison.OrdinalIgnoreCase));
         // Không hiển thị option trống. Khi tài liệu chưa có giá trị, dòng đầu của Mô tả/Ghi chú là mặc định.
-        <select class="form-control ext-field ext-select" id="@id" data-stg-field="@postKey">
+        <select class="form-control ext-field ext-select" id="@id" data-stg-field="@postKey"
+                data-field-label="@f.Title" data-input-type="select" data-required="@requiredAttr" data-min-len="@minLenAttr" data-max-len="@maxLenAttr">
             @for (var i = 0; i < selectOptions.Count; i++)
             {
                 var opt = selectOptions[i];
@@ -121,18 +131,22 @@
     {
         <input type="text" inputmode="decimal" class="form-control ext-field ext-number"
                id="@id" data-stg-field="@postKey" value="@val"
+               data-field-label="@f.Title" data-input-type="number" data-required="@requiredAttr" data-min-len="@minLenAttr" data-max-len="@maxLenAttr"
                pattern="^-?\d+([.,]\d+)?$"
                @(f.MaxLen > 0 ? $"maxlength=\"{f.MaxLen}\"" : null) />
     }
-    else if (isDate)
+    else if (forceDateInput)
     {
         <input type="text" class="form-control ext-field ext-date"
                id="@id" data-stg-field="@postKey" value="@dateDisplay"
+               data-field-label="@f.Title" data-input-type="date" data-required="@requiredAttr" data-min-len="@minLenAttr" data-max-len="@maxLenAttr"
                placeholder="dd/MM/yyyy" autocomplete="off" />
     }
     else
     {
-        <input type="text" class="form-control ext-field" id="@id" data-stg-field="@postKey" value="@val" @(f.MaxLen > 0 ? $"maxlength=\"{f.MaxLen}\"" : null) placeholder="@f.Format" />
+        <input type="text" class="form-control ext-field" id="@id" data-stg-field="@postKey" value="@val"
+               data-field-label="@f.Title" data-input-type="text" data-required="@requiredAttr" data-min-len="@minLenAttr" data-max-len="@maxLenAttr"
+               @(f.MaxLen > 0 ? $"maxlength=\"{f.MaxLen}\"" : null) placeholder="@f.Format" />
     }
     @if (f.MinLen > 0 || f.MaxLen > 0)
     {

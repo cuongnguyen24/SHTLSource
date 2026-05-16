@@ -5,10 +5,6 @@ namespace SHTL.Modules.Core.Application.Services.Axe;
 
 public sealed record FieldValidationError(string FieldKey, string Title, string Message);
 
-/// <summary>
-/// Validate giá trị nhập liệu cho từng cấu hình trường (IType, MinValue/MaxValue, MinLen/MaxLen, Select options).
-/// Thiết kế để gọi ngay trước khi map vào entity Document.
-/// </summary>
 public static class DocumentFieldValueValidator
 {
     private static readonly NumberStyles NumberStyle = NumberStyles.Number;
@@ -26,8 +22,7 @@ public static class DocumentFieldValueValidator
 
         foreach (var s in settings)
         {
-            if (s.IsCatalog) continue;
-            if (s.IdField == 1) continue; // Tên = file name, không cho user sửa
+            if (s.IdField == 1) continue;
             if (s.IsReadOnly) continue;
 
             StgDocFieldDto? f = null;
@@ -35,25 +30,46 @@ public static class DocumentFieldValueValidator
             var rawName = f?.Name;
             var key = StgFieldToDocumentMapper.ResolvePostFieldKey(rawName, s.IdField);
             var title = string.IsNullOrWhiteSpace(s.Title) ? (f?.Title ?? key) : s.Title;
+            var isDateLikeField = IsDateLikeField(s, f, title);
 
-            // Server có thể nhận theo PostKey hoặc theo FieldName trực tiếp.
             string? rawValue = null;
-            if (!values.TryGetValue(key, out rawValue) && !string.IsNullOrEmpty(rawName))
-                values.TryGetValue(rawName, out rawValue);
+            foreach (var candidate in StgFieldToDocumentMapper.GetStgSubmitLookupKeys(s.IdField, rawName))
+            {
+                if (values.TryGetValue(candidate, out var found))
+                {
+                    rawValue = found;
+                    break;
+                }
+            }
 
             var v = (rawValue ?? string.Empty).Trim();
+
+            // Trường catalog: không ràng buộc required/min-max/select nhưng vẫn phải đúng kiểu ngày/số nếu có nhập
+            // (tránh báo thành công trong khi ApplyValue bỏ qua vì TryParse thất bại).
+            if (s.IsCatalog)
+            {
+                if (string.IsNullOrEmpty(v)) continue;
+                if (isDateLikeField && !TryParseStgDate(v, out _))
+                    errors.Add(new FieldValidationError(key, title, $"Trường \"{title}\" phải có định dạng ngày dd/MM/yyyy."));
+                if (s.IType == 3)
+                {
+                    var numericCat = v.Replace(',', '.');
+                    if (!decimal.TryParse(numericCat, NumberStyle, Invariant, out _))
+                        errors.Add(new FieldValidationError(key, title, $"Trường \"{title}\" phải là số."));
+                }
+                continue;
+            }
 
             if (s.IsRequired && string.IsNullOrEmpty(v))
             {
                 errors.Add(new FieldValidationError(key, title, $"Trường \"{title}\" là bắt buộc."));
                 continue;
             }
-
             if (string.IsNullOrEmpty(v)) continue;
 
             switch (s.IType)
             {
-                case 3: // number
+                case 3:
                     var numeric = v.Replace(',', '.');
                     if (!decimal.TryParse(numeric, NumberStyle, Invariant, out var dec))
                     {
@@ -73,12 +89,7 @@ public static class DocumentFieldValueValidator
                     }
                     break;
 
-                case 4: // date
-                    if (!TryParseDate(v, out _))
-                        errors.Add(new FieldValidationError(key, title, $"Trường \"{title}\" phải có định dạng ngày dd/MM/yyyy."));
-                    break;
-
-                case 5: // select
+                case 5:
                     var options = SplitOptions(s.PatternCustom);
                     if (options.Count > 0
                         && !options.Any(o => string.Equals(o, v, StringComparison.OrdinalIgnoreCase)))
@@ -88,7 +99,9 @@ public static class DocumentFieldValueValidator
                     break;
             }
 
-            // Ràng buộc độ dài cho text/textarea (IType 1, 2).
+            if (isDateLikeField && !TryParseStgDate(v, out _))
+                errors.Add(new FieldValidationError(key, title, $"Trường \"{title}\" phải có định dạng ngày dd/MM/yyyy."));
+
             if (s.IType is 1 or 2)
             {
                 if (s.MinLen > 0 && v.Length < s.MinLen)
@@ -101,11 +114,55 @@ public static class DocumentFieldValueValidator
         return errors;
     }
 
+    /// <summary>
+    /// Kiểm tra mọi khóa trong payload map vào cột ngày trong <see cref="StgFieldToDocumentMapper.ApplyValue"/>,
+    /// trừ khóa thuộc trường đã cấu hình rõ <b>không</b> phải date (vd. field21 là text).
+    /// Đảm bảo không lưu "thành công" khi cấu hình loại tài liệu trống/sai nhưng người dùng vẫn gửi chữ vào ô ngày.
+    /// </summary>
+    public static IReadOnlyList<FieldValidationError> ValidateStgDatePayloadAgainstApply(
+        IReadOnlyList<StgDocFieldSettingDto> settings,
+        IReadOnlyDictionary<int, StgDocFieldDto>? fieldMap,
+        IDictionary<string, string?> values)
+    {
+        var errors = new List<FieldValidationError>();
+        var nonDatePostKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var s in settings)
+        {
+            if (s.IdField == 1 || s.IsReadOnly) continue;
+            StgDocFieldDto? f = null;
+            fieldMap?.TryGetValue(s.IdField, out f);
+            var rawName = f?.Name;
+            var titleForLike = string.IsNullOrWhiteSpace(s.Title) ? (f?.Title ?? "") : s.Title;
+            if (IsDateLikeField(s, f, titleForLike)) continue;
+
+            foreach (var k in StgFieldToDocumentMapper.GetStgSubmitLookupKeys(s.IdField, rawName))
+            {
+                if (!string.IsNullOrWhiteSpace(k)) nonDatePostKeys.Add(k);
+            }
+        }
+
+        foreach (var kv in values)
+        {
+            if (string.IsNullOrWhiteSpace(kv.Value)) continue;
+            var key = kv.Key?.Trim() ?? "";
+            if (string.IsNullOrEmpty(key)) continue;
+            if (nonDatePostKeys.Contains(key)) continue;
+            if (!StgFieldToDocumentMapper.StgPostKeyMapsToDateColumn(key)) continue;
+
+            var v = kv.Value.Trim();
+            if (!TryParseStgDate(v, out _))
+                errors.Add(new FieldValidationError(key, key, $"Trường \"{key}\" phải là ngày hợp lệ (dd/MM/yyyy hoặc yyyy-MM-dd)."));
+        }
+
+        return errors;
+    }
+
     public static string FormatErrorsForUser(IReadOnlyList<FieldValidationError> errors)
     {
         if (errors == null || errors.Count == 0) return string.Empty;
         if (errors.Count == 1) return errors[0].Message;
-        var lines = errors.Select(e => "• " + e.Message);
+        var lines = errors.Select(e => "- " + e.Message);
         return $"Có {errors.Count} lỗi cần sửa:\n" + string.Join("\n", lines);
     }
 
@@ -120,10 +177,38 @@ public static class DocumentFieldValueValidator
             .ToList();
     }
 
-    private static bool TryParseDate(string raw, out DateTime parsed)
+    /// <summary>Parse ngày giống lúc map vào entity (đồng bộ với <see cref="StgFieldToDocumentMapper.ApplyValue"/>).</summary>
+    public static bool TryParseStgDate(string raw, out DateTime parsed)
     {
-        var formats = new[] { "dd/MM/yyyy", "d/M/yyyy", "yyyy-MM-dd", "yyyy/MM/dd", "dd-MM-yyyy" };
+        var formats = new[] { "dd/MM/yyyy", "d/M/yyyy", "yyyy-MM-dd", "yyyy/MM/dd", "dd-MM-yyyy", "dd.MM.yyyy" };
         return DateTime.TryParseExact(raw, formats, Invariant, DateTimeStyles.None, out parsed)
             || DateTime.TryParse(raw, Invariant, DateTimeStyles.None, out parsed);
+    }
+
+    private static bool IsDateLikeField(StgDocFieldSettingDto setting, StgDocFieldDto? field, string title)
+    {
+        if (setting.IType == 4) return true;
+
+        var name = field?.Name ?? string.Empty;
+        if (name.Equals("dc_issued", StringComparison.OrdinalIgnoreCase)
+            || name.Equals("issued", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        var datatype = field?.Datatype ?? string.Empty;
+        if (datatype.Contains("date", StringComparison.OrdinalIgnoreCase)
+            || datatype.Contains("time", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        var format = setting.Format ?? string.Empty;
+        if (format.Contains("dd/MM/yyyy", StringComparison.OrdinalIgnoreCase)
+            || format.Contains("dd-MM-yyyy", StringComparison.OrdinalIgnoreCase)
+            || format.Contains("dd.MM.yyyy", StringComparison.OrdinalIgnoreCase)
+            || format.Contains("yyyy-MM-dd", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (!string.IsNullOrWhiteSpace(title) && title.Contains("ngày", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return false;
     }
 }
