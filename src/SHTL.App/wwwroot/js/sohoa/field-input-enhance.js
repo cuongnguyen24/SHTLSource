@@ -13,7 +13,6 @@
             el.dataset.numberBound = '1';
             el.addEventListener('keypress', function (e) {
                 var ch = String.fromCharCode(e.which || e.keyCode);
-                // Cho phép số, dấu chấm/phẩy thập phân, dấu trừ ở đầu.
                 if (/[0-9.,\-]/.test(ch)) return;
                 e.preventDefault();
             });
@@ -36,11 +35,12 @@
     function setIsoFromDmy(el, dd, mm, yy) {
         el.dataset.iso = yy + '-' + pad2(mm) + '-' + pad2(dd);
         el.value = pad2(dd) + '/' + pad2(mm) + '/' + yy;
+        el.dataset.rawSnapshot = '';
     }
 
     function initIsoFromCurrentValue(el) {
         var v = (el.value || '').trim();
-        if (!v) { delete el.dataset.iso; return; }
+        if (!v) { delete el.dataset.iso; el.dataset.rawSnapshot = ''; return; }
         var m = v.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
         if (!m) return;
         var dd = parseInt(m[1], 10), mm = parseInt(m[2], 10), yy = parseInt(m[3], 10);
@@ -68,6 +68,7 @@
                             if (selectedDates && selectedDates.length) {
                                 var d = selectedDates[0];
                                 el.dataset.iso = d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+                                el.dataset.rawSnapshot = '';
                                 el.classList.remove('is-invalid');
                             } else {
                                 delete el.dataset.iso;
@@ -75,12 +76,15 @@
                         }
                     });
                 } catch (e) {
-                    // Bỏ qua nếu flatpickr lỗi — giữ input text thủ công.
+                    // noop
                 }
             }
+            el.addEventListener('input', function () {
+                el.dataset.rawSnapshot = el.value || '';
+            });
             el.addEventListener('blur', function () {
                 var v = (el.value || '').trim();
-                if (!v) { delete el.dataset.iso; el.classList.remove('is-invalid'); return; }
+                if (!v) { delete el.dataset.iso; el.classList.remove('is-invalid'); el.dataset.rawSnapshot = ''; return; }
                 var m = v.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
                 if (!m) { el.classList.add('is-invalid'); return; }
                 var dd = parseInt(m[1], 10), mm = parseInt(m[2], 10), yy = parseInt(m[3], 10);
@@ -95,40 +99,151 @@
         });
     }
 
-    // Trả về giá trị nên gửi tới server cho một input. Date → ISO; còn lại giữ nguyên.
-    function getSubmitValue(el) {
-        if (!el) return '';
-        if ((el.classList.contains('ext-date') || el.classList.contains('chk-date')) && el.dataset && el.dataset.iso) {
-            return el.dataset.iso;
-        }
-        return el.value;
+    function effectiveDateText(el) {
+        var snap = (el.dataset && el.dataset.rawSnapshot != null) ? String(el.dataset.rawSnapshot).trim() : '';
+        if (snap.length > 0) return snap;
+        return (el.value || '').trim();
     }
 
-    // Kiểm tra trước submit: trả về object { ok, message, firstInvalid }.
+    function getSubmitValue(el) {
+        if (!el) return '';
+        var isDate = el.classList.contains('ext-date') || el.classList.contains('chk-date');
+        var text = isDate ? effectiveDateText(el) : (el.value || '');
+        text = text.trim();
+        if (isDate && el.dataset && el.dataset.iso) {
+            if (text.length > 0) {
+                var m = text.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+                if (m) {
+                    var dd = parseInt(m[1], 10), mm = parseInt(m[2], 10), yy = parseInt(m[3], 10);
+                    var d = new Date(yy, mm - 1, dd);
+                    if (d.getFullYear() === yy && d.getMonth() === mm - 1 && d.getDate() === dd) {
+                        return el.dataset.iso;
+                    }
+                }
+                return text;
+            }
+            return '';
+        }
+        return isDate ? text : (el.value || '');
+    }
+
     function validateBeforeSubmit(root) {
         var scope = root || document;
-        var invalids = scope.querySelectorAll('.ext-field.is-invalid, .chk-field.is-invalid');
+        var fields = scope.querySelectorAll('.ext-field, .chk-field, [data-stg-field][data-input-type="date"]');
+        var firstInvalid = null;
+
+        function markInvalid(el) {
+            el.classList.add('is-invalid');
+            if (!firstInvalid) firstInvalid = el;
+        }
+        function clearInvalid(el) { el.classList.remove('is-invalid'); }
+        function getLabel(el) {
+            var custom = el.getAttribute('data-field-label');
+            if (custom) return custom;
+            var fg = el.closest('.form-group');
+            var labelEl = fg ? fg.querySelector('label') : null;
+            return labelEl ? labelEl.innerText.replace('*', '').trim() : 'trường nhập';
+        }
+
+        for (var i = 0; i < fields.length; i++) {
+            var el = fields[i];
+            var inputType = (el.getAttribute('data-input-type') || '').toLowerCase();
+            var raw = (el.value || '').trim();
+            if (inputType === 'date' || el.classList.contains('ext-date') || el.classList.contains('chk-date')) {
+                var eff = effectiveDateText(el);
+                if (eff.length > 0) raw = eff;
+            }
+            var isRequired = String(el.getAttribute('data-required') || 'false').toLowerCase() === 'true';
+            var minLen = parseInt(el.getAttribute('data-min-len') || '0', 10) || 0;
+            var maxLen = parseInt(el.getAttribute('data-max-len') || '0', 10) || 0;
+
+            clearInvalid(el);
+
+            if (isRequired && raw.length === 0) {
+                markInvalid(el);
+                return { ok: false, firstInvalid: firstInvalid, message: 'Trường "' + getLabel(el) + '" không được để trống.' };
+            }
+            if (raw.length > 0 && minLen > 0 && raw.length < minLen) {
+                markInvalid(el);
+                return { ok: false, firstInvalid: firstInvalid, message: 'Trường "' + getLabel(el) + '" phải có ít nhất ' + minLen + ' ký tự.' };
+            }
+            if (raw.length > 0 && maxLen > 0 && raw.length > maxLen) {
+                markInvalid(el);
+                return { ok: false, firstInvalid: firstInvalid, message: 'Trường "' + getLabel(el) + '" không được vượt quá ' + maxLen + ' ký tự.' };
+            }
+
+            if (inputType === 'number' || el.classList.contains('ext-number') || el.classList.contains('chk-number')) {
+                if (raw.length > 0) {
+                    var normalized = raw.replace(/,/g, '.');
+                    if (!/^-?\d+(\.\d+)?$/.test(normalized)) {
+                        markInvalid(el);
+                        return { ok: false, firstInvalid: firstInvalid, message: 'Trường "' + getLabel(el) + '" phải là số hợp lệ.' };
+                    }
+                    el.value = normalized;
+                }
+            }
+
+            if (inputType === 'date' || el.classList.contains('ext-date') || el.classList.contains('chk-date')) {
+                if (raw.length > 0) {
+                    var m = raw.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+                    if (!m) {
+                        markInvalid(el);
+                        return { ok: false, firstInvalid: firstInvalid, message: 'Trường "' + getLabel(el) + '" phải đúng định dạng dd/MM/yyyy.' };
+                    }
+                    var dd = parseInt(m[1], 10), mm = parseInt(m[2], 10), yy = parseInt(m[3], 10);
+                    var d = new Date(yy, mm - 1, dd);
+                    if (d.getFullYear() !== yy || d.getMonth() !== mm - 1 || d.getDate() !== dd) {
+                        markInvalid(el);
+                        return { ok: false, firstInvalid: firstInvalid, message: 'Trường "' + getLabel(el) + '" có ngày không hợp lệ.' };
+                    }
+                    setIsoFromDmy(el, dd, mm, yy);
+                }
+            }
+
+            if (inputType === 'select' || el.classList.contains('ext-select') || el.classList.contains('chk-select')) {
+                if (isRequired && el.options && el.options.length === 0) {
+                    markInvalid(el);
+                    return { ok: false, firstInvalid: firstInvalid, message: 'Trường "' + getLabel(el) + '" chưa có lựa chọn hợp lệ.' };
+                }
+                if (isRequired && raw.length === 0) {
+                    markInvalid(el);
+                    return { ok: false, firstInvalid: firstInvalid, message: 'Vui lòng chọn giá trị cho trường "' + getLabel(el) + '".' };
+                }
+            }
+        }
+
+        var cells = scope.querySelectorAll('.ext-cell[data-cell-id]');
+        for (var j = 0; j < cells.length; j++) {
+            var cell = cells[j];
+            var cellValue = (cell.value || '').trim();
+            var cellMax = parseInt(cell.getAttribute('maxlength') || '0', 10) || 0;
+            cell.classList.remove('is-invalid');
+            if (cellMax > 0 && cellValue.length > cellMax) {
+                cell.classList.add('is-invalid');
+                firstInvalid = firstInvalid || cell;
+                var cellName = cell.getAttribute('data-cell-label') || ('Ô #' + (cell.getAttribute('data-cell-id') || ''));
+                return { ok: false, firstInvalid: firstInvalid, message: cellName + ' không được vượt quá ' + cellMax + ' ký tự.' };
+            }
+        }
+
+        var invalids = scope.querySelectorAll('.ext-field.is-invalid, .chk-field.is-invalid, .ext-cell.is-invalid');
         if (invalids.length > 0) {
-            var first = invalids[0];
-            var labelEl = first.closest('.form-group')?.querySelector('label');
-            var label = labelEl ? labelEl.innerText.replace('*', '').trim() : 'trường nhập';
             return {
                 ok: false,
-                firstInvalid: first,
-                message: 'Trường "' + label + '" có giá trị chưa hợp lệ. Vui lòng kiểm tra lại.'
+                firstInvalid: invalids[0],
+                message: 'Có trường dữ liệu chưa hợp lệ. Vui lòng kiểm tra lại.'
             };
         }
         return { ok: true };
     }
 
     function focusFirstInvalid(scope) {
-        var first = (scope || document).querySelector('.ext-field.is-invalid, .chk-field.is-invalid');
+        var first = (scope || document).querySelector('.ext-field.is-invalid, .chk-field.is-invalid, .ext-cell.is-invalid');
         if (!first) return;
         try { first.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) { /* ignore */ }
         try { first.focus(); } catch (e) { /* ignore */ }
     }
 
-    // Modal phóng to TextArea — dùng chung cho cả Extract và Check.
     function ensureExpandModal() {
         var m = document.getElementById('shtlTextareaExpandModal');
         if (m) return m;
@@ -189,8 +304,8 @@
                 if (!ta) return;
                 currentTarget = ta;
                 bigArea.value = ta.value || '';
-                var label = ta.closest('.form-group')?.querySelector('label')?.innerText || 'Soạn nội dung';
-                titleEl.textContent = 'Soạn nội dung — ' + label.trim();
+                var label = ta.closest('.form-group') ? ta.closest('.form-group').querySelector('label') : null;
+                titleEl.textContent = 'Soạn nội dung — ' + ((label ? label.innerText : 'Soạn nội dung').trim());
                 if (window.jQuery) jQuery(modal).modal('show');
             });
         });
@@ -202,7 +317,6 @@
         bindTextareaExpand(root);
     }
 
-    // Public API để gọi lại sau khi render động (ví dụ trong AJAX).
     window.ShtlFieldInputEnhance = {
         enhance: enhanceAll,
         getSubmitValue: getSubmitValue,

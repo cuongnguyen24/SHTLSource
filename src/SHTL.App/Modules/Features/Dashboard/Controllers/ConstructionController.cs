@@ -15,7 +15,6 @@ namespace SHTL.Modules.Features.Dashboard.Controllers;
 /// Hiện tại đã tích hợp trang "Tiến độ thi công theo thư mục tài liệu" (trước đây ở /sohoa/report/folder-progress).
 /// </summary>
 [Authorize]
-[AuthorizeModule(ModuleCode.Report)]
 public class ConstructionController : Controller
 {
     private readonly IFolderProgressReportService _folderProgress;
@@ -43,6 +42,19 @@ public class ConstructionController : Controller
 
     /// <summary>Trang tổng quan của khu vực "Tiến độ thi công" — liệt kê các báo cáo con.</summary>
     [HttpGet]
+    [AuthorizeModule(
+        ModuleCode.Report,
+        ModuleCode.CheckScanFirst,
+        ModuleCode.CheckScanSecond,
+        ModuleCode.ExtractDigit,
+        ModuleCode.ExtractAlphabet,
+        ModuleCode.ExtractCharacter,
+        ModuleCode.ExtractTick,
+        ModuleCode.ExtractForm,
+        ModuleCode.CheckFirst,
+        ModuleCode.CheckSecond,
+        ModuleCode.CheckFinal,
+        ModuleCode.CheckLogic)]
     public async Task<IActionResult> Index()
     {
         var vm = await _batchService.GetDashboardAsync();
@@ -50,6 +62,7 @@ public class ConstructionController : Controller
     }
 
     [HttpGet]
+    [AuthorizeModule(ModuleCode.Report)]
     public async Task<IActionResult> Batches([FromQuery] string? folder = null, [FromQuery] string? q = null)
     {
         var vm = await _folderBatchService.GetFolderPageAsync(folder, q);
@@ -57,6 +70,7 @@ public class ConstructionController : Controller
     }
 
     [HttpGet]
+    [AuthorizeModule(ModuleCode.Report)]
     public async Task<IActionResult> DistributeFormsDialog([FromQuery] string folder, [FromQuery] WorkflowStep step)
     {
         if (string.IsNullOrWhiteSpace(folder))
@@ -69,6 +83,7 @@ public class ConstructionController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [AuthorizeModule(ModuleCode.Report)]
     public async Task<IActionResult> DistributeForms(ConstructionDistributeFormsRequest request)
     {
         var currentUser = HttpContext.RequestServices.GetRequiredService<ICurrentUser>();
@@ -87,6 +102,7 @@ public class ConstructionController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [AuthorizeModule(ModuleCode.Report)]
     public async Task<IActionResult> ReclaimForms([FromForm] string folder, [FromForm] WorkflowStep step, [FromForm] string? q = null)
     {
         if (string.IsNullOrWhiteSpace(folder))
@@ -104,11 +120,13 @@ public class ConstructionController : Controller
     }
 
     [HttpGet]
+    [AuthorizeModule(ModuleCode.Report)]
     public IActionResult CreateBatch()
         => View("~/Modules/Features/Dashboard/Views/Construction/CreateBatch.cshtml", new ConstructionCreateBatchRequest());
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [AuthorizeModule(ModuleCode.Report)]
     public async Task<IActionResult> CreateBatch(ConstructionCreateBatchRequest req)
     {
         var currentUser = HttpContext.RequestServices.GetRequiredService<ICurrentUser>();
@@ -124,6 +142,7 @@ public class ConstructionController : Controller
     }
 
     [HttpGet]
+    [AuthorizeModule(ModuleCode.Report)]
     public async Task<IActionResult> BatchDetails([FromRoute] long id)
     {
         var vm = await _batchService.GetBatchDetailsAsync(id);
@@ -135,6 +154,7 @@ public class ConstructionController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [AuthorizeModule(ModuleCode.Report)]
     public async Task<IActionResult> AssignBatch(long id, [FromForm] List<int> userIds, [FromForm] List<WorkflowStep> steps)
     {
         var currentUser = HttpContext.RequestServices.GetRequiredService<ICurrentUser>();
@@ -161,6 +181,7 @@ public class ConstructionController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [AuthorizeModule(ModuleCode.Report)]
     public async Task<IActionResult> UpdateBatchStatus(long id, [FromForm] ConstructionBatchStatus status)
     {
         var currentUser = HttpContext.RequestServices.GetRequiredService<ICurrentUser>();
@@ -173,46 +194,177 @@ public class ConstructionController : Controller
     }
 
     [HttpGet]
+    [AuthorizeModule(
+        ModuleCode.Report,
+        ModuleCode.CheckScanFirst,
+        ModuleCode.CheckScanSecond,
+        ModuleCode.ExtractDigit,
+        ModuleCode.ExtractAlphabet,
+        ModuleCode.ExtractCharacter,
+        ModuleCode.ExtractTick,
+        ModuleCode.ExtractForm,
+        ModuleCode.CheckFirst,
+        ModuleCode.CheckSecond,
+        ModuleCode.CheckFinal,
+        ModuleCode.CheckLogic)]
     public async Task<IActionResult> Kpi([FromQuery] DateTime? from = null, [FromQuery] DateTime? to = null, [FromQuery] int? userId = null)
     {
+        var currentUser = HttpContext.RequestServices.GetRequiredService<ICurrentUser>();
+        var allowedSteps = ResolveAllowedKpiSteps(currentUser);
+        var allowedRoles = ResolveAllowedKpiRoles(allowedSteps);
+        if (!currentUser.IsAdmin) userId = currentUser.Id;
         var fromDate = (from ?? DateTime.Today).Date;
         var toDate = (to ?? DateTime.Today).Date;
         if (toDate < fromDate) toDate = fromDate;
+
+        int? targetUserId = currentUser.IsAdmin ? null : currentUser.Id;
+        for (var d = fromDate; d <= toDate; d = d.AddDays(1))
+        {
+            await _kpiPayrollService.RecalculateKpiAsync(d, currentUser, targetUserId, currentUser.IsAdmin ? null : allowedSteps);
+        }
+
         var vm = await _kpiPayrollService.GetKpiDashboardAsync(fromDate, toDate, userId);
+        if (!currentUser.IsAdmin)
+        {
+            vm.Kpis = vm.Kpis.Where(x => allowedSteps.Contains(x.Step)).ToList();
+            vm.RoleConfigs = vm.RoleConfigs.Where(x => allowedRoles.Contains(x.Role)).ToList();
+        }
+        vm.PeriodStats = await BuildPeriodStatsAsync(currentUser, userId, allowedSteps, allowedRoles);
+        ViewBag.IsAdmin = currentUser.IsAdmin;
         return View("~/Modules/Features/Dashboard/Views/Construction/Kpi.cshtml", vm);
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [AuthorizeModule(
+        ModuleCode.Report,
+        ModuleCode.CheckScanFirst,
+        ModuleCode.CheckScanSecond,
+        ModuleCode.ExtractDigit,
+        ModuleCode.ExtractAlphabet,
+        ModuleCode.ExtractCharacter,
+        ModuleCode.ExtractTick,
+        ModuleCode.ExtractForm,
+        ModuleCode.CheckFirst,
+        ModuleCode.CheckSecond,
+        ModuleCode.CheckFinal,
+        ModuleCode.CheckLogic)]
     public async Task<IActionResult> RecalculateKpi([FromForm] DateTime workDate)
     {
         var currentUser = HttpContext.RequestServices.GetRequiredService<ICurrentUser>();
-        var result = await _kpiPayrollService.RecalculateKpiAsync(workDate.Date, currentUser);
+        var allowedSteps = ResolveAllowedKpiSteps(currentUser);
+        int? targetUserId = currentUser.IsAdmin ? null : currentUser.Id;
+        var result = await _kpiPayrollService.RecalculateKpiAsync(
+            workDate.Date,
+            currentUser,
+            targetUserId,
+            currentUser.IsAdmin ? null : allowedSteps);
         TempData[result.Success ? "Success" : "Error"] = result.Message;
         return RedirectToAction(nameof(Kpi), new { from = workDate.Date, to = workDate.Date });
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> CheckIn([FromForm] string? notes = null)
+    public async Task<IActionResult> SaveKpiConfig(SaveConstructionKpiConfigRequest request)
     {
         var currentUser = HttpContext.RequestServices.GetRequiredService<ICurrentUser>();
-        var result = await _kpiPayrollService.CheckInAsync(currentUser, null, notes);
+        if (!currentUser.IsAdmin) return Forbid();
+        var result = await _kpiPayrollService.SaveKpiConfigAsync(request, currentUser);
         TempData[result.Success ? "Success" : "Error"] = result.Message;
-        return RedirectToAction(nameof(Kpi), new { from = DateTime.Today, to = DateTime.Today });
+        return RedirectToAction(nameof(Kpi));
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> CreateKpiConfig([FromQuery] ConstructionKpiRole role = ConstructionKpiRole.CheckScan)
+    {
+        var currentUser = HttpContext.RequestServices.GetRequiredService<ICurrentUser>();
+        if (!currentUser.IsAdmin) return Forbid();
+        var cfg = await _kpiPayrollService.GetKpiRoleConfigAsync(role);
+        var vm = new ConstructionKpiConfigUpsertViewModel
+        {
+            IsEdit = false,
+            Title = $"Tạo cấu hình KPI - {ConstructionKpiConfig.DisplayName(role)}",
+            Form = new SaveConstructionKpiConfigRequest
+            {
+                Role = role,
+                DailyTarget = cfg?.DailyTarget ?? 1,
+                MinQualityPercent = cfg?.MinQualityPercent ?? 0,
+                BonusTiers = (cfg?.BonusTiers ?? new List<ConstructionKpiBonusTierDto>()).ToList()
+            }
+        };
+        while (vm.Form.BonusTiers.Count < 3) vm.Form.BonusTiers.Add(new ConstructionKpiBonusTierDto());
+        return View("~/Modules/Features/Dashboard/Views/Construction/UpsertKpiConfig.cshtml", vm);
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> CheckOut([FromForm] string? notes = null)
+    public async Task<IActionResult> CreateKpiConfig(ConstructionKpiConfigUpsertViewModel vm)
     {
         var currentUser = HttpContext.RequestServices.GetRequiredService<ICurrentUser>();
-        var result = await _kpiPayrollService.CheckOutAsync(currentUser, null, notes);
+        if (!currentUser.IsAdmin) return Forbid();
+        var result = await _kpiPayrollService.SaveKpiConfigAsync(vm.Form, currentUser);
         TempData[result.Success ? "Success" : "Error"] = result.Message;
-        return RedirectToAction(nameof(Kpi), new { from = DateTime.Today, to = DateTime.Today });
+        if (result.Success) return RedirectToAction(nameof(Kpi));
+
+        vm.IsEdit = false;
+        vm.Title = $"Tạo cấu hình KPI - {ConstructionKpiConfig.DisplayName(vm.Form.Role)}";
+        while (vm.Form.BonusTiers.Count < 3) vm.Form.BonusTiers.Add(new ConstructionKpiBonusTierDto());
+        return View("~/Modules/Features/Dashboard/Views/Construction/UpsertKpiConfig.cshtml", vm);
     }
 
     [HttpGet]
+    public async Task<IActionResult> EditKpiConfig([FromQuery] ConstructionKpiRole role)
+    {
+        var currentUser = HttpContext.RequestServices.GetRequiredService<ICurrentUser>();
+        if (!currentUser.IsAdmin) return Forbid();
+        var cfg = await _kpiPayrollService.GetKpiRoleConfigAsync(role);
+        if (cfg is null) return NotFound();
+
+        var vm = new ConstructionKpiConfigUpsertViewModel
+        {
+            IsEdit = true,
+            Title = $"Sửa cấu hình KPI - {cfg.DisplayName}",
+            Form = new SaveConstructionKpiConfigRequest
+            {
+                Role = cfg.Role,
+                DailyTarget = cfg.DailyTarget,
+                MinQualityPercent = cfg.MinQualityPercent,
+                BonusTiers = cfg.BonusTiers.ToList()
+            }
+        };
+        while (vm.Form.BonusTiers.Count < 3) vm.Form.BonusTiers.Add(new ConstructionKpiBonusTierDto());
+        return View("~/Modules/Features/Dashboard/Views/Construction/UpsertKpiConfig.cshtml", vm);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> EditKpiConfig(ConstructionKpiConfigUpsertViewModel vm)
+    {
+        var currentUser = HttpContext.RequestServices.GetRequiredService<ICurrentUser>();
+        if (!currentUser.IsAdmin) return Forbid();
+        var result = await _kpiPayrollService.SaveKpiConfigAsync(vm.Form, currentUser);
+        TempData[result.Success ? "Success" : "Error"] = result.Message;
+        if (result.Success) return RedirectToAction(nameof(Kpi));
+
+        vm.IsEdit = true;
+        vm.Title = $"Sửa cấu hình KPI - {ConstructionKpiConfig.DisplayName(vm.Form.Role)}";
+        while (vm.Form.BonusTiers.Count < 3) vm.Form.BonusTiers.Add(new ConstructionKpiBonusTierDto());
+        return View("~/Modules/Features/Dashboard/Views/Construction/UpsertKpiConfig.cshtml", vm);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteKpiConfig([FromForm] ConstructionKpiRole role)
+    {
+        var currentUser = HttpContext.RequestServices.GetRequiredService<ICurrentUser>();
+        if (!currentUser.IsAdmin) return Forbid();
+        var result = await _kpiPayrollService.DeleteKpiConfigAsync(role, currentUser);
+        TempData[result.Success ? "Success" : "Error"] = result.Message;
+        return RedirectToAction(nameof(Kpi));
+    }
+
+    [HttpGet]
+    [AuthorizeModule(ModuleCode.Report)]
     public async Task<IActionResult> Payroll([FromQuery] int? year = null, [FromQuery] int? month = null, [FromQuery] int? userId = null)
     {
         var now = DateTime.Today;
@@ -224,6 +376,19 @@ public class ConstructionController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [AuthorizeModule(ModuleCode.Report)]
+    public async Task<IActionResult> SavePayrollConfig(ConstructionPayrollConfigDto request, [FromForm] int year, [FromForm] int month)
+    {
+        var currentUser = HttpContext.RequestServices.GetRequiredService<ICurrentUser>();
+        if (!currentUser.IsAdmin) return Forbid();
+        var result = await _kpiPayrollService.SavePayrollConfigAsync(request, currentUser);
+        TempData[result.Success ? "Success" : "Error"] = result.Message;
+        return RedirectToAction(nameof(Payroll), new { year, month });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [AuthorizeModule(ModuleCode.Report)]
     public async Task<IActionResult> RecalculatePayroll([FromForm] int year, [FromForm] int month)
     {
         var currentUser = HttpContext.RequestServices.GetRequiredService<ICurrentUser>();
@@ -234,6 +399,7 @@ public class ConstructionController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [AuthorizeModule(ModuleCode.Report)]
     public async Task<IActionResult> ApprovePayroll([FromForm] long id, [FromForm] int year, [FromForm] int month)
     {
         var currentUser = HttpContext.RequestServices.GetRequiredService<ICurrentUser>();
@@ -242,7 +408,81 @@ public class ConstructionController : Controller
         return RedirectToAction(nameof(Payroll), new { year, month });
     }
 
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [AuthorizeModule(ModuleCode.Report)]
+    public async Task<IActionResult> RollbackPayrollApproval([FromForm] long id, [FromForm] int year, [FromForm] int month)
+    {
+        var currentUser = HttpContext.RequestServices.GetRequiredService<ICurrentUser>();
+        if (!currentUser.IsAdmin) return Forbid();
+        var result = await _kpiPayrollService.RollbackPayrollApprovalAsync(id, currentUser);
+        TempData[result.Success ? "Success" : "Error"] = result.Message;
+        return RedirectToAction(nameof(Payroll), new { year, month });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [AuthorizeModule(ModuleCode.Report)]
+    public async Task<IActionResult> SavePayrollHistory([FromForm] int year, [FromForm] int month, [FromForm] string? note = null)
+    {
+        var currentUser = HttpContext.RequestServices.GetRequiredService<ICurrentUser>();
+        if (!currentUser.IsAdmin) return Forbid();
+        var result = await _kpiPayrollService.SavePayrollHistoryAsync(year, month, currentUser, note);
+        TempData[result.Success ? "Success" : "Error"] = result.Message;
+        return RedirectToAction(nameof(Payroll), new { year, month });
+    }
+
     [HttpGet]
+    [AuthorizeModule(ModuleCode.Report)]
+    public async Task<IActionResult> ExportPayrollHistory([FromQuery] long id, [FromQuery] int year, [FromQuery] int month)
+    {
+        var currentUser = HttpContext.RequestServices.GetRequiredService<ICurrentUser>();
+        if (!currentUser.IsAdmin) return Forbid();
+
+        var data = await _kpiPayrollService.ExportPayrollHistoryExcelAsync(id);
+        if (data is null)
+        {
+            TempData["Error"] = "Không tìm thấy dữ liệu lịch sử để xuất Excel.";
+            return RedirectToAction(nameof(Payroll), new { year, month });
+        }
+
+        return File(data.Value.Content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", data.Value.FileName);
+    }
+
+    [HttpGet]
+    [AuthorizeModule(ModuleCode.Report)]
+    public async Task<IActionResult> PayrollHistoryDetail([FromQuery] long id, [FromQuery] int year, [FromQuery] int month)
+    {
+        var currentUser = HttpContext.RequestServices.GetRequiredService<ICurrentUser>();
+        if (!currentUser.IsAdmin) return Forbid();
+        var detail = await _kpiPayrollService.GetPayrollHistoryDetailsAsync(id);
+        if (detail.Header is null)
+        {
+            TempData["Error"] = "Không tìm thấy lịch sử trả lương.";
+            return RedirectToAction(nameof(Payroll), new { year, month });
+        }
+
+        ViewBag.Header = detail.Header;
+        ViewBag.Year = year;
+        ViewBag.Month = month;
+        return View("~/Modules/Features/Dashboard/Views/Construction/PayrollHistoryDetail.cshtml", detail.Items);
+    }
+
+    [HttpGet]
+    [AuthorizeModule(ModuleCode.Report)]
+    public async Task<IActionResult> PayrollHistoryDetailPartial([FromQuery] long id)
+    {
+        var currentUser = HttpContext.RequestServices.GetRequiredService<ICurrentUser>();
+        if (!currentUser.IsAdmin) return Forbid();
+
+        var detail = await _kpiPayrollService.GetPayrollHistoryDetailsAsync(id);
+        if (detail.Header is null) return NotFound();
+        ViewBag.Header = detail.Header;
+        return PartialView("~/Modules/Features/Dashboard/Views/Construction/_PayrollHistoryDetailPartial.cshtml", detail.Items);
+    }
+
+    [HttpGet]
+    [AuthorizeModule(ModuleCode.Report)]
     public async Task<IActionResult> FolderProgress([FromQuery] string? q = null)
     {
         var vm = await _folderProgress.GetAsync(q);
@@ -251,6 +491,7 @@ public class ConstructionController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [AuthorizeModule(ModuleCode.Report)]
     public async Task<IActionResult> PurgeFolderDocuments([FromForm] string folder, [FromQuery] string? q = null)
     {
         var currentUser = HttpContext.RequestServices.GetRequiredService<ICurrentUser>();
@@ -279,6 +520,7 @@ public class ConstructionController : Controller
     /// <summary>Đưa lại các tài liệu OCR-lỗi của thư mục về hàng đợi để chạy lại OCR.</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [AuthorizeModule(ModuleCode.Report)]
     public async Task<IActionResult> RequeueFailedOcr([FromForm] string folder, [FromQuery] string? q = null)
     {
         var currentUser = HttpContext.RequestServices.GetRequiredService<ICurrentUser>();
@@ -294,5 +536,92 @@ public class ConstructionController : Controller
             TempData["Success"] = result.Message;
 
         return RedirectToAction(nameof(FolderProgress), new { q });
+    }
+
+    private static HashSet<WorkflowStep> ResolveAllowedKpiSteps(ICurrentUser user)
+    {
+        var steps = new HashSet<WorkflowStep>();
+        if (user.IsAdmin)
+        {
+            steps.Add(WorkflowStep.CheckScan1);
+            steps.Add(WorkflowStep.CheckScan2);
+            steps.Add(WorkflowStep.Extract);
+            steps.Add(WorkflowStep.Check1);
+            return steps;
+        }
+
+        if (user.HasPermission(ModuleCode.CheckScanFirst.ToString()))
+            steps.Add(WorkflowStep.CheckScan1);
+        if (user.HasPermission(ModuleCode.CheckScanSecond.ToString()))
+            steps.Add(WorkflowStep.CheckScan2);
+        if (user.HasPermission(ModuleCode.ExtractDigit.ToString()) ||
+            user.HasPermission(ModuleCode.ExtractAlphabet.ToString()) ||
+            user.HasPermission(ModuleCode.ExtractCharacter.ToString()) ||
+            user.HasPermission(ModuleCode.ExtractTick.ToString()) ||
+            user.HasPermission(ModuleCode.ExtractForm.ToString()))
+            steps.Add(WorkflowStep.Extract);
+        if (user.HasPermission(ModuleCode.CheckFirst.ToString()))
+            steps.Add(WorkflowStep.Check1);
+
+        return steps;
+    }
+
+    private static HashSet<ConstructionKpiRole> ResolveAllowedKpiRoles(IReadOnlyCollection<WorkflowStep> steps)
+    {
+        var roles = new HashSet<ConstructionKpiRole>();
+        foreach (var step in steps)
+        {
+            var role = ConstructionKpiConfig.MapWorkflowStep(step);
+            if (role.HasValue) roles.Add(role.Value);
+        }
+        return roles;
+    }
+
+    private async Task<IReadOnlyList<ConstructionKpiPeriodStatsDto>> BuildPeriodStatsAsync(
+        ICurrentUser currentUser,
+        int? userId,
+        IReadOnlyCollection<WorkflowStep> allowedSteps,
+        IReadOnlyCollection<ConstructionKpiRole> allowedRoles)
+    {
+        var today = DateTime.Today;
+        var monthStart = new DateTime(today.Year, today.Month, 1);
+        var sixMonthStart = monthStart.AddMonths(-5);
+        var yearStart = today.AddYears(-1).AddDays(1);
+        var periods = new[]
+        {
+            new { Key = "7d", Label = "7 ngày", From = today.AddDays(-6), To = today },
+            new { Key = "1m", Label = "Tháng", From = monthStart, To = today },
+            new { Key = "6m", Label = "6 tháng", From = sixMonthStart, To = today },
+            new { Key = "1y", Label = "1 năm", From = yearStart, To = today }
+        };
+
+        var results = new List<ConstructionKpiPeriodStatsDto>(periods.Length);
+        foreach (var p in periods)
+        {
+            var vm = await _kpiPayrollService.GetKpiDashboardAsync(p.From, p.To, userId);
+            var kpis = currentUser.IsAdmin ? vm.Kpis : vm.Kpis.Where(x => allowedSteps.Contains(x.Step)).ToList();
+            var attendance = vm.Attendance;
+            if (!currentUser.IsAdmin)
+            {
+                var roleSet = new HashSet<ConstructionKpiRole>(allowedRoles);
+                kpis = kpis.Where(x => x.KpiRole.HasValue && roleSet.Contains(x.KpiRole.Value)).ToList();
+            }
+
+            results.Add(new ConstructionKpiPeriodStatsDto
+            {
+                Key = p.Key,
+                Label = p.Label,
+                FromDate = p.From,
+                ToDate = p.To,
+                TotalProcessed = kpis.Sum(x => x.DocumentsProcessed),
+                AverageQuality = kpis.Count == 0 ? 0m : Math.Round(kpis.Average(x => x.QualityScore), 2),
+                TotalBonus = kpis.Sum(x => x.BonusAmount),
+                TotalWorkDays = attendance.Sum(x => x.WorkHours),
+                TotalRows = kpis.Count,
+                KpiMetRows = kpis.Count(x => x.KpiMet)
+            });
+        }
+
+        return results;
     }
 }

@@ -25,7 +25,7 @@
         </div>
     </div>
 
-    <form asp-area="sohoa" asp-controller="LoaiTaiLieu" asp-action="@(isNew ? "CreateSubmit" : "EditSubmit")" asp-route-id="@Model.DocType.Id" method="post" class="border-0 bg-transparent p-0">
+    <form asp-area="sohoa" asp-controller="LoaiTaiLieu" asp-action="@(isNew ? "CreateSubmit" : "EditSubmit")" asp-route-id="@Model.DocType.Id" method="post" novalidate class="border-0 bg-transparent p-0">
         @Html.AntiForgeryToken()
         <div class="card-figma mb-3">
             <div class="card-header-figma">
@@ -36,7 +36,7 @@
                     <div class="col-md-6">
                         <div class="form-group-figma">
                             <label class="label-figma" for="dt-name">Tên <span class="text-danger">*</span></label>
-                            <input type="text" id="dt-name" name="Name" class="form-control" value="@Model.DocType.Name" required maxlength="255" />
+                            <input type="text" id="dt-name" name="Name" class="form-control" value="@Model.DocType.Name" maxlength="255" />
                         </div>
                     </div>
                     <div class="col-md-6">
@@ -73,3 +73,32 @@
         </div>
     </form>
 </div>
+
+@section Scripts {
+    <script>
+        (function () {
+            var form = document.querySelector('form[method="post"]');
+            var nameInput = document.getElementById('dt-name');
+            if (!form || !nameInput) return;
+
+            form.addEventListener('submit', function (e) {
+                var raw = nameInput.value || '';
+                var trimmed = raw.trim();
+                nameInput.value = trimmed;
+
+                if (!trimmed) {
+                    e.preventDefault();
+                    if (typeof toastr !== 'undefined') toastr.error('Tên loại tài liệu không được để trống.');
+                    nameInput.focus();
+                    return;
+                }
+
+                if (trimmed.length > 255) {
+                    e.preventDefault();
+                    if (typeof toastr !== 'undefined') toastr.error('Tên loại tài liệu không được vượt quá 255 ký tự.');
+                    nameInput.focus();
+                }
+            });
+        })();
+    </script>
+}

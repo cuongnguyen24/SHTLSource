@@ -409,7 +409,9 @@
                                                     <td>@c.Page</td>
                                                     <td class="small text-muted text-truncate" style="max-width:180px;" title="@showVal">@showVal</td>
                                                     <td style="min-width:200px;">
-                                                        <input type="text" class="form-control form-control-sm ext-cell" data-cell-id="@c.Id" value="@c.ExtractedValue" placeholder="@c.Value" @(extractReadOnlyAfterCheck1Pass ? "readonly" : null) />
+                                                        <input type="text" class="form-control form-control-sm ext-cell" data-cell-id="@c.Id"
+                                                               data-cell-label="Ô @(c.Title ?? c.Field ?? ("#" + c.Id))" maxlength="2000"
+                                                               value="@c.ExtractedValue" placeholder="@c.Value" @(extractReadOnlyAfterCheck1Pass ? "readonly" : null) />
                                                     </td>
                                                 </tr>
                                             }
@@ -581,9 +583,39 @@
             function toastErrorLong(msg) {
                 if (typeof toastr !== 'undefined') {
                     toastr.error(msg, '', { timeOut: 90000, closeButton: true, tapToDismiss: true, newestOnTop: true });
-                } else {
-                    alert(msg);
                 }
+            }
+
+            function validateExtractDateInputs() {
+                var fields = document.querySelectorAll('.ext-date[data-stg-field]');
+                function labelOf(el) {
+                    var fg = el.closest('.form-group');
+                    var label = fg ? fg.querySelector('label') : null;
+                    return label ? label.innerText.replace('*', '').trim() : 'trường ngày';
+                }
+                for (var i = 0; i < fields.length; i++) {
+                    var el = fields[i];
+                    var raw = (el.value || '').trim();
+                    if (el.dataset && el.dataset.rawSnapshot && el.dataset.rawSnapshot.trim().length > 0) {
+                        raw = el.dataset.rawSnapshot.trim();
+                    }
+                    el.classList.remove('is-invalid');
+                    if (raw.length === 0) continue;
+                    var m = raw.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+                    if (!m) {
+                        el.classList.add('is-invalid');
+                        return { ok: false, firstInvalid: el, message: 'Trường "' + labelOf(el) + '" phải đúng định dạng dd/MM/yyyy.' };
+                    }
+                    var dd = parseInt(m[1], 10);
+                    var mm = parseInt(m[2], 10);
+                    var yy = parseInt(m[3], 10);
+                    var d = new Date(yy, mm - 1, dd);
+                    if (d.getFullYear() !== yy || d.getMonth() !== mm - 1 || d.getDate() !== dd) {
+                        el.classList.add('is-invalid');
+                        return { ok: false, firstInvalid: el, message: 'Trường "' + labelOf(el) + '" có ngày không hợp lệ.' };
+                    }
+                }
+                return { ok: true };
             }
 
             document.getElementById('btnExtractSubmit').onclick = function () {
@@ -599,6 +631,13 @@
                         window.ShtlFieldInputEnhance.focusFirstInvalid(document);
                         return;
                     }
+                }
+                var dateValidation = validateExtractDateInputs();
+                if (!dateValidation.ok) {
+                    toastErrorLong(dateValidation.message);
+                    try { dateValidation.firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) { /* ignore */ }
+                    try { dateValidation.firstInvalid.focus(); } catch (e) { /* ignore */ }
+                    return;
                 }
                 var stg = {};
                 var getVal = (window.ShtlFieldInputEnhance && window.ShtlFieldInputEnhance.getSubmitValue)

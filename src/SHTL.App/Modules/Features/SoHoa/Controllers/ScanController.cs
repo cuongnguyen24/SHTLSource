@@ -172,7 +172,15 @@ public class ScanController : BaseController
 
     /// <summary>Trang xem PDF (toolbar + iframe/object), tương tự AXE scanner form.</summary>
     [HttpGet("/scan/preview/{id:long}")]
-    [AuthorizeModule(ModuleCode.ScanUpload, ModuleCode.CheckScanFirst, ModuleCode.CheckScanSecond)]
+    [AuthorizeModule(
+        ModuleCode.ScanUpload,
+        ModuleCode.CheckScanFirst,
+        ModuleCode.CheckScanSecond,
+        ModuleCode.ExtractDigit,
+        ModuleCode.ExtractAlphabet,
+        ModuleCode.ExtractCharacter,
+        ModuleCode.ExtractTick,
+        ModuleCode.ExtractForm)]
     public async Task<IActionResult> Preview(long id)
     {
         var doc = await _docService.GetByIdAsync(id, CurrentUser);
@@ -211,7 +219,15 @@ public class ScanController : BaseController
 
     /// <summary>Stream PDF inline (dùng trong iframe). Không đặt tên action là File để tránh trùng Controller.File().</summary>
     [HttpGet("/scan/pdf/{id:long}")]
-    [AuthorizeModule(ModuleCode.ScanUpload, ModuleCode.CheckScanFirst, ModuleCode.CheckScanSecond)]
+    [AuthorizeModule(
+        ModuleCode.ScanUpload,
+        ModuleCode.CheckScanFirst,
+        ModuleCode.CheckScanSecond,
+        ModuleCode.ExtractDigit,
+        ModuleCode.ExtractAlphabet,
+        ModuleCode.ExtractCharacter,
+        ModuleCode.ExtractTick,
+        ModuleCode.ExtractForm)]
     public async Task<IActionResult> Pdf(long id)
     {
         var doc = await _docService.GetByIdAsync(id, CurrentUser);
@@ -304,7 +320,15 @@ public class ScanController : BaseController
     }
 
     [HttpGet("/scan/download/{id:long}")]
-    [AuthorizeModule(ModuleCode.ScanUpload, ModuleCode.CheckScanFirst, ModuleCode.CheckScanSecond)]
+    [AuthorizeModule(
+        ModuleCode.ScanUpload,
+        ModuleCode.CheckScanFirst,
+        ModuleCode.CheckScanSecond,
+        ModuleCode.ExtractDigit,
+        ModuleCode.ExtractAlphabet,
+        ModuleCode.ExtractCharacter,
+        ModuleCode.ExtractTick,
+        ModuleCode.ExtractForm)]
     public async Task<IActionResult> Download(long id)
     {
         var doc = await _docService.GetByIdAsync(id, CurrentUser);

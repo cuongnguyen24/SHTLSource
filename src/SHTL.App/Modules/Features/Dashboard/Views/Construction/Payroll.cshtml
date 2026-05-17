@@ -1,6 +1,7 @@
 @model SHTL.Modules.Shared.Contracts.Dtos.ConstructionPayrollDashboardViewModel
 @{
     ViewData["Title"] = "Payroll";
+    var isAdmin = User.IsInRole("admin");
 }
 @section Breadcrumb {
     <li class="breadcrumb-item"><a asp-area="dashboard" asp-controller="Construction" asp-action="Index">Tiến độ thi công</a></li>
@@ -26,54 +27,229 @@
                     <button class="btn-figma btn-figma-primary" type="submit">Lọc</button>
                 </form>
                 <form method="post" asp-action="RecalculatePayroll" class="d-flex" style="gap:6px;">
-                @Html.AntiForgeryToken()
-                <input type="hidden" name="year" value="@Model.Year" />
-                <input type="hidden" name="month" value="@Model.Month" />
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="year" value="@Model.Year" />
+                    <input type="hidden" name="month" value="@Model.Month" />
                     <button class="btn btn-warning btn-sm" type="submit">Tính lại lương tháng</button>
                 </form>
+                @if (isAdmin)
+                {
+                    <form method="post" asp-action="SavePayrollHistory" class="d-flex" style="gap:6px;">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="year" value="@Model.Year" />
+                        <input type="hidden" name="month" value="@Model.Month" />
+                        <button class="btn btn-success btn-sm" type="submit">Lưu trả lương</button>
+                    </form>
+                }
             </div>
         </div>
     </div>
 
+    <div class="card-figma mb-3">
+        <div class="card-header-figma"><h3 class="card-title-figma mb-0">Cấu hình tính lương</h3></div>
+        <div class="card-content-figma">
+            @if (isAdmin)
+            {
+                <form method="post" asp-action="SavePayrollConfig">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="year" value="@Model.Year" />
+                    <input type="hidden" name="month" value="@Model.Month" />
+                    <div class="form-row">
+                        <div class="col-md-4 mb-2">
+                            <label class="small text-muted">Lương cơ bản</label>
+                            <input class="form-control form-control-sm" type="number" min="0" step="1000" name="BaseSalary" value="@Model.Config.BaseSalary.ToString("0")" />
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="small text-muted">Đơn giá theo sản lượng</label>
+                            <input class="form-control form-control-sm" type="number" min="0" step="100" name="RatePerDocument" value="@Model.Config.RatePerDocument.ToString("0.##")" />
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="small text-muted">Khấu trừ mỗi ngày thiếu công</label>
+                            <input class="form-control form-control-sm" type="number" min="0" step="1000" name="AttendanceDeductionPerDay" value="@Model.Config.AttendanceDeductionPerDay.ToString("0")" />
+                        </div>
+                    </div>
+                    <button class="btn btn-sm btn-primary" type="submit">Lưu cấu hình</button>
+                </form>
+            }
+            else
+            {
+                <div class="form-row">
+                    <div class="col-md-4 mb-2"><div class="small text-muted">Lương cơ bản</div><div class="font-weight-bold">@Model.Config.BaseSalary.ToString("N0")</div></div>
+                    <div class="col-md-4 mb-2"><div class="small text-muted">Đơn giá theo sản lượng</div><div class="font-weight-bold">@Model.Config.RatePerDocument.ToString("N0")</div></div>
+                    <div class="col-md-4 mb-2"><div class="small text-muted">Khấu trừ mỗi ngày thiếu công</div><div class="font-weight-bold">@Model.Config.AttendanceDeductionPerDay.ToString("N0")</div></div>
+                </div>
+            }
+        </div>
+    </div>
+
     <div class="card-figma">
+        <div class="card-header-figma pb-0">
+            <ul class="nav nav-tabs border-0" role="tablist">
+                <li class="nav-item"><a class="nav-link active font-weight-bold" data-toggle="tab" href="#payroll-current" role="tab">Bảng lương tháng</a></li>
+                <li class="nav-item"><a class="nav-link font-weight-bold" data-toggle="tab" href="#payroll-history" role="tab">Lịch sử trả lương</a></li>
+            </ul>
+        </div>
         <div class="card-content-figma p-0">
-            <div class="table-responsive">
-                <table class="table table-sm table-hover mb-0">
-                    <thead class="table-light">
-                        <tr><th>User</th><th>Họ tên</th><th>Lương cơ bản</th><th>Theo sản lượng</th><th>Thưởng chất lượng</th><th>Khấu trừ công</th><th>Thực lĩnh</th><th>Trạng thái</th><th>Chốt</th></tr>
-                    </thead>
-                    <tbody>
-                    @if (!Model.Entries.Any())
-                    {
-                        <tr><td colspan="9" class="text-center text-muted p-3">Chưa có dữ liệu bảng lương.</td></tr>
-                    }
-                    else
-                    {
-                        foreach (var p in Model.Entries)
-                        {
-                            <tr>
-                                <td>@p.UserName</td><td>@p.FullName</td>
-                                <td>@p.BaseSalary.ToString("N0")</td><td>@p.QuantityAmount.ToString("N0")</td>
-                                <td>@p.QualityBonus.ToString("N0")</td><td>@p.AttendanceDeduction.ToString("N0")</td>
-                                <td class="font-weight-bold">@p.TotalSalary.ToString("N0")</td><td>@p.Status</td>
-                                <td>
-                                    @if (p.Status == SHTL.Modules.Core.Domain.Enums.ConstructionPayrollStatus.Draft)
-                                    {
-                                        <form method="post" asp-action="ApprovePayroll" class="d-inline">
-                                            @Html.AntiForgeryToken()
-                                            <input type="hidden" name="id" value="@p.Id" />
-                                            <input type="hidden" name="year" value="@Model.Year" />
-                                            <input type="hidden" name="month" value="@Model.Month" />
-                                            <button class="btn btn-sm btn-success" type="submit">Chốt</button>
-                                        </form>
-                                    }
-                                </td>
-                            </tr>
-                        }
-                    }
-                    </tbody>
-                </table>
+            <div class="tab-content">
+                <div class="tab-pane fade show active" id="payroll-current" role="tabpanel">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light">
+                                <tr><th>User</th><th>Họ tên</th><th>Lương cơ bản</th><th>Theo sản lượng</th><th>Thưởng chất lượng</th><th>Khấu trừ công</th><th>Thực lĩnh</th><th>Trạng thái</th><th>Chốt</th><th>Xóa chốt</th></tr>
+                            </thead>
+                            <tbody>
+                            @if (!Model.Entries.Any())
+                            {
+                                <tr><td colspan="10" class="text-center text-muted p-3">Chưa có dữ liệu bảng lương.</td></tr>
+                            }
+                            else
+                            {
+                                foreach (var p in Model.Entries)
+                                {
+                                    <tr>
+                                        <td>@p.UserName</td><td>@p.FullName</td>
+                                        <td>@p.BaseSalary.ToString("N0")</td><td>@p.QuantityAmount.ToString("N0")</td>
+                                        <td>@p.QualityBonus.ToString("N0")</td><td>@p.AttendanceDeduction.ToString("N0")</td>
+                                        <td class="font-weight-bold">@p.TotalSalary.ToString("N0")</td><td>@p.Status</td>
+                                        <td>
+                                            @if (p.Status == SHTL.Modules.Core.Domain.Enums.ConstructionPayrollStatus.Draft && isAdmin)
+                                            {
+                                                <form method="post" asp-action="ApprovePayroll" class="d-inline">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="id" value="@p.Id" />
+                                                    <input type="hidden" name="year" value="@Model.Year" />
+                                                    <input type="hidden" name="month" value="@Model.Month" />
+                                                    <button class="btn btn-sm btn-success" type="submit">Chốt</button>
+                                                </form>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (p.Status != SHTL.Modules.Core.Domain.Enums.ConstructionPayrollStatus.Draft && isAdmin)
+                                            {
+                                                <form method="post" asp-action="RollbackPayrollApproval" class="d-inline">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="id" value="@p.Id" />
+                                                    <input type="hidden" name="year" value="@Model.Year" />
+                                                    <input type="hidden" name="month" value="@Model.Month" />
+                                                    <button class="btn btn-sm btn-outline-danger" type="submit" onclick="return confirm('Xóa chốt phiếu lương này?');">Xóa chốt</button>
+                                                </form>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="tab-pane fade" id="payroll-history" role="tabpanel">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light">
+                                <tr><th>ID</th><th>Kỳ</th><th>Từ ngày</th><th>Đến ngày</th><th>Số người</th><th>Tổng tiền</th><th>Người lưu</th><th>Thời gian</th><th>Chi tiết</th><th>Xuất Excel</th></tr>
+                            </thead>
+                            <tbody>
+                            @if (!Model.Histories.Any())
+                            {
+                                <tr><td colspan="10" class="text-center text-muted p-3">Chưa có lịch sử trả lương.</td></tr>
+                            }
+                            else
+                            {
+                                foreach (var h in Model.Histories)
+                                {
+                                    <tr>
+                                        <td>@h.Id</td>
+                                        <td>@h.Month/@h.Year</td>
+                                        <td>@h.PeriodFrom.ToString("dd/MM/yyyy")</td>
+                                        <td>@h.PeriodTo.ToString("dd/MM/yyyy")</td>
+                                        <td>@h.TotalUsers</td>
+                                        <td class="font-weight-bold">@h.TotalAmount.ToString("N0")</td>
+                                        <td>@h.CreatedByName</td>
+                                        <td>@h.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                                        <td>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary js-payroll-history-detail" data-history-id="@h.Id" aria-expanded="false">
+                                                <i class="fas fa-chevron-right mr-1 js-detail-icon"></i>Chi tiết
+                                            </button>
+                                        </td>
+                                        <td>
+                                            <a class="btn btn-sm btn-outline-primary" asp-action="ExportPayrollHistory" asp-route-id="@h.Id" asp-route-year="@Model.Year" asp-route-month="@Model.Month">Excel</a>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        (function () {
+            document.querySelectorAll('.js-payroll-history-detail').forEach(btn => {
+                btn.addEventListener('click', async function () {
+                    const id = this.getAttribute('data-history-id');
+                    if (!id) return;
+                    const currentRow = this.closest('tr');
+                    if (!currentRow) return;
+                    const currentExpanded = currentRow.nextElementSibling;
+                    const icon = this.querySelector('.js-detail-icon');
+
+                    // Nếu đang mở đúng dòng này thì đóng lại.
+                    if (currentExpanded && currentExpanded.classList.contains('js-history-detail-row') && currentExpanded.getAttribute('data-history-id') === id) {
+                        currentExpanded.remove();
+                        this.setAttribute('aria-expanded', 'false');
+                        this.classList.remove('btn-secondary');
+                        this.classList.add('btn-outline-secondary');
+                        if (icon) {
+                            icon.classList.remove('fa-chevron-down');
+                            icon.classList.add('fa-chevron-right');
+                        }
+                        return;
+                    }
+
+                    // Đóng mọi detail row đang mở trước đó.
+                    document.querySelectorAll('.js-history-detail-row').forEach(r => r.remove());
+                    document.querySelectorAll('.js-payroll-history-detail[aria-expanded="true"]').forEach(openBtn => {
+                        openBtn.setAttribute('aria-expanded', 'false');
+                        openBtn.classList.remove('btn-secondary');
+                        openBtn.classList.add('btn-outline-secondary');
+                        const openIcon = openBtn.querySelector('.js-detail-icon');
+                        if (openIcon) {
+                            openIcon.classList.remove('fa-chevron-down');
+                            openIcon.classList.add('fa-chevron-right');
+                        }
+                    });
+
+                    const detailRow = document.createElement('tr');
+                    detailRow.className = 'js-history-detail-row';
+                    detailRow.setAttribute('data-history-id', id);
+                    const detailCell = document.createElement('td');
+                    detailCell.colSpan = 10;
+                    detailCell.innerHTML = '<div class="p-3 text-muted">Đang tải chi tiết...</div>';
+                    detailRow.appendChild(detailCell);
+                    currentRow.insertAdjacentElement('afterend', detailRow);
+
+                    try {
+                        const res = await fetch(`/dashboard/Construction/PayrollHistoryDetailPartial?id=${encodeURIComponent(id)}`, { credentials: 'same-origin' });
+                        if (!res.ok) throw new Error('Không tải được dữ liệu chi tiết');
+                        const html = await res.text();
+                        detailCell.innerHTML = html;
+                        this.setAttribute('aria-expanded', 'true');
+                        this.classList.remove('btn-outline-secondary');
+                        this.classList.add('btn-secondary');
+                        if (icon) {
+                            icon.classList.remove('fa-chevron-right');
+                            icon.classList.add('fa-chevron-down');
+                        }
+                    } catch (e) {
+                        detailCell.innerHTML = '<div class="p-3 text-danger">Không tải được chi tiết lịch sử.</div>';
+                    }
+                });
+            });
+        })();
+    </script>
+}

@@ -76,14 +76,46 @@
             document.getElementById('sepTable').addEventListener('click', function (e) {
                 if (e.target.closest('.btnRmSep')) e.target.closest('tr').remove();
             });
-            document.getElementById('frmSep').addEventListener('submit', function () {
+            document.getElementById('frmSep').addEventListener('submit', function (e) {
                 var xs = [], ys = [], ws = [], hs = [];
-                document.querySelectorAll('#sepTable tbody tr').forEach(function (tr) {
-                    xs.push(tr.querySelector('.sep-x').value || '0');
-                    ys.push(tr.querySelector('.sep-y').value || '0');
-                    ws.push(tr.querySelector('.sep-w').value || '0');
-                    hs.push(tr.querySelector('.sep-h').value || '0');
+                var invalidMessage = '';
+                var rows = document.querySelectorAll('#sepTable tbody tr');
+                rows.forEach(function (tr, index) {
+                    var xRaw = (tr.querySelector('.sep-x').value || '').trim();
+                    var yRaw = (tr.querySelector('.sep-y').value || '').trim();
+                    var wRaw = (tr.querySelector('.sep-w').value || '').trim();
+                    var hRaw = (tr.querySelector('.sep-h').value || '').trim();
+
+                    var x = Number(xRaw);
+                    var y = Number(yRaw);
+                    var w = Number(wRaw);
+                    var h = Number(hRaw);
+
+                    if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(w) || !Number.isFinite(h)) {
+                        invalidMessage = 'Dòng ' + (index + 1) + ' có giá trị không hợp lệ.';
+                        return;
+                    }
+                    if (x < 0 || y < 0 || w < 0 || h < 0) {
+                        invalidMessage = 'Dòng ' + (index + 1) + ' không được nhập số âm.';
+                        return;
+                    }
+                    if (w <= 0 || h <= 0) {
+                        invalidMessage = 'Dòng ' + (index + 1) + ': Width và Height phải lớn hơn 0.';
+                        return;
+                    }
+
+                    xs.push(String(x));
+                    ys.push(String(y));
+                    ws.push(String(w));
+                    hs.push(String(h));
                 });
+
+                if (invalidMessage) {
+                    if (typeof toastr !== 'undefined') toastr.error(invalidMessage);
+                    e.preventDefault();
+                    return;
+                }
+
                 document.getElementById('hidX').value = xs.join(',');
                 document.getElementById('hidY').value = ys.join(',');
                 document.getElementById('hidW').value = ws.join(',');

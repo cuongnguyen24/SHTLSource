@@ -65,20 +65,28 @@ public class ExtractController : BaseController
         var scanConfig = await LoadScanCheckConfigAsync();
         ViewBag.RequireCheckFirstScan = scanConfig.requireFirst;
         ViewBag.RequireCheckSecondScan = scanConfig.requireSecond;
-
-        WorkflowStep? step = WorkflowStep.Extract;
-        if (Enum.TryParse<WorkflowStep>(Request.Query["step"], true, out var parsedStep))
-            step = parsedStep;
+        var rawStatus = Request.Query["status"].ToString();
+        int? extractStatus = int.TryParse(rawStatus, out var parsedStatus) && parsedStatus is >= 1 and <= 3
+            ? parsedStatus
+            : null;
+        int? docTypeId = int.TryParse(Request.Query["docTypeId"], out var parsedDocTypeId) && parsedDocTypeId > 0
+            ? parsedDocTypeId
+            : null;
 
         var req = new DocumentFilterRequest
         {
             PageIndex = GetPageRequest().PageIndex,
             PageSize = GetPageRequest().PageSize,
             Search = Request.Query["q"],
-            Step = step,
-            IncludeExtractedInCheck1 = step == WorkflowStep.Extract
+            Step = WorkflowStep.Extract,
+            IncludeExtractedInCheck1 = true,
+            DocTypeId = docTypeId,
+            ExtractInputStatus = extractStatus,
+            RequireCheckFirstScan = scanConfig.requireFirst,
+            RequireCheckSecondScan = scanConfig.requireSecond
         };
         var result = await _docService.GetListAsync(req, CurrentUser);
+        ViewBag.Request = req;
         return View(result);
     }
 

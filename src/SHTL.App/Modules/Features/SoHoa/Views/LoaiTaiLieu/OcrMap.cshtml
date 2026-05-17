@@ -139,6 +139,24 @@
     </div>
 </div>
 
+<div class="modal fade" id="ocrConfirmModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Xác nhận</h5>
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0" id="ocrConfirmMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-danger" id="ocrConfirmOk">Đồng ý</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script src="~/js/shtl-ajax.js" asp-append-version="true"></script>
     <script>
@@ -150,6 +168,7 @@
             var pdfJsUrl = @Html.Raw(JsonSerializer.Serialize(pdfJsUrl));
             var pdfWorkerUrl = @Html.Raw(JsonSerializer.Serialize(pdfWorkerUrl));
             var sampleStorageFolder = @Html.Raw(JsonSerializer.Serialize(sampleStorageFolder));
+            var maxUploadBytes = 100 * 1024 * 1024;
 
             function loadScript(url) {
                 return new Promise(function (resolve, reject) {
@@ -173,6 +192,18 @@
             }
 
             function token() { return window.ShtlAjax.getRequestVerificationToken(); }
+            function showConfirm(message, onOk) {
+                var modal = $('#ocrConfirmModal');
+                document.getElementById('ocrConfirmMessage').textContent = message || 'Bạn có chắc chắn?';
+                var okBtn = document.getElementById('ocrConfirmOk');
+                var handler = function () {
+                    okBtn.removeEventListener('click', handler);
+                    modal.modal('hide');
+                    onOk();
+                };
+                okBtn.addEventListener('click', handler);
+                modal.modal('show');
+            }
 
             var uploadBtn = document.getElementById('ocrUploadBtn');
             var uploadInput = document.getElementById('ocrUploadInput');
@@ -180,8 +211,20 @@
                 uploadBtn.addEventListener('click', function () { uploadInput.click(); });
                 uploadInput.addEventListener('change', function () {
                     if (!this.files || !this.files.length) return;
+                    var picked = this.files[0];
+                    var fileName = (picked.name || '').toLowerCase();
+                    if (!fileName.endsWith('.pdf')) {
+                        if (typeof toastr !== 'undefined') toastr.error('Chỉ cho phép tải file PDF.');
+                        this.value = '';
+                        return;
+                    }
+                    if (picked.size > maxUploadBytes) {
+                        if (typeof toastr !== 'undefined') toastr.error('Dung lượng PDF mẫu không được vượt quá 100MB.');
+                        this.value = '';
+                        return;
+                    }
                     var fd = new FormData();
-                    fd.append('file', this.files[0]);
+                    fd.append('file', picked);
                     fetch(uploadUrl, {
                         method: 'POST',
                         credentials: 'same-origin',
@@ -214,22 +257,23 @@
                 if (deleteBtn) {
                     deleteBtn.addEventListener('click', function (e) {
                         e.stopPropagation();
-                        if (!window.confirm('Xóa PDF mẫu này khỏi storage?')) return;
-                        fetch(deleteSampleUrl + '?key=' + encodeURIComponent(key), {
-                            method: 'POST',
-                            credentials: 'same-origin',
-                            headers: { 'RequestVerificationToken': token() }
-                        }).then(function (r) { return r.json(); }).then(function (j) {
-                            if (j.success) {
-                                if (typeof toastr !== 'undefined') toastr.success(j.message || 'Đã xóa PDF mẫu');
-                                var url = new URL(window.location.href);
-                                if (url.searchParams.get('sampleKey') === key) {
-                                    url.searchParams.delete('sampleKey');
+                        showConfirm('Xóa PDF mẫu này khỏi storage?', function () {
+                            fetch(deleteSampleUrl + '?key=' + encodeURIComponent(key), {
+                                method: 'POST',
+                                credentials: 'same-origin',
+                                headers: { 'RequestVerificationToken': token() }
+                            }).then(function (r) { return r.json(); }).then(function (j) {
+                                if (j.success) {
+                                    if (typeof toastr !== 'undefined') toastr.success(j.message || 'Đã xóa PDF mẫu');
+                                    var url = new URL(window.location.href);
+                                    if (url.searchParams.get('sampleKey') === key) {
+                                        url.searchParams.delete('sampleKey');
+                                    }
+                                    window.location.href = url.toString();
+                                } else if (typeof toastr !== 'undefined') {
+                                    toastr.error(j.message || 'Lỗi');
                                 }
-                                window.location.href = url.toString();
-                            } else if (typeof toastr !== 'undefined') {
-                                toastr.error(j.message || 'Lỗi');
-                            }
+                            });
                         });
                     });
                 }

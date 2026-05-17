@@ -40,6 +40,7 @@
 }
 
 <div class="layout-expanded">
+    <form id="antiIndexActions" class="d-none">@Html.AntiForgeryToken()</form>
     <div class="frame-figma mb-3">
         <div class="frame-header">
             <div class="d-flex align-items-center">
@@ -132,6 +133,24 @@
     </div>
 </div>
 
+<div class="modal fade" id="docTypeConfirmModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Xác nhận</h5>
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0" id="docTypeConfirmMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-danger" id="docTypeConfirmOk">Đồng ý</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal sắp xếp thứ tự -->
 <div class="modal fade" id="sortModal" tabindex="-1" role="dialog">
     <div class="modal-dialog modal-lg" role="document">
@@ -159,6 +178,24 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            const getRequestVerificationToken = () => document.querySelector('#antiIndexActions input[name="__RequestVerificationToken"]')?.value || '';
+            const toastSuccess = (msg) => { if (typeof toastr !== 'undefined') toastr.success(msg); };
+            const toastError = (msg) => { if (typeof toastr !== 'undefined') toastr.error(msg); };
+            const toastInfo = (msg) => { if (typeof toastr !== 'undefined') toastr.info(msg); };
+
+            function showConfirm(message, onOk) {
+                const modal = $('#docTypeConfirmModal');
+                document.getElementById('docTypeConfirmMessage').textContent = message || 'Bạn có chắc chắn?';
+                const okBtn = document.getElementById('docTypeConfirmOk');
+                const handler = function () {
+                    okBtn.removeEventListener('click', handler);
+                    modal.modal('hide');
+                    onOk();
+                };
+                okBtn.addEventListener('click', handler);
+                modal.modal('show');
+            }
+
             // Select all checkbox
             const selectAllCheckbox = document.getElementById('selectAll');
             if (selectAllCheckbox) {
@@ -182,9 +219,7 @@
                 btn.addEventListener('click', function(e) {
                     e.preventDefault();
                     const docTypeId = this.getAttribute('data-id');
-                    if (confirm('Bạn có chắc muốn sao chép loại tài liệu này?')) {
-                        cloneDocType(docTypeId);
-                    }
+                    showConfirm('Bạn có chắc muốn sao chép loại tài liệu này?', function () { cloneDocType(docTypeId); });
                 });
             });
 
@@ -193,12 +228,10 @@
                 btn.addEventListener('click', function(e) {
                     e.preventDefault();
                     const docTypeId = this.getAttribute('data-id');
-                    if (confirm('Bạn có chắc muốn xóa loại tài liệu này?')) {
-                        deleteDocType(docTypeId);
-                    }
+                    showConfirm('Bạn có chắc muốn xóa loại tài liệu này?', function () { deleteDocType(docTypeId); });
                 });
             });
-        });
+        
 
         function openSortModal(docTypeId) {
             // Load field settings
@@ -235,54 +268,59 @@
                     }
                 })
                 .catch(err => {
-                    alert('Lỗi: ' + err.message);
+                    toastError('Lỗi: ' + err.message);
                 });
         }
 
         function cloneDocType(docTypeId) {
+            const token = document.querySelector('#antiIndexActions input[name="__RequestVerificationToken"]')?.value || '';
             fetch(`/sohoa/loai-tai-lieu/api/clone/${docTypeId}`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
                 }
             })
             .then(r => r.json())
             .then(data => {
                 if (data.success) {
-                    alert(data.message || 'Đã sao chép thành công');
+                    toastSuccess(data.message || 'Đã sao chép thành công');
                     location.reload();
                 } else {
-                    alert('Lỗi: ' + (data.message || 'Không sao chép được'));
+                    toastError(data.message || 'Không sao chép được');
                 }
             })
             .catch(err => {
-                alert('Lỗi: ' + err.message);
+                toastError('Lỗi: ' + err.message);
             });
         }
 
         function deleteDocType(docTypeId) {
+            const token = document.querySelector('#antiIndexActions input[name="__RequestVerificationToken"]')?.value || '';
             fetch(`/sohoa/loai-tai-lieu/api/delete/${docTypeId}`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
                 }
             })
             .then(r => r.json())
             .then(data => {
                 if (data.success) {
-                    alert(data.message || 'Đã xóa thành công');
+                    toastSuccess(data.message || 'Đã xóa thành công');
                     location.reload();
                 } else {
-                    alert('Lỗi: ' + (data.message || 'Không xóa được'));
+                    toastError(data.message || 'Không xóa được');
                 }
             })
             .catch(err => {
-                alert('Lỗi: ' + err.message);
+                toastError('Lỗi: ' + err.message);
             });
         }
 
         // Save sort order
         document.getElementById('saveSortBtn').addEventListener('click', function() {
+            const token = document.querySelector('#antiIndexActions input[name="__RequestVerificationToken"]')?.value || '';
             const docTypeId = this.getAttribute('data-doctype-id');
             const items = [];
             document.querySelectorAll('.sortable-item').forEach((item, index) => {
@@ -297,23 +335,25 @@
             fetch(`/sohoa/loai-tai-lieu/api/update-weight`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
                 },
                 body: JSON.stringify(items)
             })
             .then(r => r.json())
             .then(data => {
                 if (data.success) {
-                    alert(data.message || 'Đã lưu thứ tự');
+                    toastSuccess(data.message || 'Đã lưu thứ tự');
                     $('#sortModal').modal('hide');
                     location.reload();
                 } else {
-                    alert('Lỗi: ' + (data.message || 'Không lưu được'));
+                    toastError(data.message || 'Không lưu được');
                 }
             })
             .catch(err => {
-                alert('Lỗi: ' + err.message);
+                toastError('Lỗi: ' + err.message);
             });
+        });
         });
     </script>
 }

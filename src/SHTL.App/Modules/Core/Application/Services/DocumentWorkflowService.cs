@@ -273,12 +273,23 @@ public class DocumentWorkflowService : IDocumentWorkflowService
         if (req.StgFieldValues is null || req.StgFieldValues.Count == 0)
             return Array.Empty<FieldValidationError>();
 
+        var valuesCi = new Dictionary<string, string?>(req.StgFieldValues, StringComparer.OrdinalIgnoreCase);
         var settings = await _docTypeRepo.GetFieldSettingsByTypeAsync(doc.DocTypeId);
-        if (settings.Count == 0) return Array.Empty<FieldValidationError>();
-
         var fields = await _docTypeRepo.GetAllFieldsAsync();
         var fieldMap = fields.ToDictionary(f => f.Id);
-        return DocumentFieldValueValidator.Validate(settings, fieldMap, req.StgFieldValues);
+
+        var combined = new List<FieldValidationError>();
+        if (settings.Count > 0)
+            combined.AddRange(DocumentFieldValueValidator.Validate(settings, fieldMap, valuesCi));
+
+        var seenKeys = new HashSet<string>(combined.Select(e => e.FieldKey), StringComparer.OrdinalIgnoreCase);
+        foreach (var e in DocumentFieldValueValidator.ValidateStgDatePayloadAgainstApply(settings, fieldMap, valuesCi))
+        {
+            if (seenKeys.Add(e.FieldKey))
+                combined.Add(e);
+        }
+
+        return combined;
     }
 
     /// <summary>Validate dữ liệu chỉnh sửa khi Check1/Check2 (chỉ chặn khi <see cref="StepResult.Pass"/>).</summary>
