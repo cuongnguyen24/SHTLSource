@@ -1,0 +1,73 @@
+@model SHTL.Modules.Shared.Contracts.Dtos.ConstructionKpiConfigUpsertViewModel
+@{
+    ViewData["Title"] = Model.Title;
+}
+@section Breadcrumb {
+    <li class="breadcrumb-item"><a asp-area="dashboard" asp-controller="Construction" asp-action="Index">Tiến độ thi công</a></li>
+    <li class="breadcrumb-item"><a asp-area="dashboard" asp-controller="Construction" asp-action="Kpi">KPI ngày</a></li>
+    <li class="breadcrumb-item active">@(Model.IsEdit ? "Sửa cấu hình KPI" : "Tạo cấu hình KPI")</li>
+}
+
+<div class="layout-expanded">
+    <div class="frame-figma mb-3">
+        <div class="frame-header">
+            <div class="d-flex align-items-center">
+                <div class="mr-3 d-flex align-items-center justify-content-center" style="width:36px;height:36px;background:var(--primary-light);color:var(--primary);border-radius:8px;">
+                    <i class="fas fa-sliders-h"></i>
+                </div>
+                <div>
+                    <h6 class="mb-0 font-weight-bold" style="color:var(--primary);">@Model.Title</h6>
+                    <div class="text-muted small">Thiết lập chỉ tiêu và mốc thưởng KPI theo vai trò.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-figma">
+        <div class="card-content-figma">
+            <div asp-validation-summary="All" class="text-danger mb-3"></div>
+            <form method="post" asp-action="@(Model.IsEdit ? "EditKpiConfig" : "CreateKpiConfig")">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="IsEdit" />
+                <input type="hidden" asp-for="Title" />
+                <input type="hidden" asp-for="Form.Role" />
+                <div class="form-row">
+                    <div class="col-md-3 mb-2">
+                        <label class="small text-muted">Chỉ tiêu ngày (tài liệu)</label>
+                        <input asp-for="Form.DailyTarget" class="form-control form-control-sm" type="number" min="1" required />
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <label class="small text-muted">Chất lượng tối thiểu (%)</label>
+                        <input asp-for="Form.MinQualityPercent" class="form-control form-control-sm" type="number" min="0" max="100" step="0.1" required />
+                    </div>
+                </div>
+                <div class="small text-muted mb-1">Mốc thưởng (tối đa 3 mốc)</div>
+                @for (var i = 0; i < 3; i++)
+                {
+                    <div class="form-row align-items-end mb-1">
+                        <div class="col-md-3">
+                            <label class="small text-muted">Mốc @(i + 1) - từ (tài liệu)</label>
+                            <input asp-for="Form.BonusTiers[i].MinProcessed" class="form-control form-control-sm" type="number" min="0" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="small text-muted">Chất lượng (%)</label>
+                            <input asp-for="Form.BonusTiers[i].MinQualityPercent" class="form-control form-control-sm" type="number" min="0" max="100" step="0.1" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="small text-muted">Thưởng (VNĐ)</label>
+                            <input asp-for="Form.BonusTiers[i].BonusAmount" class="form-control form-control-sm" type="number" min="0" step="1000" />
+                        </div>
+                    </div>
+                }
+                <div class="d-flex flex-wrap mt-3" style="gap:8px;">
+                    <button class="btn-figma btn-figma-primary" type="submit">@(Model.IsEdit ? "Cập nhật" : "Tạo mới")</button>
+                    <a asp-action="Kpi" class="btn-figma btn-figma-outline">Quay lại</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

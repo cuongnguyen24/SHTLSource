@@ -55,7 +55,8 @@ SELECT
     u.user_name AS UserName,
     u.full_name AS FullName,
     a.work_date AS WorkDate,
-    a.work_hours AS WorkHours
+    a.work_hours AS WorkHours,
+    a.notes AS Notes
 FROM dbo.stg_construction_attendances a
 LEFT JOIN dbo.acc_users u ON u.id = a.user_id
 WHERE a.work_date >= @FromDate
