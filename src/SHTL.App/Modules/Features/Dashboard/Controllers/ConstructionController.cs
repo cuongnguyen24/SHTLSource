@@ -210,11 +210,26 @@ public class ConstructionController : Controller
     public async Task<IActionResult> Kpi([FromQuery] DateTime? from = null, [FromQuery] DateTime? to = null, [FromQuery] int? userId = null)
     {
         var currentUser = HttpContext.RequestServices.GetRequiredService<ICurrentUser>();
+        var allowedSteps = ResolveAllowedKpiSteps(currentUser);
+        var allowedRoles = ResolveAllowedKpiRoles(allowedSteps);
         if (!currentUser.IsAdmin) userId = currentUser.Id;
         var fromDate = (from ?? DateTime.Today).Date;
         var toDate = (to ?? DateTime.Today).Date;
         if (toDate < fromDate) toDate = fromDate;
+
+        int? targetUserId = currentUser.IsAdmin ? null : currentUser.Id;
+        for (var d = fromDate; d <= toDate; d = d.AddDays(1))
+        {
+            await _kpiPayrollService.RecalculateKpiAsync(d, currentUser, targetUserId, currentUser.IsAdmin ? null : allowedSteps);
+        }
+
         var vm = await _kpiPayrollService.GetKpiDashboardAsync(fromDate, toDate, userId);
+        if (!currentUser.IsAdmin)
+        {
+            vm.Kpis = vm.Kpis.Where(x => allowedSteps.Contains(x.Step)).ToList();
+            vm.RoleConfigs = vm.RoleConfigs.Where(x => allowedRoles.Contains(x.Role)).ToList();
+        }
+        vm.PeriodStats = await BuildPeriodStatsAsync(currentUser, userId, allowedSteps, allowedRoles);
         ViewBag.IsAdmin = currentUser.IsAdmin;
         return View("~/Modules/Features/Dashboard/Views/Construction/Kpi.cshtml", vm);
     }
@@ -237,8 +252,13 @@ public class ConstructionController : Controller
     public async Task<IActionResult> RecalculateKpi([FromForm] DateTime workDate)
     {
         var currentUser = HttpContext.RequestServices.GetRequiredService<ICurrentUser>();
+        var allowedSteps = ResolveAllowedKpiSteps(currentUser);
         int? targetUserId = currentUser.IsAdmin ? null : currentUser.Id;
-        var result = await _kpiPayrollService.RecalculateKpiAsync(workDate.Date, currentUser, targetUserId);
+        var result = await _kpiPayrollService.RecalculateKpiAsync(
+            workDate.Date,
+            currentUser,
+            targetUserId,
+            currentUser.IsAdmin ? null : allowedSteps);
         TempData[result.Success ? "Success" : "Error"] = result.Message;
         return RedirectToAction(nameof(Kpi), new { from = workDate.Date, to = workDate.Date });
     }
@@ -357,6 +377,18 @@ public class ConstructionController : Controller
     [HttpPost]
     [ValidateAntiForgeryToken]
     [AuthorizeModule(ModuleCode.Report)]
+    public async Task<IActionResult> SavePayrollConfig(ConstructionPayrollConfigDto request, [FromForm] int year, [FromForm] int month)
+    {
+        var currentUser = HttpContext.RequestServices.GetRequiredService<ICurrentUser>();
+        if (!currentUser.IsAdmin) return Forbid();
+        var result = await _kpiPayrollService.SavePayrollConfigAsync(request, currentUser);
+        TempData[result.Success ? "Success" : "Error"] = result.Message;
+        return RedirectToAction(nameof(Payroll), new { year, month });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [AuthorizeModule(ModuleCode.Report)]
     public async Task<IActionResult> RecalculatePayroll([FromForm] int year, [FromForm] int month)
     {
         var currentUser = HttpContext.RequestServices.GetRequiredService<ICurrentUser>();
@@ -374,6 +406,79 @@ public class ConstructionController : Controller
         var result = await _kpiPayrollService.ApprovePayrollAsync(id, currentUser);
         TempData[result.Success ? "Success" : "Error"] = result.Message;
         return RedirectToAction(nameof(Payroll), new { year, month });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [AuthorizeModule(ModuleCode.Report)]
+    public async Task<IActionResult> RollbackPayrollApproval([FromForm] long id, [FromForm] int year, [FromForm] int month)
+    {
+        var currentUser = HttpContext.RequestServices.GetRequiredService<ICurrentUser>();
+        if (!currentUser.IsAdmin) return Forbid();
+        var result = await _kpiPayrollService.RollbackPayrollApprovalAsync(id, currentUser);
+        TempData[result.Success ? "Success" : "Error"] = result.Message;
+        return RedirectToAction(nameof(Payroll), new { year, month });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [AuthorizeModule(ModuleCode.Report)]
+    public async Task<IActionResult> SavePayrollHistory([FromForm] int year, [FromForm] int month, [FromForm] string? note = null)
+    {
+        var currentUser = HttpContext.RequestServices.GetRequiredService<ICurrentUser>();
+        if (!currentUser.IsAdmin) return Forbid();
+        var result = await _kpiPayrollService.SavePayrollHistoryAsync(year, month, currentUser, note);
+        TempData[result.Success ? "Success" : "Error"] = result.Message;
+        return RedirectToAction(nameof(Payroll), new { year, month });
+    }
+
+    [HttpGet]
+    [AuthorizeModule(ModuleCode.Report)]
+    public async Task<IActionResult> ExportPayrollHistory([FromQuery] long id, [FromQuery] int year, [FromQuery] int month)
+    {
+        var currentUser = HttpContext.RequestServices.GetRequiredService<ICurrentUser>();
+        if (!currentUser.IsAdmin) return Forbid();
+
+        var data = await _kpiPayrollService.ExportPayrollHistoryExcelAsync(id);
+        if (data is null)
+        {
+            TempData["Error"] = "Không tìm thấy dữ liệu lịch sử để xuất Excel.";
+            return RedirectToAction(nameof(Payroll), new { year, month });
+        }
+
+        return File(data.Value.Content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", data.Value.FileName);
+    }
+
+    [HttpGet]
+    [AuthorizeModule(ModuleCode.Report)]
+    public async Task<IActionResult> PayrollHistoryDetail([FromQuery] long id, [FromQuery] int year, [FromQuery] int month)
+    {
+        var currentUser = HttpContext.RequestServices.GetRequiredService<ICurrentUser>();
+        if (!currentUser.IsAdmin) return Forbid();
+        var detail = await _kpiPayrollService.GetPayrollHistoryDetailsAsync(id);
+        if (detail.Header is null)
+        {
+            TempData["Error"] = "Không tìm thấy lịch sử trả lương.";
+            return RedirectToAction(nameof(Payroll), new { year, month });
+        }
+
+        ViewBag.Header = detail.Header;
+        ViewBag.Year = year;
+        ViewBag.Month = month;
+        return View("~/Modules/Features/Dashboard/Views/Construction/PayrollHistoryDetail.cshtml", detail.Items);
+    }
+
+    [HttpGet]
+    [AuthorizeModule(ModuleCode.Report)]
+    public async Task<IActionResult> PayrollHistoryDetailPartial([FromQuery] long id)
+    {
+        var currentUser = HttpContext.RequestServices.GetRequiredService<ICurrentUser>();
+        if (!currentUser.IsAdmin) return Forbid();
+
+        var detail = await _kpiPayrollService.GetPayrollHistoryDetailsAsync(id);
+        if (detail.Header is null) return NotFound();
+        ViewBag.Header = detail.Header;
+        return PartialView("~/Modules/Features/Dashboard/Views/Construction/_PayrollHistoryDetailPartial.cshtml", detail.Items);
     }
 
     [HttpGet]
@@ -431,5 +536,92 @@ public class ConstructionController : Controller
             TempData["Success"] = result.Message;
 
         return RedirectToAction(nameof(FolderProgress), new { q });
+    }
+
+    private static HashSet<WorkflowStep> ResolveAllowedKpiSteps(ICurrentUser user)
+    {
+        var steps = new HashSet<WorkflowStep>();
+        if (user.IsAdmin)
+        {
+            steps.Add(WorkflowStep.CheckScan1);
+            steps.Add(WorkflowStep.CheckScan2);
+            steps.Add(WorkflowStep.Extract);
+            steps.Add(WorkflowStep.Check1);
+            return steps;
+        }
+
+        if (user.HasPermission(ModuleCode.CheckScanFirst.ToString()))
+            steps.Add(WorkflowStep.CheckScan1);
+        if (user.HasPermission(ModuleCode.CheckScanSecond.ToString()))
+            steps.Add(WorkflowStep.CheckScan2);
+        if (user.HasPermission(ModuleCode.ExtractDigit.ToString()) ||
+            user.HasPermission(ModuleCode.ExtractAlphabet.ToString()) ||
+            user.HasPermission(ModuleCode.ExtractCharacter.ToString()) ||
+            user.HasPermission(ModuleCode.ExtractTick.ToString()) ||
+            user.HasPermission(ModuleCode.ExtractForm.ToString()))
+            steps.Add(WorkflowStep.Extract);
+        if (user.HasPermission(ModuleCode.CheckFirst.ToString()))
+            steps.Add(WorkflowStep.Check1);
+
+        return steps;
+    }
+
+    private static HashSet<ConstructionKpiRole> ResolveAllowedKpiRoles(IReadOnlyCollection<WorkflowStep> steps)
+    {
+        var roles = new HashSet<ConstructionKpiRole>();
+        foreach (var step in steps)
+        {
+            var role = ConstructionKpiConfig.MapWorkflowStep(step);
+            if (role.HasValue) roles.Add(role.Value);
+        }
+        return roles;
+    }
+
+    private async Task<IReadOnlyList<ConstructionKpiPeriodStatsDto>> BuildPeriodStatsAsync(
+        ICurrentUser currentUser,
+        int? userId,
+        IReadOnlyCollection<WorkflowStep> allowedSteps,
+        IReadOnlyCollection<ConstructionKpiRole> allowedRoles)
+    {
+        var today = DateTime.Today;
+        var monthStart = new DateTime(today.Year, today.Month, 1);
+        var sixMonthStart = monthStart.AddMonths(-5);
+        var yearStart = today.AddYears(-1).AddDays(1);
+        var periods = new[]
+        {
+            new { Key = "7d", Label = "7 ngày", From = today.AddDays(-6), To = today },
+            new { Key = "1m", Label = "Tháng", From = monthStart, To = today },
+            new { Key = "6m", Label = "6 tháng", From = sixMonthStart, To = today },
+            new { Key = "1y", Label = "1 năm", From = yearStart, To = today }
+        };
+
+        var results = new List<ConstructionKpiPeriodStatsDto>(periods.Length);
+        foreach (var p in periods)
+        {
+            var vm = await _kpiPayrollService.GetKpiDashboardAsync(p.From, p.To, userId);
+            var kpis = currentUser.IsAdmin ? vm.Kpis : vm.Kpis.Where(x => allowedSteps.Contains(x.Step)).ToList();
+            var attendance = vm.Attendance;
+            if (!currentUser.IsAdmin)
+            {
+                var roleSet = new HashSet<ConstructionKpiRole>(allowedRoles);
+                kpis = kpis.Where(x => x.KpiRole.HasValue && roleSet.Contains(x.KpiRole.Value)).ToList();
+            }
+
+            results.Add(new ConstructionKpiPeriodStatsDto
+            {
+                Key = p.Key,
+                Label = p.Label,
+                FromDate = p.From,
+                ToDate = p.To,
+                TotalProcessed = kpis.Sum(x => x.DocumentsProcessed),
+                AverageQuality = kpis.Count == 0 ? 0m : Math.Round(kpis.Average(x => x.QualityScore), 2),
+                TotalBonus = kpis.Sum(x => x.BonusAmount),
+                TotalWorkDays = attendance.Sum(x => x.WorkHours),
+                TotalRows = kpis.Count,
+                KpiMetRows = kpis.Count(x => x.KpiMet)
+            });
+        }
+
+        return results;
     }
 }

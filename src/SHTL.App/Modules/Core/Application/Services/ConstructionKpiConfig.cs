@@ -100,10 +100,10 @@ public static class ConstructionKpiConfig
     public static decimal CalculateBonus(ConstructionKpiRoleSettings role, int processed, decimal quality)
     {
         decimal bonus = 0;
-        foreach (var tier in role.BonusTiers.OrderBy(t => t.MinProcessed))
+        foreach (var tier in role.BonusTiers)
         {
             if (processed >= tier.MinProcessed && quality >= tier.MinQualityPercent)
-                bonus = tier.BonusAmount;
+                bonus += tier.BonusAmount;
         }
         return bonus;
     }

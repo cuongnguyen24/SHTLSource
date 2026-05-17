@@ -327,6 +327,56 @@
         }
 
         $(document).ready(function() {
+            // ========================================
+            // GLOBAL TOAST ADAPTER
+            // ========================================
+            toastr.options = {
+                closeButton: true,
+                progressBar: true,
+                newestOnTop: true,
+                positionClass: 'toast-top-right',
+                timeOut: 5000
+            };
+
+            function pushToastFromAlertElement($alert) {
+                if (!$alert || !$alert.length) return;
+                const rawText = ($alert.text() || '').trim();
+                if (!rawText) return;
+
+                if ($alert.hasClass('alert-success')) {
+                    toastr.success(rawText, 'Thành công');
+                    return;
+                }
+                if ($alert.hasClass('alert-warning')) {
+                    toastr.warning(rawText, 'Cảnh báo');
+                    return;
+                }
+                if ($alert.hasClass('alert-info') || $alert.hasClass('alert-primary') || $alert.hasClass('alert-secondary')) {
+                    toastr.info(rawText, 'Thông tin');
+                    return;
+                }
+                toastr.error(rawText, 'Lỗi');
+            }
+
+            function convertBootstrapAlertsToToasts() {
+                $('.alert').each(function() {
+                    const $alert = $(this);
+                    if ($alert.data('toastConverted') === true) return;
+                    $alert.data('toastConverted', true);
+                    pushToastFromAlertElement($alert);
+                    $alert.remove();
+                });
+            }
+
+            // Override alert() toàn cục để view/js cũ dùng toast thay vì popup trình duyệt.
+            window.alert = function(message) {
+                const text = (message ?? '').toString();
+                if (!text.trim()) return;
+                toastr.warning(text, 'Thông báo');
+            };
+
+            convertBootstrapAlertsToToasts();
+
             // Initialize time display
             updateHeaderTime();
             setInterval(updateHeaderTime, 60000);
@@ -557,10 +607,8 @@
                 }
             });
 
-            // Auto-hide notifications after some time
-            setTimeout(function() {
-                $('.alert').fadeOut('slow');
-            }, 10000);
+            // Re-check sau các thao tác render động.
+            setTimeout(convertBootstrapAlertsToToasts, 300);
 
         });
     </script>

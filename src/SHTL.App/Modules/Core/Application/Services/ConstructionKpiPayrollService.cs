@@ -1,4 +1,5 @@
 using Dapper;
+using ClosedXML.Excel;
 using SHTL.Modules.Core.Domain.Contracts;
 using SHTL.Modules.Core.Domain.Entities.Stg;
 using SHTL.Modules.Core.Domain.Enums;
@@ -14,12 +15,17 @@ public interface IConstructionKpiPayrollService
 {
     Task<ConstructionKpiDashboardViewModel> GetKpiDashboardAsync(DateTime fromDate, DateTime toDate, int? userId = null);
     Task<ConstructionKpiRoleConfigDto?> GetKpiRoleConfigAsync(ConstructionKpiRole role);
-    Task<ApiResult> RecalculateKpiAsync(DateTime workDate, ICurrentUser currentUser, int? targetUserId = null);
+    Task<ApiResult> RecalculateKpiAsync(DateTime workDate, ICurrentUser currentUser, int? targetUserId = null, IReadOnlyCollection<WorkflowStep>? allowedSteps = null);
     Task<ApiResult> SaveKpiConfigAsync(SaveConstructionKpiConfigRequest request, ICurrentUser currentUser);
     Task<ApiResult> DeleteKpiConfigAsync(ConstructionKpiRole role, ICurrentUser currentUser);
     Task<ConstructionPayrollDashboardViewModel> GetPayrollDashboardAsync(int year, int month, int? userId = null);
+    Task<ApiResult> SavePayrollConfigAsync(ConstructionPayrollConfigDto request, ICurrentUser currentUser);
     Task<ApiResult> RecalculatePayrollAsync(int year, int month, ICurrentUser currentUser);
     Task<ApiResult> ApprovePayrollAsync(long payrollId, ICurrentUser currentUser);
+    Task<ApiResult<long>> SavePayrollHistoryAsync(int year, int month, ICurrentUser currentUser, string? note = null);
+    Task<(byte[] Content, string FileName)?> ExportPayrollHistoryExcelAsync(long historyId);
+    Task<(ConstructionPayrollHistoryDto? Header, IReadOnlyList<ConstructionPayrollHistoryItemDto> Items)> GetPayrollHistoryDetailsAsync(long historyId);
+    Task<ApiResult> RollbackPayrollApprovalAsync(long payrollId, ICurrentUser currentUser);
 }
 
 public sealed class ConstructionKpiPayrollService : IConstructionKpiPayrollService
@@ -101,7 +107,7 @@ public sealed class ConstructionKpiPayrollService : IConstructionKpiPayrollServi
         return ApiResult.Ok($"Đã xóa mốc thưởng và reset KPI về mặc định tối thiểu cho vai trò {ConstructionKpiConfig.DisplayName(role)}.");
     }
 
-    public async Task<ApiResult> RecalculateKpiAsync(DateTime workDate, ICurrentUser currentUser, int? targetUserId = null)
+    public async Task<ApiResult> RecalculateKpiAsync(DateTime workDate, ICurrentUser currentUser, int? targetUserId = null, IReadOnlyCollection<WorkflowStep>? allowedSteps = null)
     {
         var date = workDate.Date;
         var settings = await ConstructionKpiConfig.LoadAsync(_cnfRepo);
@@ -109,15 +115,20 @@ public sealed class ConstructionKpiPayrollService : IConstructionKpiPayrollServi
         if (targetUserId.HasValue)
             users = users.Where(x => x.Id == targetUserId.Value).ToList();
         var conn = await _db.GetOpenConnectionAsync();
+        var allowedStepSet = allowedSteps is null ? null : new HashSet<WorkflowStep>(allowedSteps);
 
         foreach (var user in users)
         {
             var stepStats = new Dictionary<WorkflowStep, KpiAggRow>();
 
-            await AggregateStepAsync(conn, user.Id, date, WorkflowStep.CheckScan1, stepStats, CheckScan1Sql);
-            await AggregateStepAsync(conn, user.Id, date, WorkflowStep.CheckScan2, stepStats, CheckScan2Sql);
-            await AggregateStepAsync(conn, user.Id, date, WorkflowStep.Extract, stepStats, ExtractSql);
-            await AggregateStepAsync(conn, user.Id, date, WorkflowStep.Check1, stepStats, Check1Sql);
+            if (allowedStepSet is null || allowedStepSet.Contains(WorkflowStep.CheckScan1))
+                await AggregateStepAsync(conn, user.Id, date, WorkflowStep.CheckScan1, stepStats, CheckScan1Sql);
+            if (allowedStepSet is null || allowedStepSet.Contains(WorkflowStep.CheckScan2))
+                await AggregateStepAsync(conn, user.Id, date, WorkflowStep.CheckScan2, stepStats, CheckScan2Sql);
+            if (allowedStepSet is null || allowedStepSet.Contains(WorkflowStep.Extract))
+                await AggregateStepAsync(conn, user.Id, date, WorkflowStep.Extract, stepStats, ExtractSql);
+            if (allowedStepSet is null || allowedStepSet.Contains(WorkflowStep.Check1))
+                await AggregateStepAsync(conn, user.Id, date, WorkflowStep.Check1, stepStats, Check1Sql);
 
             foreach (var (step, row) in stepStats)
             {
@@ -173,12 +184,33 @@ public sealed class ConstructionKpiPayrollService : IConstructionKpiPayrollServi
 
     public async Task<ConstructionPayrollDashboardViewModel> GetPayrollDashboardAsync(int year, int month, int? userId = null)
     {
+        var config = await LoadPayrollConfigAsync();
         return new ConstructionPayrollDashboardViewModel
         {
             Year = year,
             Month = month,
-            Entries = await _repo.GetPayrollAsync(year, month, userId)
+            Entries = await _repo.GetPayrollAsync(year, month, userId),
+            Histories = await _repo.GetPayrollHistoriesAsync(year, month),
+            Config = new ConstructionPayrollConfigDto
+            {
+                BaseSalary = config.BaseSalary,
+                RatePerDocument = config.RatePerDocument,
+                AttendanceDeductionPerDay = config.AttendanceDeductionPerDay,
+                QualityThresholdHigh = config.QualityThresholdHigh,
+                QualityBonusHigh = config.QualityBonusHigh,
+                QualityThresholdMedium = config.QualityThresholdMedium,
+                QualityBonusMedium = config.QualityBonusMedium
+            }
         };
+    }
+
+    public async Task<ApiResult> SavePayrollConfigAsync(ConstructionPayrollConfigDto request, ICurrentUser currentUser)
+    {
+        const string group = "Construction";
+        await _cnfRepo.UpsertConfigAsync("ConstructionPayrollBaseSalary", Math.Max(0, request.BaseSalary).ToString("0.##"), currentUser.Id, group, "Lương cơ bản");
+        await _cnfRepo.UpsertConfigAsync("ConstructionPayrollRatePerDocument", Math.Max(0, request.RatePerDocument).ToString("0.##"), currentUser.Id, group, "Đơn giá theo sản lượng");
+        await _cnfRepo.UpsertConfigAsync("ConstructionPayrollAttendanceDeductionPerDay", Math.Max(0, request.AttendanceDeductionPerDay).ToString("0.##"), currentUser.Id, group, "Khấu trừ mỗi ngày thiếu công");
+        return ApiResult.Ok("Đã lưu cấu hình lương.");
     }
 
     public async Task<ApiResult> RecalculatePayrollAsync(int year, int month, ICurrentUser currentUser)
@@ -198,18 +230,12 @@ public sealed class ConstructionKpiPayrollService : IConstructionKpiPayrollServi
             var userAtt = atts.Where(x => x.UserId == user.Id).ToList();
 
             var processed = userKpis.Sum(x => x.DocumentsProcessed);
-            var avgQuality = userKpis.Count == 0 ? 0m : userKpis.Average(x => x.QualityScore);
             var workDays = userAtt.Sum(x => x.WorkHours);
             var kpiBonus = userKpis.Sum(x => x.BonusAmount);
 
             var baseSalary = payrollConfig.BaseSalary;
             var quantityAmount = processed * payrollConfig.RatePerDocument;
-            var qualityBonus = avgQuality >= payrollConfig.QualityThresholdHigh
-                ? payrollConfig.QualityBonusHigh
-                : avgQuality >= payrollConfig.QualityThresholdMedium
-                    ? payrollConfig.QualityBonusMedium
-                    : 0m;
-            qualityBonus += kpiBonus;
+            var qualityBonus = kpiBonus;
 
             var expectedWorkDays = CountWeekdays(year, month);
             var missingDays = Math.Max(0, expectedWorkDays - (int)workDays);
@@ -254,6 +280,91 @@ SET [status] = 1,
 WHERE id = @Id;";
         var affected = await conn.ExecuteAsync(sql, new { Id = payrollId, UserId = currentUser.Id });
         return affected > 0 ? ApiResult.Ok("Đã chốt lương.") : ApiResult.Fail("Không tìm thấy phiếu lương.");
+    }
+
+    public async Task<ApiResult<long>> SavePayrollHistoryAsync(int year, int month, ICurrentUser currentUser, string? note = null)
+    {
+        try
+        {
+            var first = new DateTime(year, month, 1);
+            var last = first.AddMonths(1).AddDays(-1);
+            var id = await _repo.SavePayrollHistoryAsync(year, month, first, last, currentUser.Id, note);
+            return ApiResult<long>.Ok(id, "Đã lưu lịch sử trả lương.");
+        }
+        catch (Exception ex)
+        {
+            return ApiResult<long>.Fail(ex.Message);
+        }
+    }
+
+    public async Task<(byte[] Content, string FileName)?> ExportPayrollHistoryExcelAsync(long historyId)
+    {
+        var header = await _repo.GetPayrollHistoryByIdAsync(historyId);
+        if (header is null) return null;
+        var items = await _repo.GetPayrollHistoryItemsAsync(historyId);
+        if (items.Count == 0)
+        {
+            var fallback = await _repo.GetPayrollAsync(header.Year, header.Month, null);
+            items = fallback.Select(x => new ConstructionPayrollHistoryItemDto
+            {
+                UserName = x.UserName,
+                FullName = x.FullName,
+                BaseSalary = x.BaseSalary,
+                QuantityAmount = x.QuantityAmount,
+                QualityBonus = x.QualityBonus,
+                AttendanceDeduction = x.AttendanceDeduction,
+                TotalSalary = x.TotalSalary,
+                Status = x.Status.ToString()
+            }).ToList();
+        }
+        if (items.Count == 0) return null;
+
+        using var workbook = new XLWorkbook();
+        var ws = workbook.Worksheets.Add("PayrollHistory");
+        ws.Cell(1, 1).Value = "User";
+        ws.Cell(1, 2).Value = "Họ tên";
+        ws.Cell(1, 3).Value = "Lương cơ bản";
+        ws.Cell(1, 4).Value = "Theo sản lượng";
+        ws.Cell(1, 5).Value = "Thưởng";
+        ws.Cell(1, 6).Value = "Khấu trừ công";
+        ws.Cell(1, 7).Value = "Thực lĩnh";
+        ws.Cell(1, 8).Value = "Trạng thái";
+
+        var row = 2;
+        foreach (var item in items)
+        {
+            ws.Cell(row, 1).Value = item.UserName;
+            ws.Cell(row, 2).Value = item.FullName;
+            ws.Cell(row, 3).Value = item.BaseSalary;
+            ws.Cell(row, 4).Value = item.QuantityAmount;
+            ws.Cell(row, 5).Value = item.QualityBonus;
+            ws.Cell(row, 6).Value = item.AttendanceDeduction;
+            ws.Cell(row, 7).Value = item.TotalSalary;
+            ws.Cell(row, 8).Value = item.Status;
+            row++;
+        }
+
+        ws.Range(1, 1, 1, 8).Style.Font.Bold = true;
+        ws.Columns().AdjustToContents();
+        ws.Columns(3, 7).Style.NumberFormat.Format = "#,##0";
+
+        using var ms = new MemoryStream();
+        workbook.SaveAs(ms);
+        return (ms.ToArray(), $"payroll-history-{historyId}-{header.Month}-{header.Year}.xlsx");
+    }
+
+    public async Task<(ConstructionPayrollHistoryDto? Header, IReadOnlyList<ConstructionPayrollHistoryItemDto> Items)> GetPayrollHistoryDetailsAsync(long historyId)
+    {
+        var header = await _repo.GetPayrollHistoryByIdAsync(historyId);
+        if (header is null) return (null, Array.Empty<ConstructionPayrollHistoryItemDto>());
+        var items = await _repo.GetPayrollHistoryItemsAsync(historyId);
+        return (header, items);
+    }
+
+    public async Task<ApiResult> RollbackPayrollApprovalAsync(long payrollId, ICurrentUser currentUser)
+    {
+        var affected = await _repo.RollbackPayrollApprovalAsync(payrollId, currentUser.Id);
+        return affected > 0 ? ApiResult.Ok("Đã xóa chốt lương, phiếu trở về Draft.") : ApiResult.Fail("Không tìm thấy phiếu lương.");
     }
 
     private static bool EvaluateWorkDay(Dictionary<WorkflowStep, KpiAggRow> stepStats, ConstructionKpiSettings settings)
@@ -453,9 +564,9 @@ WHERE d.status = 1
             BaseSalary = ReadDecimal(map, "ConstructionPayrollBaseSalary", 5_000_000m),
             RatePerDocument = ReadDecimal(map, "ConstructionPayrollRatePerDocument", 1_000m),
             QualityThresholdHigh = ReadDecimal(map, "ConstructionPayrollQualityThresholdHigh", 98m),
-            QualityBonusHigh = ReadDecimal(map, "ConstructionPayrollQualityBonusHigh", 1_500_000m),
+            QualityBonusHigh = ReadDecimal(map, "ConstructionPayrollQualityBonusHigh", 0m),
             QualityThresholdMedium = ReadDecimal(map, "ConstructionPayrollQualityThresholdMedium", 95m),
-            QualityBonusMedium = ReadDecimal(map, "ConstructionPayrollQualityBonusMedium", 750_000m),
+            QualityBonusMedium = ReadDecimal(map, "ConstructionPayrollQualityBonusMedium", 0m),
             AttendanceDeductionPerDay = ReadDecimal(map, "ConstructionPayrollAttendanceDeductionPerDay", 200_000m)
         };
     }

@@ -13,6 +13,11 @@ public interface IConstructionKpiPayrollRepository
     Task<IReadOnlyList<ConstructionKpiDailyDto>> GetDailyKpisAsync(DateTime fromDate, DateTime toDate, int? userId = null);
     Task<long> UpsertPayrollAsync(ConstructionPayrollEntry row);
     Task<IReadOnlyList<ConstructionPayrollDto>> GetPayrollAsync(int year, int month, int? userId = null);
+    Task<long> SavePayrollHistoryAsync(int year, int month, DateTime periodFrom, DateTime periodTo, int createdBy, string? note = null);
+    Task<IReadOnlyList<ConstructionPayrollHistoryDto>> GetPayrollHistoriesAsync(int year, int month);
+    Task<IReadOnlyList<ConstructionPayrollHistoryItemDto>> GetPayrollHistoryItemsAsync(long historyId);
+    Task<ConstructionPayrollHistoryDto?> GetPayrollHistoryByIdAsync(long historyId);
+    Task<int> RollbackPayrollApprovalAsync(long payrollId, int updatedBy);
 }
 
 public sealed class ConstructionKpiPayrollRepository : BaseRepository, IConstructionKpiPayrollRepository
@@ -248,5 +253,228 @@ WHERE p.[year] = @Year
 ORDER BY u.full_name, u.user_name;";
         var rows = await QueryAsync<ConstructionPayrollDto>(conn, sql, new { Year = year, Month = month, UserId = userId });
         return rows.ToList();
+    }
+
+    public async Task<long> SavePayrollHistoryAsync(int year, int month, DateTime periodFrom, DateTime periodTo, int createdBy, string? note = null)
+    {
+        var conn = await OpenConnectionAsync();
+        const string sql = @"
+IF OBJECT_ID('dbo.stg_construction_payroll_histories', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.stg_construction_payroll_histories
+    (
+        id BIGINT IDENTITY(1,1) PRIMARY KEY,
+        [year] INT NOT NULL,
+        [month] INT NOT NULL,
+        period_from DATE NOT NULL,
+        period_to DATE NOT NULL,
+        total_users INT NOT NULL,
+        total_amount DECIMAL(18,2) NOT NULL,
+        note NVARCHAR(500) NULL,
+        created DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+        created_by INT NOT NULL DEFAULT 0
+    );
+END;
+
+IF OBJECT_ID('dbo.stg_construction_payroll_history_items', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.stg_construction_payroll_history_items
+    (
+        id BIGINT IDENTITY(1,1) PRIMARY KEY,
+        history_id BIGINT NOT NULL,
+        user_id INT NOT NULL,
+        user_name NVARCHAR(128) NULL,
+        full_name NVARCHAR(255) NULL,
+        base_salary DECIMAL(18,2) NOT NULL,
+        quantity_amount DECIMAL(18,2) NOT NULL,
+        quality_bonus DECIMAL(18,2) NOT NULL,
+        attendance_deduction DECIMAL(18,2) NOT NULL,
+        total_salary DECIMAL(18,2) NOT NULL,
+        [status] TINYINT NOT NULL
+    );
+END;
+
+IF EXISTS (
+    SELECT 1 FROM dbo.stg_construction_payroll_entries
+    WHERE [year] = @Year AND [month] = @Month AND [status] = 0
+)
+BEGIN
+    RAISERROR (N'Vẫn còn phiếu lương chưa chốt. Không thể lưu lịch sử trả lương.', 16, 1);
+    RETURN;
+END;
+
+DECLARE @HistoryId BIGINT;
+INSERT INTO dbo.stg_construction_payroll_histories
+    ([year], [month], period_from, period_to, total_users, total_amount, note, created, created_by)
+SELECT
+    @Year,
+    @Month,
+    @PeriodFrom,
+    @PeriodTo,
+    COUNT(1),
+    ISNULL(SUM(total_salary), 0),
+    @Note,
+    SYSUTCDATETIME(),
+    @CreatedBy
+FROM dbo.stg_construction_payroll_entries
+WHERE [year] = @Year AND [month] = @Month;
+
+SET @HistoryId = SCOPE_IDENTITY();
+
+INSERT INTO dbo.stg_construction_payroll_history_items
+    (history_id, user_id, user_name, full_name, base_salary, quantity_amount, quality_bonus, attendance_deduction, total_salary, [status])
+SELECT
+    @HistoryId,
+    p.user_id,
+    u.user_name,
+    u.full_name,
+    p.base_salary,
+    p.quantity_amount,
+    p.quality_bonus,
+    p.attendance_deduction,
+    p.total_salary,
+    p.[status]
+FROM dbo.stg_construction_payroll_entries p
+LEFT JOIN dbo.acc_users u ON u.id = p.user_id
+WHERE p.[year] = @Year AND p.[month] = @Month;
+
+SELECT @HistoryId;";
+
+        return await ExecuteScalarAsync<long>(conn, sql, new
+        {
+            Year = year,
+            Month = month,
+            PeriodFrom = periodFrom.Date,
+            PeriodTo = periodTo.Date,
+            CreatedBy = createdBy,
+            Note = note
+        });
+    }
+
+    public async Task<IReadOnlyList<ConstructionPayrollHistoryDto>> GetPayrollHistoriesAsync(int year, int month)
+    {
+        var conn = await OpenConnectionAsync();
+        const string sql = @"
+IF OBJECT_ID('dbo.stg_construction_payroll_histories', 'U') IS NULL
+BEGIN
+    SELECT
+        CAST(NULL AS BIGINT) AS Id,
+        CAST(NULL AS INT) AS [Year],
+        CAST(NULL AS INT) AS [Month],
+        CAST(NULL AS DATE) AS PeriodFrom,
+        CAST(NULL AS DATE) AS PeriodTo,
+        CAST(NULL AS INT) AS TotalUsers,
+        CAST(NULL AS DECIMAL(18,2)) AS TotalAmount,
+        CAST(NULL AS NVARCHAR(500)) AS Note,
+        CAST(NULL AS DATETIME2) AS CreatedAt,
+        CAST(NULL AS NVARCHAR(255)) AS CreatedByName
+    WHERE 1 = 0;
+    RETURN;
+END;
+
+SELECT
+    h.id AS Id,
+    h.[year] AS [Year],
+    h.[month] AS [Month],
+    h.period_from AS PeriodFrom,
+    h.period_to AS PeriodTo,
+    h.total_users AS TotalUsers,
+    h.total_amount AS TotalAmount,
+    h.note AS Note,
+    h.created AS CreatedAt,
+    ISNULL(u.full_name, u.user_name) AS CreatedByName
+FROM dbo.stg_construction_payroll_histories h
+LEFT JOIN dbo.acc_users u ON u.id = h.created_by
+WHERE h.[year] = @Year AND h.[month] = @Month
+ORDER BY h.id DESC;";
+        var rows = await QueryAsync<ConstructionPayrollHistoryDto>(conn, sql, new { Year = year, Month = month });
+        return rows.ToList();
+    }
+
+    public async Task<IReadOnlyList<ConstructionPayrollHistoryItemDto>> GetPayrollHistoryItemsAsync(long historyId)
+    {
+        var conn = await OpenConnectionAsync();
+        const string sql = @"
+IF OBJECT_ID('dbo.stg_construction_payroll_history_items', 'U') IS NULL
+BEGIN
+    SELECT
+        CAST(NULL AS NVARCHAR(128)) AS UserName,
+        CAST(NULL AS NVARCHAR(255)) AS FullName,
+        CAST(NULL AS DECIMAL(18,2)) AS BaseSalary,
+        CAST(NULL AS DECIMAL(18,2)) AS QuantityAmount,
+        CAST(NULL AS DECIMAL(18,2)) AS QualityBonus,
+        CAST(NULL AS DECIMAL(18,2)) AS AttendanceDeduction,
+        CAST(NULL AS DECIMAL(18,2)) AS TotalSalary,
+        CAST(NULL AS NVARCHAR(50)) AS [Status]
+    WHERE 1 = 0;
+    RETURN;
+END;
+
+SELECT
+    i.user_name AS UserName,
+    i.full_name AS FullName,
+    i.base_salary AS BaseSalary,
+    i.quantity_amount AS QuantityAmount,
+    i.quality_bonus AS QualityBonus,
+    i.attendance_deduction AS AttendanceDeduction,
+    i.total_salary AS TotalSalary,
+    CASE i.[status] WHEN 1 THEN N'Approved' ELSE N'Draft' END AS [Status]
+FROM dbo.stg_construction_payroll_history_items i
+WHERE i.history_id = @HistoryId
+ORDER BY i.full_name, i.user_name;";
+        var rows = await QueryAsync<ConstructionPayrollHistoryItemDto>(conn, sql, new { HistoryId = historyId });
+        return rows.ToList();
+    }
+
+    public async Task<ConstructionPayrollHistoryDto?> GetPayrollHistoryByIdAsync(long historyId)
+    {
+        var conn = await OpenConnectionAsync();
+        const string sql = @"
+IF OBJECT_ID('dbo.stg_construction_payroll_histories', 'U') IS NULL
+BEGIN
+    SELECT
+        CAST(NULL AS BIGINT) AS Id,
+        CAST(NULL AS INT) AS [Year],
+        CAST(NULL AS INT) AS [Month],
+        CAST(NULL AS DATE) AS PeriodFrom,
+        CAST(NULL AS DATE) AS PeriodTo,
+        CAST(NULL AS INT) AS TotalUsers,
+        CAST(NULL AS DECIMAL(18,2)) AS TotalAmount,
+        CAST(NULL AS NVARCHAR(500)) AS Note,
+        CAST(NULL AS DATETIME2) AS CreatedAt,
+        CAST(NULL AS NVARCHAR(255)) AS CreatedByName
+    WHERE 1 = 0;
+    RETURN;
+END;
+
+SELECT
+    h.id AS Id,
+    h.[year] AS [Year],
+    h.[month] AS [Month],
+    h.period_from AS PeriodFrom,
+    h.period_to AS PeriodTo,
+    h.total_users AS TotalUsers,
+    h.total_amount AS TotalAmount,
+    h.note AS Note,
+    h.created AS CreatedAt,
+    ISNULL(u.full_name, u.user_name) AS CreatedByName
+FROM dbo.stg_construction_payroll_histories h
+LEFT JOIN dbo.acc_users u ON u.id = h.created_by
+WHERE h.id = @HistoryId;";
+        return await QueryFirstOrDefaultAsync<ConstructionPayrollHistoryDto>(conn, sql, new { HistoryId = historyId });
+    }
+
+    public async Task<int> RollbackPayrollApprovalAsync(long payrollId, int updatedBy)
+    {
+        var conn = await OpenConnectionAsync();
+        const string sql = @"
+UPDATE dbo.stg_construction_payroll_entries
+SET [status] = 0,
+    approved_at = NULL,
+    approved_by = 0,
+    updated = SYSUTCDATETIME(),
+    updated_by = @UpdatedBy
+WHERE id = @Id;";
+        return await ExecuteAsync(conn, sql, new { Id = payrollId, UpdatedBy = updatedBy });
     }
 }

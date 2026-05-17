@@ -57,6 +57,21 @@ public sealed class ConstructionKpiDashboardViewModel
     public IReadOnlyList<ConstructionAttendanceDto> Attendance { get; set; } = Array.Empty<ConstructionAttendanceDto>();
     public IReadOnlyList<ConstructionKpiDailyDto> Kpis { get; set; } = Array.Empty<ConstructionKpiDailyDto>();
     public IReadOnlyList<ConstructionKpiRoleConfigDto> RoleConfigs { get; set; } = Array.Empty<ConstructionKpiRoleConfigDto>();
+    public IReadOnlyList<ConstructionKpiPeriodStatsDto> PeriodStats { get; set; } = Array.Empty<ConstructionKpiPeriodStatsDto>();
+}
+
+public sealed class ConstructionKpiPeriodStatsDto
+{
+    public string Key { get; set; } = string.Empty;
+    public string Label { get; set; } = string.Empty;
+    public DateTime FromDate { get; set; }
+    public DateTime ToDate { get; set; }
+    public int TotalProcessed { get; set; }
+    public decimal AverageQuality { get; set; }
+    public decimal TotalBonus { get; set; }
+    public decimal TotalWorkDays { get; set; }
+    public int TotalRows { get; set; }
+    public int KpiMetRows { get; set; }
 }
 
 public sealed class SaveConstructionKpiConfigRequest
@@ -95,4 +110,43 @@ public sealed class ConstructionPayrollDashboardViewModel
     public int Year { get; set; }
     public int Month { get; set; }
     public IReadOnlyList<ConstructionPayrollDto> Entries { get; set; } = Array.Empty<ConstructionPayrollDto>();
+    public ConstructionPayrollConfigDto Config { get; set; } = new();
+    public IReadOnlyList<ConstructionPayrollHistoryDto> Histories { get; set; } = Array.Empty<ConstructionPayrollHistoryDto>();
+}
+
+public sealed class ConstructionPayrollConfigDto
+{
+    public decimal BaseSalary { get; set; }
+    public decimal RatePerDocument { get; set; }
+    public decimal AttendanceDeductionPerDay { get; set; }
+    public decimal QualityThresholdHigh { get; set; }
+    public decimal QualityBonusHigh { get; set; }
+    public decimal QualityThresholdMedium { get; set; }
+    public decimal QualityBonusMedium { get; set; }
+}
+
+public sealed class ConstructionPayrollHistoryDto
+{
+    public long Id { get; set; }
+    public int Year { get; set; }
+    public int Month { get; set; }
+    public DateTime PeriodFrom { get; set; }
+    public DateTime PeriodTo { get; set; }
+    public int TotalUsers { get; set; }
+    public decimal TotalAmount { get; set; }
+    public string? Note { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public string CreatedByName { get; set; } = string.Empty;
+}
+
+public sealed class ConstructionPayrollHistoryItemDto
+{
+    public string UserName { get; set; } = string.Empty;
+    public string FullName { get; set; } = string.Empty;
+    public decimal BaseSalary { get; set; }
+    public decimal QuantityAmount { get; set; }
+    public decimal QualityBonus { get; set; }
+    public decimal AttendanceDeduction { get; set; }
+    public decimal TotalSalary { get; set; }
+    public string Status { get; set; } = string.Empty;
 }

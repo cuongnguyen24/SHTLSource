@@ -1,0 +1,39 @@
+@model IReadOnlyList<SHTL.Modules.Shared.Contracts.Dtos.ConstructionPayrollHistoryItemDto>
+@{
+    var header = ViewBag.Header as SHTL.Modules.Shared.Contracts.Dtos.ConstructionPayrollHistoryDto;
+}
+<div class="p-3 border-top bg-light">
+    <div class="d-flex align-items-center justify-content-between mb-2">
+        <div class="font-weight-bold">Chi tiết lịch sử #@header?.Id - @header?.Month/@header?.Year</div>
+        <div class="text-muted small">Tổng tiền: @header?.TotalAmount.ToString("N0")</div>
+    </div>
+    <div class="table-responsive bg-white">
+        <table class="table table-sm table-hover mb-0">
+            <thead class="table-light">
+                <tr><th>User</th><th>Họ tên</th><th>Lương cơ bản</th><th>Theo sản lượng</th><th>Thưởng</th><th>Khấu trừ công</th><th>Thực lĩnh</th><th>Trạng thái</th></tr>
+            </thead>
+            <tbody>
+            @if (!Model.Any())
+            {
+                <tr><td colspan="8" class="text-center text-muted p-3">Không có chi tiết.</td></tr>
+            }
+            else
+            {
+                foreach (var i in Model)
+                {
+                    <tr>
+                        <td>@i.UserName</td>
+                        <td>@i.FullName</td>
+                        <td>@i.BaseSalary.ToString("N0")</td>
+                        <td>@i.QuantityAmount.ToString("N0")</td>
+                        <td>@i.QualityBonus.ToString("N0")</td>
+                        <td>@i.AttendanceDeduction.ToString("N0")</td>
+                        <td class="font-weight-bold">@i.TotalSalary.ToString("N0")</td>
+                        <td>@i.Status</td>
+                    </tr>
+                }
+            }
+            </tbody>
+        </table>
+    </div>
+</div>

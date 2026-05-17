@@ -1,0 +1,63 @@
+@model IReadOnlyList<SHTL.Modules.Shared.Contracts.Dtos.ConstructionPayrollHistoryItemDto>
+@{
+    var header = ViewBag.Header as SHTL.Modules.Shared.Contracts.Dtos.ConstructionPayrollHistoryDto;
+    var year = (int)(ViewBag.Year ?? 0);
+    var month = (int)(ViewBag.Month ?? 0);
+    ViewData["Title"] = "Chi tiết lịch sử trả lương";
+}
+@section Breadcrumb {
+    <li class="breadcrumb-item"><a asp-area="dashboard" asp-controller="Construction" asp-action="Index">Tiến độ thi công</a></li>
+    <li class="breadcrumb-item"><a asp-area="dashboard" asp-controller="Construction" asp-action="Payroll" asp-route-year="@year" asp-route-month="@month">Payroll</a></li>
+    <li class="breadcrumb-item active">Chi tiết lịch sử</li>
+}
+
+<div class="layout-expanded">
+    <div class="card-figma mb-3">
+        <div class="card-header-figma d-flex justify-content-between align-items-center">
+            <h3 class="card-title-figma mb-0">Chi tiết lịch sử trả lương #@header?.Id</h3>
+            <a class="btn btn-sm btn-outline-primary" asp-action="ExportPayrollHistory" asp-route-id="@header?.Id" asp-route-year="@year" asp-route-month="@month">Xuất Excel</a>
+        </div>
+        <div class="card-content-figma">
+            <div class="form-row">
+                <div class="col-md-3"><div class="small text-muted">Kỳ</div><div class="font-weight-bold">@header?.Month/@header?.Year</div></div>
+                <div class="col-md-3"><div class="small text-muted">Từ ngày</div><div class="font-weight-bold">@header?.PeriodFrom.ToString("dd/MM/yyyy")</div></div>
+                <div class="col-md-3"><div class="small text-muted">Đến ngày</div><div class="font-weight-bold">@header?.PeriodTo.ToString("dd/MM/yyyy")</div></div>
+                <div class="col-md-3"><div class="small text-muted">Tổng tiền</div><div class="font-weight-bold">@header?.TotalAmount.ToString("N0")</div></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-figma">
+        <div class="card-content-figma p-0">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light">
+                        <tr><th>User</th><th>Họ tên</th><th>Lương cơ bản</th><th>Theo sản lượng</th><th>Thưởng</th><th>Khấu trừ công</th><th>Thực lĩnh</th><th>Trạng thái</th></tr>
+                    </thead>
+                    <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr><td colspan="8" class="text-center text-muted p-3">Không có chi tiết.</td></tr>
+                    }
+                    else
+                    {
+                        foreach (var i in Model)
+                        {
+                            <tr>
+                                <td>@i.UserName</td>
+                                <td>@i.FullName</td>
+                                <td>@i.BaseSalary.ToString("N0")</td>
+                                <td>@i.QuantityAmount.ToString("N0")</td>
+                                <td>@i.QualityBonus.ToString("N0")</td>
+                                <td>@i.AttendanceDeduction.ToString("N0")</td>
+                                <td class="font-weight-bold">@i.TotalSalary.ToString("N0")</td>
+                                <td>@i.Status</td>
+                            </tr>
+                        }
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
