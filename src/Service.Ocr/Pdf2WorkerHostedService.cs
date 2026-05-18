@@ -93,7 +93,7 @@ internal sealed class OcrWorkerHostedService : BackgroundService
                 }
 
                 // ── Dynamic concurrency ──────────────────────────────────────
-                var target = SystemResourceMonitor.ComputeTargetWorkers(opt);
+                var target = Math.Min(5, SystemResourceMonitor.ComputeTargetWorkers(opt));
 
                 // Log resource status định kỳ (1 phút/lần)
                 if (DateTime.UtcNow - lastResourceLog > TimeSpan.FromMinutes(1))

@@ -213,7 +213,7 @@ def main() -> int:
                     fontsize = max(4, min(36, r.height * 0.9))
                     placed = False
                     try:
-                        new_page.insert_textbox(
+                        rc = new_page.insert_textbox(
                             r,
                             text,
                             fontname=use_font,
@@ -221,7 +221,7 @@ def main() -> int:
                             align=fitz.TEXT_ALIGN_LEFT,
                             render_mode=3,  # invisible (text dùng để select/search)
                         )
-                        placed = True
+                        placed = rc is None or rc >= 0
                     except Exception:
                         pass
                     if not placed:

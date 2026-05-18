@@ -71,6 +71,15 @@ public sealed class FolderProgressReportService : IFolderProgressReportService
                 pdf_processing AS PdfProcessing,
                 pdf_ready AS PdfReady,
                 pdf_failed AS PdfFailed,
+                (pdf_ready + pdf_failed) AS PdfDoneTotal,
+                (pdf_queued + pdf_processing) AS PdfRemaining,
+                CAST(
+                    CASE
+                        WHEN total_pdfs <= 0 THEN 0
+                        ELSE ((pdf_ready + pdf_failed) * 100.0 / total_pdfs)
+                    END
+                    AS decimal(5,2)
+                ) AS PdfProgressPercent,
                 extracted_done AS ExtractedDone,
                 check1_done AS Check1Done,
                 check2_done AS Check2Done

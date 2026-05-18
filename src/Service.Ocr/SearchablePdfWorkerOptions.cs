@@ -63,7 +63,7 @@ public sealed class OcrSearchablePdfWorkerOptions
     /// <c>0</c> (mặc định) = tự động scale theo RAM và số CPU core.
     /// Đặt giá trị dương để cố định (bỏ qua auto-scale).
     /// </summary>
-    public int MaxConcurrentWorkers { get; set; } = 0;
+    public int MaxConcurrentWorkers { get; set; } = 5;
 
     /// <summary>
     /// RAM tối thiểu cần còn trống (MB) để khởi động thêm 1 Python worker.

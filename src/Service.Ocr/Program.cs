@@ -23,6 +23,7 @@ builder.Services.AddSingleton<OcrServiceJobRepository>();
 builder.Services.AddSingleton<WorkerFileStorage>();
 builder.Services.AddSingleton<PythonDependencyBootstrapper>();
 builder.Services.AddSingleton<OcrPythonRunner>();
+builder.Services.AddSingleton<OcrZoneFieldFillService>();
 builder.Services.AddSingleton<OcrProcessor>();
 builder.Services.AddHostedService<OcrWorkerHostedService>();
 

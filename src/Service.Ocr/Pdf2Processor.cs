@@ -10,6 +10,7 @@ internal sealed class OcrProcessor
     private readonly IOptions<StorageOptions> _storageOpts;
     private readonly IOptions<OcrSearchablePdfWorkerOptions> _pdfOpts;
     private readonly OcrPythonRunner _runner;
+    private readonly OcrZoneFieldFillService _zoneFieldFill;
     private readonly ILogger<OcrProcessor> _logger;
 
     public OcrProcessor(
@@ -18,6 +19,7 @@ internal sealed class OcrProcessor
         IOptions<StorageOptions> storageOpts,
         IOptions<OcrSearchablePdfWorkerOptions> pdfOpts,
         OcrPythonRunner runner,
+        OcrZoneFieldFillService zoneFieldFill,
         ILogger<OcrProcessor> logger)
     {
         _repo = repo;
@@ -25,6 +27,7 @@ internal sealed class OcrProcessor
         _storageOpts = storageOpts;
         _pdfOpts = pdfOpts;
         _runner = runner;
+        _zoneFieldFill = zoneFieldFill;
         _logger = logger;
     }
 
@@ -99,6 +102,16 @@ internal sealed class OcrProcessor
                 await _repo.UpdateOcrSearchablePdfStateAsync(documentId, OcrOcrStatus.OcrSearchablePdfFailed, null, 0, cancellationToken)
                     .ConfigureAwait(false);
                 return;
+            }
+
+            var fill = await _zoneFieldFill.FillAsync(documentId, doc.DocTypeId, tempOut, cancellationToken).ConfigureAwait(false);
+            if (fill.Success)
+            {
+                await LogDocAsync(documentId, "INFO", "ZONE_FILL", $"Filled OCR zones: {fill.FilledCount} field(s). {fill.Reason}").ConfigureAwait(false);
+            }
+            else
+            {
+                await LogDocAsync(documentId, "WARN", "ZONE_FILL_EMPTY", $"OCR done but no DB field filled. {fill.Reason}").ConfigureAwait(false);
             }
 
             string storedRel;

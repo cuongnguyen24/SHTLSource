@@ -44,7 +44,7 @@
     }
     var dateDisplay = forceDateInput ? FormatDateValue(val) : val;
 }
-<div class="form-group ext-field-group" data-input-type="@it">
+<div class="form-group ext-field-group" data-input-type="@it" data-field-setting-id="@f.Id" data-field-id="@f.FieldId">
     <div class="d-flex align-items-center justify-content-between mb-1">
         <label class="small text-muted mb-0 d-block" for="@id">
             @f.Title @if (f.IsRequired) { <span class="text-danger">*</span> }
