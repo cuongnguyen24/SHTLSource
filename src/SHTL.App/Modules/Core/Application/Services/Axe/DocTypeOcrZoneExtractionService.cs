@@ -7,6 +7,7 @@ using SHTL.Modules.Core.Domain.Contracts;
 using SHTL.Modules.Core.Domain.Entities.Stg;
 using SHTL.Modules.Infrastructure.Data.Repositories.Stg;
 using SHTL.Modules.Infrastructure.Storage;
+using SHTL.Modules.Shared.Contracts;
 using SHTL.Modules.Shared.Contracts.Dtos;
 
 namespace SHTL.Modules.Core.Application.Services.Axe;
@@ -14,6 +15,25 @@ namespace SHTL.Modules.Core.Application.Services.Axe;
 public interface IDocTypeOcrZoneExtractionService
 {
     Task<bool> TryPrefillDocumentFromConfiguredZonesAsync(long documentId, CancellationToken cancellationToken = default);
+    Task<ApiResult<OcrZoneExtractResultDto>> ExtractTemporaryZoneAsync(long documentId, OcrZoneExtractRequest request, CancellationToken cancellationToken = default);
+}
+
+public sealed class OcrZoneExtractRequest
+{
+    public int FieldSettingId { get; set; }
+    public int PageNumber { get; set; }
+    public decimal XRatio { get; set; }
+    public decimal YRatio { get; set; }
+    public decimal WidthRatio { get; set; }
+    public decimal HeightRatio { get; set; }
+}
+
+public sealed class OcrZoneExtractResultDto
+{
+    public int FieldSettingId { get; set; }
+    public int FieldId { get; set; }
+    public string FieldKey { get; set; } = string.Empty;
+    public string Value { get; set; } = string.Empty;
 }
 
 public sealed class DocTypeOcrZoneExtractionService : IDocTypeOcrZoneExtractionService
@@ -159,6 +179,77 @@ public sealed class DocTypeOcrZoneExtractionService : IDocTypeOcrZoneExtractionS
         return true;
     }
 
+    public async Task<ApiResult<OcrZoneExtractResultDto>> ExtractTemporaryZoneAsync(
+        long documentId,
+        OcrZoneExtractRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (request.FieldSettingId <= 0)
+            return ApiResult<OcrZoneExtractResultDto>.Fail("Thieu truong cau hinh OCR.");
+        if (request.PageNumber <= 0)
+            return ApiResult<OcrZoneExtractResultDto>.Fail("Trang OCR khong hop le.");
+        if (request.WidthRatio <= 0 || request.HeightRatio <= 0)
+            return ApiResult<OcrZoneExtractResultDto>.Fail("Vung OCR phai co kich thuoc.");
+
+        var doc = await _docRepo.GetByIdAsync(documentId);
+        if (doc is null)
+            return ApiResult<OcrZoneExtractResultDto>.Fail("Tai lieu khong ton tai.");
+
+        var settings = await _docTypeRepo.GetFieldSettingsByTypeAsync(doc.DocTypeId);
+        var setting = settings.FirstOrDefault(x => x.Id == request.FieldSettingId);
+        if (setting is null)
+            return ApiResult<OcrZoneExtractResultDto>.Fail("Truong cau hinh OCR khong thuoc loai tai lieu hien tai.");
+
+        var fields = await _docTypeRepo.GetAllFieldsAsync();
+        var field = fields.FirstOrDefault(x => x.Id == setting.IdField);
+        var fieldId = field?.Id ?? setting.IdField;
+        var fieldName = field?.Name ?? string.Empty;
+
+        var fieldKey = StgFieldToDocumentMapper.ResolvePostFieldKey(fieldName, fieldId);
+        if (string.IsNullOrWhiteSpace(fieldKey))
+            return ApiResult<OcrZoneExtractResultDto>.Fail("Khong xac dinh duoc cot du lieu can map.");
+
+        var pdfBytes = await StoragePdfFileReader.ReadAllBytesAsync(
+            _storage,
+            _storageOptions,
+            EnumeratePdfCandidates(doc),
+            cancellationToken);
+        if (pdfBytes is null || pdfBytes.Length == 0)
+            return ApiResult<OcrZoneExtractResultDto>.Fail("Khong doc duoc PDF 2 lop cua tai lieu.");
+
+        try
+        {
+            using var reader = new PdfReader(new MemoryStream(pdfBytes));
+            using var pdf = new PdfDocument(reader);
+            if (request.PageNumber > pdf.GetNumberOfPages())
+                return ApiResult<OcrZoneExtractResultDto>.Fail("Trang OCR vuot qua so trang PDF.");
+
+            var text = PdfOcrRegionTextExtractor.ExtractStrict(
+                pdf.GetPage(request.PageNumber),
+                ClampRatio(request.XRatio),
+                ClampRatio(request.YRatio),
+                ClampRatio(request.WidthRatio),
+                ClampRatio(request.HeightRatio));
+
+            if (string.IsNullOrWhiteSpace(text))
+                return ApiResult<OcrZoneExtractResultDto>.Fail("Khong boc duoc chu tu vung OCR nay. Hay keo rong vung hon hoac kiem tra PDF 2 lop.");
+
+            var normalized = NormalizeValueForField(fieldKey, field, text);
+            return ApiResult<OcrZoneExtractResultDto>.Ok(new OcrZoneExtractResultDto
+            {
+                FieldSettingId = request.FieldSettingId,
+                FieldId = fieldId,
+                FieldKey = fieldKey,
+                Value = normalized
+            }, "Da OCR lai vung va dua du lieu vao o nhap.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Temporary OCR zone extract failed. DocumentId={DocumentId}, FieldSettingId={FieldSettingId}", documentId, request.FieldSettingId);
+            return ApiResult<OcrZoneExtractResultDto>.Fail("Loi khi OCR lai vung hien tai.");
+        }
+    }
+
     private static bool TryResolveField(
         DocTypeOcrZoneDto zone,
         IReadOnlyDictionary<int, StgDocFieldSettingDto> settingById,
@@ -228,10 +319,12 @@ public sealed class DocTypeOcrZoneExtractionService : IDocTypeOcrZoneExtractionS
         return null;
     }
 
-    private static string NormalizeValueForField(string fieldKey, StgDocFieldDto field, string text)
+    private static decimal ClampRatio(decimal value) => Math.Min(1m, Math.Max(0m, value));
+
+    private static string NormalizeValueForField(string fieldKey, StgDocFieldDto? field, string text)
     {
-        var isDateField = string.Equals(field.Datatype, "date", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(field.Datatype, "datetime", StringComparison.OrdinalIgnoreCase)
+        var isDateField = string.Equals(field?.Datatype, "date", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(field?.Datatype, "datetime", StringComparison.OrdinalIgnoreCase)
             || fieldKey.Contains("date", StringComparison.OrdinalIgnoreCase)
             || fieldKey.Contains("issued", StringComparison.OrdinalIgnoreCase);
 

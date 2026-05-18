@@ -10,6 +10,7 @@
     ViewData["Title"] = extractReadOnlyAfterCheck1Pass ? ("Xem nhập liệu — " + doc.Name) : ("Nhập liệu — " + doc.Name);
     var submitUrl = Url.Action("Submit", "Extract", new { area = "sohoa" })!;
     var applyOcrZonesUrl = Url.Action("ApplyOcrZones", "Extract", new { area = "sohoa", id = doc.Id })!;
+    var ocrTemporaryZoneUrl = Url.Action("OcrTemporaryZone", "Extract", new { area = "sohoa", id = doc.Id })!;
     var previewUrl = Url.Content("~/scan/preview/" + doc.Id);
     var indexUrl = Url.Action("Index", "Extract", new { area = "sohoa" })!;
     var pdfRawUrl = Url.Content("~/scan/pdf/" + doc.Id);
@@ -177,6 +178,8 @@
             background: rgba(220, 53, 69, .10);
             box-shadow: 0 0 18px rgba(220, 53, 69, .35);
             box-sizing: border-box;
+            pointer-events: auto;
+            cursor: move;
         }
         .extract-ocr-zone-label {
             position: absolute;
@@ -192,6 +195,30 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+        }
+        .extract-ocr-handle {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border: 2px solid #dc3545;
+            background: #fff;
+            border-radius: 50%;
+            box-sizing: border-box;
+        }
+        .extract-ocr-handle-nw { left: -7px; top: -7px; cursor: nwse-resize; }
+        .extract-ocr-handle-ne { right: -7px; top: -7px; cursor: nesw-resize; }
+        .extract-ocr-handle-sw { left: -7px; bottom: -7px; cursor: nesw-resize; }
+        .extract-ocr-handle-se { right: -7px; bottom: -7px; cursor: nwse-resize; }
+        .extract-ocr-context {
+            position: fixed;
+            z-index: 1060;
+            display: none;
+            min-width: 150px;
+            padding: 8px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            background: #fff;
+            box-shadow: 0 8px 24px rgba(0,0,0,.18);
         }
         .extract-pdf-toolbar {
             flex: 0 0 auto;
@@ -603,6 +630,11 @@
 </div>
 
 <form id="antiEx" class="d-none">@Html.AntiForgeryToken()</form>
+<div id="extractOcrContext" class="extract-ocr-context">
+    <button type="button" class="btn-figma btn-figma-primary btn-sm w-100" id="extractOcrAgainBtn">
+        <i class="fas fa-sync-alt mr-1"></i>OCR lại
+    </button>
+</div>
 
 @section Scripts {
     <script src="~/js/shtl-ajax.js" asp-append-version="true"></script>
@@ -610,6 +642,7 @@
     <script>
         (function () {
             var submitUrl = @Html.Raw(JsonSerializer.Serialize(submitUrl));
+            var ocrTemporaryZoneUrl = @Html.Raw(JsonSerializer.Serialize(ocrTemporaryZoneUrl));
             var docId = @doc.Id;
             var ocrZones = @Html.Raw(JsonSerializer.Serialize(ocrZonesForClient));
             var pdfUrl = @Html.Raw(JsonSerializer.Serialize(pdfRawUrl));
@@ -618,9 +651,11 @@
             var pdfWorkerUrl = @Html.Raw(JsonSerializer.Serialize(pdfWorkerUrl));
             var ocrZoneByFieldSetting = {};
             var activeOcrZone = null;
+            var activeOcrGroup = null;
             var extractPdfDoc = null;
             var extractPdfCurrentPage = 1;
             var extractPdfRendering = false;
+            var resizeState = null;
             initSplitLayout('extractSplitLayout');
             initExtractPdfViewer();
             initOcrZoneHighlight();
@@ -804,6 +839,7 @@
 
             function activateOcrZone(group, zone) {
                 activeOcrZone = zone;
+                activeOcrGroup = group;
                 document.querySelectorAll('.ext-field-group.is-ocr-zone-active').forEach(function (el) {
                     el.classList.remove('is-ocr-zone-active');
                 });
@@ -838,10 +874,174 @@
                 label.className = 'extract-ocr-zone-label';
                 label.textContent = zone.label || 'OCR';
                 el.appendChild(label);
+                ['nw', 'ne', 'sw', 'se'].forEach(function (pos) {
+                    var handle = document.createElement('span');
+                    handle.className = 'extract-ocr-handle extract-ocr-handle-' + pos;
+                    handle.setAttribute('data-handle', pos);
+                    el.appendChild(handle);
+                });
+                bindOcrZoneEditing(el, zone);
                 layer.appendChild(el);
                 if (viewer) {
                     try { el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' }); } catch (e) { el.scrollIntoView(); }
                 }
+            }
+
+            function bindOcrZoneEditing(el, zone) {
+                el.addEventListener('contextmenu', function (e) {
+                    e.preventDefault();
+                    showOcrContext(e.clientX, e.clientY);
+                });
+                el.addEventListener('mousedown', function (e) {
+                    if (e.button !== 0) return;
+                    var handle = e.target && e.target.getAttribute ? e.target.getAttribute('data-handle') : '';
+                    startOcrResize(e, zone, handle || 'move');
+                });
+            }
+
+            function startOcrResize(e, zone, mode) {
+                var layer = document.getElementById('extractOcrZoneLayer');
+                if (!layer) return;
+                var rect = layer.getBoundingClientRect();
+                resizeState = {
+                    zone: zone,
+                    mode: mode,
+                    layerRect: rect,
+                    startX: e.clientX,
+                    startY: e.clientY,
+                    x: toRatio(zone.xRatio),
+                    y: toRatio(zone.yRatio),
+                    w: toRatio(zone.widthRatio),
+                    h: toRatio(zone.heightRatio)
+                };
+                document.addEventListener('mousemove', onOcrResizeMove);
+                document.addEventListener('mouseup', stopOcrResize);
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            function onOcrResizeMove(e) {
+                if (!resizeState) return;
+                var dx = (e.clientX - resizeState.startX) / Math.max(1, resizeState.layerRect.width);
+                var dy = (e.clientY - resizeState.startY) / Math.max(1, resizeState.layerRect.height);
+                var x = resizeState.x;
+                var y = resizeState.y;
+                var w = resizeState.w;
+                var h = resizeState.h;
+                var minSize = 0.01;
+
+                if (resizeState.mode === 'move') {
+                    x += dx; y += dy;
+                } else {
+                    if (resizeState.mode.indexOf('w') >= 0) { x += dx; w -= dx; }
+                    if (resizeState.mode.indexOf('e') >= 0) { w += dx; }
+                    if (resizeState.mode.indexOf('n') >= 0) { y += dy; h -= dy; }
+                    if (resizeState.mode.indexOf('s') >= 0) { h += dy; }
+                }
+
+                if (w < minSize) w = minSize;
+                if (h < minSize) h = minSize;
+                if (x < 0) { w += x; x = 0; }
+                if (y < 0) { h += y; y = 0; }
+                if (x + w > 1) w = 1 - x;
+                if (y + h > 1) h = 1 - y;
+
+                resizeState.zone.xRatio = x;
+                resizeState.zone.yRatio = y;
+                resizeState.zone.widthRatio = Math.max(minSize, w);
+                resizeState.zone.heightRatio = Math.max(minSize, h);
+                drawOcrZone(resizeState.zone);
+            }
+
+            function stopOcrResize() {
+                document.removeEventListener('mousemove', onOcrResizeMove);
+                document.removeEventListener('mouseup', stopOcrResize);
+                resizeState = null;
+            }
+
+            function showOcrContext(x, y) {
+                var menu = document.getElementById('extractOcrContext');
+                if (!menu) return;
+                menu.style.display = 'block';
+                menu.style.left = x + 'px';
+                menu.style.top = y + 'px';
+            }
+
+            document.addEventListener('click', function (e) {
+                var menu = document.getElementById('extractOcrContext');
+                if (menu && !menu.contains(e.target)) menu.style.display = 'none';
+            });
+
+            var ocrAgainBtn = document.getElementById('extractOcrAgainBtn');
+            if (ocrAgainBtn) {
+                ocrAgainBtn.addEventListener('click', function () {
+                    var menu = document.getElementById('extractOcrContext');
+                    if (menu) menu.style.display = 'none';
+                    ocrAgainActiveZone();
+                });
+            }
+
+            function ocrAgainActiveZone() {
+                if (!activeOcrZone || !activeOcrGroup) return;
+                var btn = document.getElementById('extractOcrAgainBtn');
+                if (btn) btn.disabled = true;
+                fetch(ocrTemporaryZoneUrl, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': token()
+                    },
+                    body: JSON.stringify({
+                        fieldSettingId: activeOcrZone.fieldSettingId,
+                        pageNumber: activeOcrZone.pageNumber,
+                        xRatio: toRatio(activeOcrZone.xRatio),
+                        yRatio: toRatio(activeOcrZone.yRatio),
+                        widthRatio: toRatio(activeOcrZone.widthRatio),
+                        heightRatio: toRatio(activeOcrZone.heightRatio)
+                    })
+                }).then(function (r) { return r.json(); }).then(function (j) {
+                    if (!j || !j.success) {
+                        toastErrorLong((j && j.message) || 'OCR lai vung that bai.');
+                        return;
+                    }
+                    applyOcrValueToActiveField(j.data || j.Data);
+                    if (typeof toastr !== 'undefined') toastr.success(j.message || j.Message || 'Da OCR lai vung.');
+                }).catch(function (err) {
+                    toastErrorLong('Loi OCR lai vung. ' + (err && err.message ? err.message : ''));
+                }).finally(function () {
+                    if (btn) btn.disabled = false;
+                });
+            }
+
+            function applyOcrValueToActiveField(data) {
+                if (!data || !activeOcrGroup) return;
+                var key = data.fieldKey || data.FieldKey;
+                var value = (data.value || data.Value || '').toString().trim();
+                var input = key
+                    ? activeOcrGroup.querySelector('[data-stg-field="' + cssEscape(key) + '"]')
+                    : activeOcrGroup.querySelector('[data-stg-field]');
+                if (!input) input = activeOcrGroup.querySelector('[data-stg-field]');
+                if (!input) return;
+                if (input.classList.contains('ext-date')) {
+                    value = formatDateForDisplay(value);
+                    input.dataset.rawSnapshot = value;
+                }
+                input.value = '';
+                input.value = value;
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+                try { input.focus(); } catch (e) { /* ignore */ }
+            }
+
+            function cssEscape(value) {
+                if (window.CSS && window.CSS.escape) return window.CSS.escape(value);
+                return String(value).replace(/"/g, '\\"');
+            }
+
+            function formatDateForDisplay(value) {
+                var m = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+                return m ? (m[3] + '/' + m[2] + '/' + m[1]) : value;
             }
 
             function toRatio(value) {

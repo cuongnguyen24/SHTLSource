@@ -143,6 +143,21 @@ public class ExtractController : BaseController
         return RedirectToAction(nameof(Form), new { id });
     }
 
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> OcrTemporaryZone(long id, [FromBody] OcrZoneExtractRequest? request)
+    {
+        if (request is null)
+            return JsonResult(ApiResult<OcrZoneExtractResultDto>.Fail("Thieu du lieu vung OCR."));
+
+        var doc = await _docService.GetByIdAsync(id, CurrentUser);
+        if (doc is null)
+            return JsonResult(ApiResult<OcrZoneExtractResultDto>.Fail("Tai lieu khong ton tai hoac ban khong co quyen truy cap."));
+
+        var result = await _ocrZoneExtraction.ExtractTemporaryZoneAsync(id, request);
+        return JsonResult(result);
+    }
+
     // POST /extract/submit
     [HttpPost]
     [ValidateAntiForgeryToken]
