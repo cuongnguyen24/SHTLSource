@@ -14,7 +14,7 @@ public interface IConstructionKpiPayrollRepository
     Task<long> UpsertPayrollAsync(ConstructionPayrollEntry row);
     Task<IReadOnlyList<ConstructionPayrollDto>> GetPayrollAsync(int year, int month, int? userId = null);
     Task<long> SavePayrollHistoryAsync(int year, int month, DateTime periodFrom, DateTime periodTo, int createdBy, string? note = null);
-    Task<IReadOnlyList<ConstructionPayrollHistoryDto>> GetPayrollHistoriesAsync(int year, int month);
+    Task<IReadOnlyList<ConstructionPayrollHistoryDto>> GetPayrollHistoriesAsync();
     Task<IReadOnlyList<ConstructionPayrollHistoryItemDto>> GetPayrollHistoryItemsAsync(long historyId);
     Task<ConstructionPayrollHistoryDto?> GetPayrollHistoryByIdAsync(long historyId);
     Task<int> RollbackPayrollApprovalAsync(long payrollId, int updatedBy);
@@ -351,7 +351,7 @@ SELECT @HistoryId;";
         });
     }
 
-    public async Task<IReadOnlyList<ConstructionPayrollHistoryDto>> GetPayrollHistoriesAsync(int year, int month)
+    public async Task<IReadOnlyList<ConstructionPayrollHistoryDto>> GetPayrollHistoriesAsync()
     {
         var conn = await OpenConnectionAsync();
         const string sql = @"
@@ -385,9 +385,8 @@ SELECT
     ISNULL(u.full_name, u.user_name) AS CreatedByName
 FROM dbo.stg_construction_payroll_histories h
 LEFT JOIN dbo.acc_users u ON u.id = h.created_by
-WHERE h.[year] = @Year AND h.[month] = @Month
-ORDER BY h.id DESC;";
-        var rows = await QueryAsync<ConstructionPayrollHistoryDto>(conn, sql, new { Year = year, Month = month });
+ORDER BY h.[year] DESC, h.[month] DESC, h.id DESC;";
+        var rows = await QueryAsync<ConstructionPayrollHistoryDto>(conn, sql);
         return rows.ToList();
     }
 
@@ -411,6 +410,7 @@ BEGIN
 END;
 
 SELECT
+    i.user_id AS UserId,
     i.user_name AS UserName,
     i.full_name AS FullName,
     i.base_salary AS BaseSalary,

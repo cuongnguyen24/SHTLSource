@@ -185,12 +185,52 @@ public sealed class ConstructionKpiPayrollService : IConstructionKpiPayrollServi
     public async Task<ConstructionPayrollDashboardViewModel> GetPayrollDashboardAsync(int year, int month, int? userId = null)
     {
         var config = await LoadPayrollConfigAsync();
+        var entries = (await _repo.GetPayrollAsync(year, month, userId)).ToList();
+        var histories = (await _repo.GetPayrollHistoriesAsync()).ToList();
+
+        if (userId.HasValue && histories.Count > 0)
+        {
+            var latestHistoryInSelectedMonth = histories
+                .Where(x => x.Year == year && x.Month == month)
+                .OrderByDescending(x => x.Id)
+                .FirstOrDefault();
+
+            if (latestHistoryInSelectedMonth is not null)
+            {
+                var latestItems = await _repo.GetPayrollHistoryItemsAsync(latestHistoryInSelectedMonth.Id);
+                var latestUserItem = latestItems.FirstOrDefault(x => x.UserId == userId.Value);
+                if (latestUserItem is not null)
+                {
+                    entries = new List<ConstructionPayrollDto>
+                    {
+                        new()
+                        {
+                            Id = 0,
+                            UserId = latestUserItem.UserId,
+                            UserName = latestUserItem.UserName,
+                            FullName = latestUserItem.FullName,
+                            Year = year,
+                            Month = month,
+                            BaseSalary = latestUserItem.BaseSalary,
+                            QuantityAmount = latestUserItem.QuantityAmount,
+                            QualityBonus = latestUserItem.QualityBonus,
+                            AttendanceDeduction = latestUserItem.AttendanceDeduction,
+                            TotalSalary = latestUserItem.TotalSalary,
+                            Status = latestUserItem.Status.Equals("Approved", StringComparison.OrdinalIgnoreCase)
+                                ? ConstructionPayrollStatus.Approved
+                                : ConstructionPayrollStatus.Draft
+                        }
+                    };
+                }
+            }
+        }
+
         return new ConstructionPayrollDashboardViewModel
         {
             Year = year,
             Month = month,
-            Entries = await _repo.GetPayrollAsync(year, month, userId),
-            Histories = await _repo.GetPayrollHistoriesAsync(year, month),
+            Entries = entries,
+            Histories = histories,
             Config = new ConstructionPayrollConfigDto
             {
                 BaseSalary = config.BaseSalary,

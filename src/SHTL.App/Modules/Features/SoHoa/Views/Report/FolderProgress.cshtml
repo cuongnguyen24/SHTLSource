@@ -121,6 +121,7 @@
                             <th rowspan="2">STT</th>
                             <th rowspan="2">Thư mục</th>
                             <th colspan="6">PDF 2 lớp</th>
+                            <th colspan="3">OCR</th>
                             <th colspan="3">Nhập liệu / Kiểm tra</th>
                         </tr>
                         <tr class="table-light">
@@ -130,6 +131,9 @@
                             <th>Đang</th>
                             <th>Đã OCR</th>
                             <th>Lỗi OCR</th>
+                            <th>Đã xử lý</th>
+                            <th>Còn lại</th>
+                            <th>% OCR</th>
                             <th>Đã nhập</th>
                             <th>Check 1</th>
                             <th>Check 2</th>
@@ -138,7 +142,7 @@
                     <tbody>
                     @if (!Model.Rows.Any())
                     {
-                        <tr><td colspan="11" class="text-center text-muted p-4">Không có dữ liệu.</td></tr>
+                        <tr><td colspan="14" class="text-center text-muted p-4">Không có dữ liệu.</td></tr>
                     }
                     else
                     {
@@ -177,6 +181,13 @@
                                                 <i class="fas fa-redo-alt"></i>
                                             </button>
                                         }
+                                    </span>
+                                </td>
+                                <td class="text-center font-weight-bold text-info">@r.PdfDoneTotal</td>
+                                <td class="text-center text-secondary">@r.PdfRemaining</td>
+                                <td class="text-center">
+                                    <span class="font-weight-bold @(r.PdfProgressPercent >= 100 ? "text-success" : "text-primary")">
+                                        @r.PdfProgressPercent.ToString("0.##")%
                                     </span>
                                 </td>
                                 <td class="text-center">@r.ExtractedDone</td>

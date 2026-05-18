@@ -68,10 +68,11 @@ public class DocumentFormViewModelBuilder : IDocumentFormViewModelBuilder
         var userNames = await BuildUserMapAsync(doc);
         var recordInfoKeys = await LoadSetRecordInfoKeysAsync();
         var sameRecordDocs = await BuildSameRecordDocumentsAsync(doc.Id, recordInfoKeys);
+        var ocrZones = await _docTypeRepo.GetOcrZonesAsync(doc.DocTypeId);
 
         return BuildViewModel(
             docType, doc, settings, allFields, groups, categories, patterns, cells, userNames,
-            recordInfoKeys, sameRecordDocs);
+            recordInfoKeys, sameRecordDocs, ocrZones);
     }
 
     public Task<DocumentFormViewModel> BuildForCheck1Async(long documentId, int currentUserId, bool isAdminUser)
@@ -91,7 +92,8 @@ public class DocumentFormViewModelBuilder : IDocumentFormViewModelBuilder
         IEnumerable<FormCell> cells,
         IDictionary<int, string> userNames,
         IReadOnlyList<string>? recordInfoKeys = null,
-        IReadOnlyList<DocumentDto>? sameRecordDocs = null)
+        IReadOnlyList<DocumentDto>? sameRecordDocs = null,
+        IReadOnlyList<DocTypeOcrZoneDto>? ocrZones = null)
     {
         var fieldMap = allFields.ToDictionary(f => f.Id);
         var fieldSettings = settings
@@ -130,7 +132,22 @@ public class DocumentFormViewModelBuilder : IDocumentFormViewModelBuilder
             Cells = cells,
             UserNames = userNames,
             RecordInfoKeys = recordInfoKeys ?? Array.Empty<string>(),
-            SameRecordDocuments = sameRecordDocs ?? Array.Empty<DocumentDto>()
+            SameRecordDocuments = sameRecordDocs ?? Array.Empty<DocumentDto>(),
+            OcrZones = (ocrZones ?? Array.Empty<DocTypeOcrZoneDto>())
+                .Where(z => z.FieldSettingId > 0 && z.PageNumber > 0)
+                .Select(z => new OcrZoneViewModel
+                {
+                    Id = z.Id,
+                    FieldSettingId = z.FieldSettingId,
+                    FieldId = z.FieldId,
+                    PageNumber = z.PageNumber,
+                    XRatio = z.XRatio,
+                    YRatio = z.YRatio,
+                    WidthRatio = z.WidthRatio,
+                    HeightRatio = z.HeightRatio,
+                    Label = z.Label
+                })
+                .ToList()
         };
     }
 

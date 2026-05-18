@@ -38,6 +38,9 @@ public sealed class FolderProgressRowViewModel
     public int PdfProcessing { get; set; }
     public int PdfReady { get; set; }
     public int PdfFailed { get; set; }
+    public int PdfDoneTotal { get; set; }
+    public int PdfRemaining { get; set; }
+    public decimal PdfProgressPercent { get; set; }
     public int ExtractedDone { get; set; }
     public int Check1Done { get; set; }
     public int Check2Done { get; set; }

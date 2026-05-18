@@ -46,7 +46,7 @@
                 <div class="tab-pane fade show active" id="kpi-role-pane" role="tabpanel">
                     <p class="text-muted small mb-3">3 vai trò: <strong>CheckScan</strong> (gộp scan 1 + 2), <strong>Extract</strong>, <strong>Check sau Extract</strong>.</p>
                     <div class="table-responsive">
-                        <table class="table table-sm table-hover mb-0">
+                        <table class="table table-sm table-bordered table-striped table-hover mb-0">
                             <thead class="table-light">
                                 <tr>
                                     <th>Vai trò</th>
@@ -79,12 +79,12 @@
                                         @if (isAdmin)
                                         {
                                             <td class="text-right">
-                                                <a asp-action="CreateKpiConfig" asp-route-role="@cfg.Role" class="btn btn-sm btn-outline-success">Tạo mới</a>
-                                                <a asp-action="EditKpiConfig" asp-route-role="@cfg.Role" class="btn btn-sm btn-primary">Sửa</a>
+                                                <a asp-action="CreateKpiConfig" asp-route-role="@cfg.Role" class="btn-figma btn-figma-outline btn-sm">Tạo mới</a>
+                                                <a asp-action="EditKpiConfig" asp-route-role="@cfg.Role" class="btn-figma btn-figma-primary btn-sm">Sửa</a>
                                                 <form method="post" asp-action="DeleteKpiConfig" class="d-inline">
                                                     @Html.AntiForgeryToken()
                                                     <input type="hidden" name="role" value="@cfg.Role" />
-                                                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Xóa cấu hình KPI của vai trò @cfg.DisplayName?');">Xóa</button>
+                                                    <button type="submit" class="btn-figma btn-figma-outline btn-sm" onclick="return confirm('Xóa cấu hình KPI của vai trò @cfg.DisplayName?');">Xóa</button>
                                                 </form>
                                             </td>
                                         }
@@ -98,11 +98,11 @@
                     <div class="d-flex flex-wrap mb-3" style="gap:8px;">
                         @foreach (var period in Model.PeriodStats)
                         {
-                            <button type="button" class="btn btn-sm btn-outline-primary js-kpi-period-btn" data-period="@period.Key">@period.Label</button>
+                            <button type="button" class="btn-figma btn-figma-outline btn-sm js-kpi-period-btn" data-period="@period.Key">@period.Label</button>
                         }
                     </div>
                     <div class="table-responsive">
-                        <table class="table table-sm table-hover mb-0">
+                        <table class="table table-sm table-bordered table-striped table-hover mb-0">
                             <thead class="table-light">
                                 <tr>
                                     <th>Kỳ</th>
@@ -138,23 +138,12 @@
     </div>
 
     <div class="card-figma mb-3">
-        <div class="card-header-figma d-flex align-items-end justify-content-between flex-wrap" style="gap:8px;">
+        <div class="card-header-figma">
             <h3 class="card-title-figma mb-0">Chấm công</h3>
-            <form method="get" class="d-flex align-items-end flex-wrap" style="gap:6px;">
-                <div>
-                    <label class="small text-muted mb-1 d-block">Từ ngày</label>
-                    <input class="form-control form-control-sm" type="date" name="from" value="@Model.FromDate.ToString("yyyy-MM-dd")" />
-                </div>
-                <div>
-                    <label class="small text-muted mb-1 d-block">Đến ngày</label>
-                    <input class="form-control form-control-sm" type="date" name="to" value="@Model.ToDate.ToString("yyyy-MM-dd")" />
-                </div>
-                <button class="btn btn-sm btn-primary" type="submit">Lọc</button>
-            </form>
         </div>
         <div class="card-content-figma p-0">
             <div class="table-responsive">
-                <table class="table table-sm table-hover mb-0">
+                <table class="table table-sm table-bordered table-striped table-hover mb-0">
                     <thead class="table-light"><tr><th>Ngày</th><th>User</th><th>Họ tên</th><th>Công</th><th>Đủ KPI</th><th>Ghi chú</th></tr></thead>
                     <tbody>
                     @if (!Model.Attendance.Any()) { <tr><td colspan="6" class="text-center text-muted p-3">Chưa có dữ liệu chấm công.</td></tr> }
@@ -179,23 +168,12 @@
     </div>
 
     <div class="card-figma">
-        <div class="card-header-figma d-flex align-items-end justify-content-between flex-wrap" style="gap:8px;">
+        <div class="card-header-figma">
             <h3 class="card-title-figma mb-0">KPI theo ngày</h3>
-            <form method="get" class="d-flex align-items-end flex-wrap" style="gap:6px;">
-                <div>
-                    <label class="small text-muted mb-1 d-block">Từ ngày</label>
-                    <input class="form-control form-control-sm" type="date" name="from" value="@Model.FromDate.ToString("yyyy-MM-dd")" />
-                </div>
-                <div>
-                    <label class="small text-muted mb-1 d-block">Đến ngày</label>
-                    <input class="form-control form-control-sm" type="date" name="to" value="@Model.ToDate.ToString("yyyy-MM-dd")" />
-                </div>
-                <button class="btn btn-sm btn-primary" type="submit">Lọc</button>
-            </form>
         </div>
         <div class="card-content-figma p-0">
             <div class="table-responsive">
-                <table class="table table-sm table-hover mb-0">
+                <table class="table table-sm table-bordered table-striped table-hover mb-0">
                     <thead class="table-light">
                         <tr>
                             <th>Ngày</th><th>User</th><th>Bước</th><th>Xử lý</th><th>Chỉ tiêu</th><th>Đạt KPI</th>
@@ -243,11 +221,11 @@
                 });
                 buttons.forEach(b => {
                     if (b.getAttribute('data-period') === period) {
-                        b.classList.remove('btn-outline-primary');
-                        b.classList.add('btn-primary');
+                        b.classList.remove('btn-figma-outline');
+                        b.classList.add('btn-figma-primary');
                     } else {
-                        b.classList.remove('btn-primary');
-                        b.classList.add('btn-outline-primary');
+                        b.classList.remove('btn-figma-primary');
+                        b.classList.add('btn-figma-outline');
                     }
                 });
             }

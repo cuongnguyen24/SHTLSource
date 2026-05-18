@@ -12,7 +12,11 @@
     var applyOcrZonesUrl = Url.Action("ApplyOcrZones", "Extract", new { area = "sohoa", id = doc.Id })!;
     var previewUrl = Url.Content("~/scan/preview/" + doc.Id);
     var indexUrl = Url.Action("Index", "Extract", new { area = "sohoa" })!;
-    var pdfViewerUrl = Url.Content("~/scan/pdf/" + doc.Id);
+    var pdfRawUrl = Url.Content("~/scan/pdf/" + doc.Id);
+    var pdfViewerUrl = Url.Content("~/sohoa-assets/pdf/viewer.html") + "?file=" + Uri.EscapeDataString(pdfRawUrl);
+    var compatibilityJsUrl = Url.Content("~/sohoa-assets/pdf/compatibility.js");
+    var pdfJsUrl = Url.Content("~/sohoa-assets/pdf/build/pdf.js");
+    var pdfWorkerUrl = Url.Content("~/sohoa-assets/pdf/build/pdf.worker.js");
     var showPdfViewer = SearchablePdfDisplay.LooksLikePdf(doc.Extension, doc.FileName, doc.FilePath);
     var spLabel = doc.SearchablePdfStatusText;
 
@@ -82,6 +86,17 @@
     var requireCheckFirstScan = (bool?)ViewBag.RequireCheckFirstScan ?? true;
     var requireCheckSecondScan = (bool?)ViewBag.RequireCheckSecondScan ?? true;
     var scanOkForExtract = (!requireCheckFirstScan || doc.IsCheckedScan1) && (!requireCheckSecondScan || doc.IsCheckedScan2);
+    var ocrZonesForClient = Model.OcrZones.Select(z => new
+    {
+        fieldSettingId = z.FieldSettingId,
+        fieldId = z.FieldId,
+        pageNumber = z.PageNumber,
+        xRatio = z.XRatio,
+        yRatio = z.YRatio,
+        widthRatio = z.WidthRatio,
+        heightRatio = z.HeightRatio,
+        label = z.Label
+    }).ToList();
     // Đã nhập nhưng chưa đạt check 1 (hoặc bị trả về) mới được sửa/lưu lại.
     var canReEditExtractBeforeCheck1 = doc.IsExtracted && !extractReadOnlyAfterCheck1Pass;
     var canSubmitExtract = !extractReadOnlyAfterCheck1Pass && (scanOkForExtract || canReEditExtractBeforeCheck1);
@@ -134,6 +149,60 @@
             border: 0;
             display: block;
         }
+        .extract-ocr-viewer {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow: auto;
+            background: #f8f9fa;
+            position: relative;
+        }
+        .extract-ocr-page {
+            position: relative;
+            width: max-content;
+            margin: 12px auto;
+            background: #fff;
+            box-shadow: 0 2px 12px rgba(0,0,0,.12);
+        }
+        .extract-ocr-page canvas {
+            display: block;
+        }
+        .extract-ocr-zone-layer {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+        }
+        .extract-ocr-zone {
+            position: absolute;
+            border: 3px solid #dc3545;
+            background: rgba(220, 53, 69, .10);
+            box-shadow: 0 0 18px rgba(220, 53, 69, .35);
+            box-sizing: border-box;
+        }
+        .extract-ocr-zone-label {
+            position: absolute;
+            left: -3px;
+            top: -25px;
+            max-width: 260px;
+            padding: 2px 7px;
+            border-radius: 4px;
+            background: #dc3545;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .extract-pdf-toolbar {
+            flex: 0 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 6px 8px;
+            border-bottom: 1px solid #dee2e6;
+            background: #fff;
+        }
         .split-pane-right {
             flex: 1 1 auto;
             min-width: 360px;
@@ -167,6 +236,26 @@
         }
         .splitter.is-dragging::before {
             background: var(--primary);
+        }
+        .ext-field-group.has-ocr-zone .form-control {
+            border-color: #9ec5fe;
+        }
+        .ext-field-group.has-ocr-zone .form-control:focus,
+        .ext-field-group.is-ocr-zone-active .form-control {
+            border-color: #dc3545;
+            box-shadow: 0 0 0 .2rem rgba(220, 53, 69, .15);
+        }
+        .ext-field-group.has-ocr-zone label::after {
+            content: " OCR";
+            display: inline-block;
+            margin-left: 6px;
+            padding: 1px 5px;
+            border-radius: 999px;
+            background: #e7f1ff;
+            color: #0d6efd;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: .02em;
         }
         @@media (max-width: 991.98px) {
             .split-layout {
@@ -283,7 +372,17 @@
                                 <span>Đang hiển thị bản scan. Sau khi hệ thống tạo PDF 2 lớp, bạn có thể copy chữ từ đây.</span>
                             }
                         </div>
-                        <iframe src="@pdfViewerUrl" title="PDF tài liệu" class="border-0 d-block"></iframe>
+                        <div class="extract-pdf-toolbar">
+                            <button type="button" class="btn-figma btn-figma-outline btn-sm" id="extractPdfPrevPage"><i class="fas fa-chevron-left"></i></button>
+                            <span class="small text-muted">Trang <span id="extractPdfPageNo">0</span>/<span id="extractPdfPageCount">0</span></span>
+                            <button type="button" class="btn-figma btn-figma-outline btn-sm" id="extractPdfNextPage"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                        <div id="extractOcrViewer" class="extract-ocr-viewer">
+                            <div id="extractOcrPage" class="extract-ocr-page">
+                                <canvas id="extractOcrCanvas"></canvas>
+                                <div id="extractOcrZoneLayer" class="extract-ocr-zone-layer"></div>
+                            </div>
+                        </div>
                     }
                     else
                     {
@@ -512,7 +611,19 @@
         (function () {
             var submitUrl = @Html.Raw(JsonSerializer.Serialize(submitUrl));
             var docId = @doc.Id;
+            var ocrZones = @Html.Raw(JsonSerializer.Serialize(ocrZonesForClient));
+            var pdfUrl = @Html.Raw(JsonSerializer.Serialize(pdfRawUrl));
+            var compatibilityJsUrl = @Html.Raw(JsonSerializer.Serialize(compatibilityJsUrl));
+            var pdfJsUrl = @Html.Raw(JsonSerializer.Serialize(pdfJsUrl));
+            var pdfWorkerUrl = @Html.Raw(JsonSerializer.Serialize(pdfWorkerUrl));
+            var ocrZoneByFieldSetting = {};
+            var activeOcrZone = null;
+            var extractPdfDoc = null;
+            var extractPdfCurrentPage = 1;
+            var extractPdfRendering = false;
             initSplitLayout('extractSplitLayout');
+            initExtractPdfViewer();
+            initOcrZoneHighlight();
 
             function initSplitLayout(layoutId) {
                 var layout = document.getElementById(layoutId);
@@ -574,6 +685,172 @@
                     document.body.style.cursor = '';
                     document.body.style.userSelect = '';
                 });
+            }
+
+            function loadScript(url) {
+                return new Promise(function (resolve, reject) {
+                    if (document.querySelector('script[data-extract-pdf-src="' + url + '"]')) {
+                        resolve();
+                        return;
+                    }
+                    var el = document.createElement('script');
+                    el.src = url;
+                    el.setAttribute('data-extract-pdf-src', url);
+                    el.onload = resolve;
+                    el.onerror = function () { reject(new Error(url)); };
+                    document.head.appendChild(el);
+                });
+            }
+
+            function initExtractPdfViewer() {
+                var viewer = document.getElementById('extractOcrViewer');
+                if (!viewer || !pdfUrl) return;
+
+                loadScript(compatibilityJsUrl).catch(function () { return null; })
+                    .then(function () { return loadScript(pdfJsUrl); })
+                    .then(function () {
+                        if (typeof PDFJS === 'undefined') {
+                            showExtractPdfFallback('PDFJS undefined');
+                            return;
+                        }
+                        PDFJS.workerSrc = pdfWorkerUrl;
+                        return PDFJS.getDocument(pdfUrl);
+                    })
+                    .then(function (pdfDoc) {
+                        if (!pdfDoc) return;
+                        extractPdfDoc = pdfDoc;
+                        var total = document.getElementById('extractPdfPageCount');
+                        if (total) total.textContent = String(pdfDoc.numPages);
+                        bindExtractPdfPager();
+                        renderExtractPdfPage(1);
+                    })
+                    .catch(function (err) {
+                        showExtractPdfFallback(err && err.message ? err.message : 'load pdf failed');
+                    });
+            }
+
+            function showExtractPdfFallback(detail) {
+                var viewer = document.getElementById('extractOcrViewer');
+                if (!viewer) return;
+                viewer.innerHTML = '<div class="p-3 text-danger small">Khong tai duoc PDF.js de hien thi vung OCR. '
+                    + (detail || '') + '</div>'
+                    + '<iframe src="' + pdfUrl + '" title="PDF tai lieu" class="w-100 border-0" style="min-height:520px;"></iframe>';
+            }
+
+            function bindExtractPdfPager() {
+                var prev = document.getElementById('extractPdfPrevPage');
+                var next = document.getElementById('extractPdfNextPage');
+                if (prev) {
+                    prev.onclick = function () {
+                        if (!extractPdfDoc || extractPdfCurrentPage <= 1) return;
+                        activeOcrZone = null;
+                        renderExtractPdfPage(extractPdfCurrentPage - 1);
+                    };
+                }
+                if (next) {
+                    next.onclick = function () {
+                        if (!extractPdfDoc || extractPdfCurrentPage >= extractPdfDoc.numPages) return;
+                        activeOcrZone = null;
+                        renderExtractPdfPage(extractPdfCurrentPage + 1);
+                    };
+                }
+            }
+
+            function renderExtractPdfPage(pageNumber) {
+                if (!extractPdfDoc || extractPdfRendering) return Promise.resolve();
+                pageNumber = Math.max(1, Math.min(extractPdfDoc.numPages, parseInt(pageNumber, 10) || 1));
+                extractPdfRendering = true;
+                extractPdfCurrentPage = pageNumber;
+                var pageNo = document.getElementById('extractPdfPageNo');
+                if (pageNo) pageNo.textContent = String(pageNumber);
+
+                return extractPdfDoc.getPage(pageNumber).then(function (page) {
+                    var canvas = document.getElementById('extractOcrCanvas');
+                    var layer = document.getElementById('extractOcrZoneLayer');
+                    if (!canvas || !layer) return;
+                    var viewport = page.getViewport(1.25);
+                    canvas.width = viewport.width;
+                    canvas.height = viewport.height;
+                    layer.style.width = viewport.width + 'px';
+                    layer.style.height = viewport.height + 'px';
+                    return page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
+                }).then(function () {
+                    extractPdfRendering = false;
+                    drawOcrZone(activeOcrZone);
+                }).catch(function (err) {
+                    extractPdfRendering = false;
+                    showExtractPdfFallback(err && err.message ? err.message : 'render page failed');
+                });
+            }
+
+            function initOcrZoneHighlight() {
+                (ocrZones || []).forEach(function (zone) {
+                    if (zone && zone.fieldSettingId) {
+                        ocrZoneByFieldSetting[String(zone.fieldSettingId)] = zone;
+                    }
+                });
+
+                document.querySelectorAll('.ext-field-group[data-field-setting-id]').forEach(function (group) {
+                    var zone = ocrZoneByFieldSetting[group.getAttribute('data-field-setting-id')];
+                    if (!zone) return;
+                    group.classList.add('has-ocr-zone');
+                    group.setAttribute('title', 'Click de xem vung OCR tuong ung tren PDF');
+                    group.querySelectorAll('[data-stg-field]').forEach(function (el) {
+                        el.addEventListener('focus', function () { activateOcrZone(group, zone); });
+                        el.addEventListener('click', function () { activateOcrZone(group, zone); });
+                    });
+                });
+            }
+
+            function activateOcrZone(group, zone) {
+                activeOcrZone = zone;
+                document.querySelectorAll('.ext-field-group.is-ocr-zone-active').forEach(function (el) {
+                    el.classList.remove('is-ocr-zone-active');
+                });
+                group.classList.add('is-ocr-zone-active');
+                scheduleDrawOcrZone(zone);
+            }
+
+            function scheduleDrawOcrZone(zone) {
+                if (!zone) return;
+                var pageNumber = parseInt(zone.pageNumber, 10) || 1;
+                if (extractPdfDoc && extractPdfCurrentPage !== pageNumber) {
+                    renderExtractPdfPage(pageNumber);
+                    return;
+                }
+                drawOcrZone(zone);
+            }
+
+            function drawOcrZone(zone) {
+                var layer = document.getElementById('extractOcrZoneLayer');
+                var viewer = document.getElementById('extractOcrViewer');
+                if (!layer) return;
+                layer.innerHTML = '';
+                if (!zone || (parseInt(zone.pageNumber, 10) || 1) !== extractPdfCurrentPage) return;
+
+                var el = document.createElement('div');
+                el.className = 'extract-ocr-zone';
+                el.style.left = (toRatio(zone.xRatio) * 100) + '%';
+                el.style.top = (toRatio(zone.yRatio) * 100) + '%';
+                el.style.width = (toRatio(zone.widthRatio) * 100) + '%';
+                el.style.height = (toRatio(zone.heightRatio) * 100) + '%';
+                var label = document.createElement('div');
+                label.className = 'extract-ocr-zone-label';
+                label.textContent = zone.label || 'OCR';
+                el.appendChild(label);
+                layer.appendChild(el);
+                if (viewer) {
+                    try { el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' }); } catch (e) { el.scrollIntoView(); }
+                }
+            }
+
+            function toRatio(value) {
+                var n = parseFloat(value);
+                if (!isFinite(n)) return 0;
+                if (n > 1 && n <= 100) n = n / 100;
+                if (n < 0) return 0;
+                if (n > 1) return 1;
+                return n;
             }
 
             function token() {

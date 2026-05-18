@@ -37,6 +37,21 @@ public class DocumentFormViewModel
 
     /// <summary>Các tài liệu cùng bộ hồ sơ (bao gồm tài liệu hiện tại).</summary>
     public IReadOnlyList<DocumentDto> SameRecordDocuments { get; set; } = Array.Empty<DocumentDto>();
+    /// <summary>Vung OCR da cau hinh cho loai tai lieu, dung de doi chieu field voi PDF.</summary>
+    public IReadOnlyList<OcrZoneViewModel> OcrZones { get; set; } = Array.Empty<OcrZoneViewModel>();
+}
+
+public class OcrZoneViewModel
+{
+    public long Id { get; set; }
+    public int FieldSettingId { get; set; }
+    public int FieldId { get; set; }
+    public int PageNumber { get; set; }
+    public decimal XRatio { get; set; }
+    public decimal YRatio { get; set; }
+    public decimal WidthRatio { get; set; }
+    public decimal HeightRatio { get; set; }
+    public string? Label { get; set; }
 }
 
 /// <summary>

@@ -364,13 +364,29 @@ public class ConstructionController : Controller
     }
 
     [HttpGet]
-    [AuthorizeModule(ModuleCode.Report)]
+    [AuthorizeModule(
+        ModuleCode.Report,
+        ModuleCode.CheckScanFirst,
+        ModuleCode.CheckScanSecond,
+        ModuleCode.ExtractDigit,
+        ModuleCode.ExtractAlphabet,
+        ModuleCode.ExtractCharacter,
+        ModuleCode.ExtractTick,
+        ModuleCode.ExtractForm,
+        ModuleCode.CheckFirst,
+        ModuleCode.CheckSecond,
+        ModuleCode.CheckFinal,
+        ModuleCode.CheckLogic)]
     public async Task<IActionResult> Payroll([FromQuery] int? year = null, [FromQuery] int? month = null, [FromQuery] int? userId = null)
     {
+        var currentUser = HttpContext.RequestServices.GetRequiredService<ICurrentUser>();
         var now = DateTime.Today;
         var y = year ?? now.Year;
         var m = month ?? now.Month;
+        if (!currentUser.IsAdmin) userId = currentUser.Id;
         var vm = await _kpiPayrollService.GetPayrollDashboardAsync(y, m, userId);
+        ViewBag.IsAdmin = currentUser.IsAdmin;
+        ViewBag.IsCurrentPayrollMonth = y == now.Year && m == now.Month;
         return View("~/Modules/Features/Dashboard/Views/Construction/Payroll.cshtml", vm);
     }
 
@@ -392,6 +408,12 @@ public class ConstructionController : Controller
     public async Task<IActionResult> RecalculatePayroll([FromForm] int year, [FromForm] int month)
     {
         var currentUser = HttpContext.RequestServices.GetRequiredService<ICurrentUser>();
+        var now = DateTime.Today;
+        if (year != now.Year || month != now.Month)
+        {
+            TempData["Error"] = "Chỉ được tính lại lương trong tháng hiện tại.";
+            return RedirectToAction(nameof(Payroll), new { year, month });
+        }
         var result = await _kpiPayrollService.RecalculatePayrollAsync(year, month, currentUser);
         TempData[result.Success ? "Success" : "Error"] = result.Message;
         return RedirectToAction(nameof(Payroll), new { year, month });
@@ -415,6 +437,12 @@ public class ConstructionController : Controller
     {
         var currentUser = HttpContext.RequestServices.GetRequiredService<ICurrentUser>();
         if (!currentUser.IsAdmin) return Forbid();
+        var now = DateTime.Today;
+        if (year != now.Year || month != now.Month)
+        {
+            TempData["Error"] = "Chỉ được xóa chốt trong tháng hiện tại.";
+            return RedirectToAction(nameof(Payroll), new { year, month });
+        }
         var result = await _kpiPayrollService.RollbackPayrollApprovalAsync(id, currentUser);
         TempData[result.Success ? "Success" : "Error"] = result.Message;
         return RedirectToAction(nameof(Payroll), new { year, month });
