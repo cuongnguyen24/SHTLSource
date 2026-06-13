@@ -169,6 +169,20 @@
             var fileDataTransfer = new DataTransfer();
             var relativePaths = [];
 
+            function setCardSelected(card, selected) {
+                if (!card) return;
+                var checkbox = card.querySelector('.sync-checkbox');
+                if (checkbox) checkbox.checked = !!selected;
+                card.classList.toggle('selected', !!selected);
+            }
+
+            function syncCardStatesFromCheckboxes() {
+                document.querySelectorAll('.upload-card').forEach(function(card) {
+                    var checkbox = card.querySelector('.sync-checkbox');
+                    card.classList.toggle('selected', !!(checkbox && checkbox.checked));
+                });
+            }
+
             // Select All checkbox
             var selectAllCheckbox = document.getElementById('selectAllSync');
             if (selectAllCheckbox) {
@@ -176,13 +190,8 @@
                     var isChecked = this.checked;
                     var syncCheckboxes = document.querySelectorAll('.sync-checkbox');
                     syncCheckboxes.forEach(function(checkbox) {
-                        checkbox.checked = isChecked;
                         var card = checkbox.closest('.card.upload-card');
-                        if (isChecked) {
-                            card.classList.add('selected');
-                        } else {
-                            card.classList.remove('selected');
-                        }
+                        setCardSelected(card, isChecked);
                     });
                     updateSelectedSyncIds();
                 });
@@ -191,22 +200,24 @@
             // Chọn loại đồng bộ - Ctrl+Click để chọn nhiều
             document.querySelectorAll('.upload-card').forEach(function(card) {
                 card.addEventListener('click', function(e) {
-                    var syncId = parseInt(card.getAttribute('data-sync-id'));
+                    // Tránh behavior mặc định khi Ctrl + click trên một số trình duyệt
+                    e.preventDefault();
+
                     var checkbox = card.querySelector('.sync-checkbox');
+                    var willSelect = !checkbox.checked;
                     
                     if (e.ctrlKey || e.metaKey) {
                         // Ctrl+Click: toggle selection
-                        checkbox.checked = !checkbox.checked;
+                        setCardSelected(card, willSelect);
                     } else {
                         // Normal click: single selection
                         document.querySelectorAll('.upload-card').forEach(function(c) {
-                            c.classList.remove('selected');
-                            c.querySelector('.sync-checkbox').checked = false;
+                            setCardSelected(c, false);
                         });
-                        card.classList.add('selected');
-                        checkbox.checked = true;
+                        setCardSelected(card, true);
                     }
-                    
+
+                    syncCardStatesFromCheckboxes();
                     updateSelectAllCheckbox();
                     updateSelectedSyncIds();
                 });

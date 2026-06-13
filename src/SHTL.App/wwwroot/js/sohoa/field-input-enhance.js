@@ -85,7 +85,7 @@
             el.addEventListener('blur', function () {
                 var v = (el.value || '').trim();
                 if (!v) { delete el.dataset.iso; el.classList.remove('is-invalid'); el.dataset.rawSnapshot = ''; return; }
-                var m = v.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+                var m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
                 if (!m) { el.classList.add('is-invalid'); return; }
                 var dd = parseInt(m[1], 10), mm = parseInt(m[2], 10), yy = parseInt(m[3], 10);
                 var d = new Date(yy, mm - 1, dd);
@@ -112,7 +112,7 @@
         text = text.trim();
         if (isDate && el.dataset && el.dataset.iso) {
             if (text.length > 0) {
-                var m = text.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+                var m = text.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
                 if (m) {
                     var dd = parseInt(m[1], 10), mm = parseInt(m[2], 10), yy = parseInt(m[3], 10);
                     var d = new Date(yy, mm - 1, dd);
@@ -185,7 +185,7 @@
 
             if (inputType === 'date' || el.classList.contains('ext-date') || el.classList.contains('chk-date')) {
                 if (raw.length > 0) {
-                    var m = raw.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+                    var m = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
                     if (!m) {
                         markInvalid(el);
                         return { ok: false, firstInvalid: firstInvalid, message: 'Trường "' + getLabel(el) + '" phải đúng định dạng dd/MM/yyyy.' };
