@@ -66,6 +66,20 @@ def horizontal_scale_for_rect(fitz_mod, text: str, rect, fontname: str, fontsize
     return max(0.75, min(2.8, (rect.width * 1.02) / text_width))
 
 
+def font_metrics(fitz_mod, font_path: str | None, fontname: str) -> tuple[float, float]:
+    try:
+        font = fitz_mod.Font(fontfile=font_path) if font_path else fitz_mod.Font(fontname=fontname)
+        return float(font.ascender), float(font.descender)
+    except Exception:
+        return 0.9, -0.22
+
+
+def baseline_for_rect(rect, fontsize: float, ascender: float, descender: float, page_h: float) -> float:
+    font_height = max(0.1, (ascender - descender) * fontsize)
+    baseline = rect.y0 + max(0.0, (rect.height - font_height) / 2.0) + ascender * fontsize
+    return min(page_h, max(0.0, baseline))
+
+
 def detect_scale(items, target_w: float, target_h: float,
                  pix_w: int, pix_h: int) -> tuple[float, float]:
     """Suy luận scale OCR-box → POINT.
@@ -90,6 +104,8 @@ def detect_scale(items, target_w: float, target_h: float,
     if not items or target_w <= 0 or target_h <= 0 or pix_w <= 0 or pix_h <= 0:
         return 1.0, 1.0
 
+    xs_all = []
+    ys_all = []
     max_x = 0.0
     max_y = 0.0
     min_x = float("inf")
@@ -104,6 +120,8 @@ def detect_scale(items, target_w: float, target_h: float,
                 y = float(pt[1])
             except (TypeError, ValueError, IndexError):
                 continue
+            xs_all.append(x)
+            ys_all.append(y)
             if x > max_x:
                 max_x = x
             if y > max_y:
@@ -115,6 +133,18 @@ def detect_scale(items, target_w: float, target_h: float,
 
     if max_x <= 0 or max_y <= 0 or not (min_x < float("inf")):
         return 1.0, 1.0
+
+    def percentile(values, p: float) -> float:
+        if not values:
+            return 0.0
+        ordered = sorted(values)
+        idx = int(round((len(ordered) - 1) * p))
+        return ordered[max(0, min(len(ordered) - 1, idx))]
+
+    robust_min_x = percentile(xs_all, 0.05)
+    robust_max_x = percentile(xs_all, 0.95)
+    robust_min_y = percentile(ys_all, 0.05)
+    robust_max_y = percentile(ys_all, 0.95)
 
     # Nhánh A — OCR đã ở POINT space.
     if max_x <= target_w * 1.2 and max_y <= target_h * 1.2:
@@ -128,11 +158,21 @@ def detect_scale(items, target_w: float, target_h: float,
     # sách, công văn…). Khi `min/max` quá lớn (> 0.5) → content lệch (header
     # logo, chỉ có chữ một bên), heuristic không tin cậy → dùng `max * 1.05`
     # làm fallback an toàn (chấp nhận highlight có thể tràn 5% mép phải).
-    if max_x > 0 and (min_x / max_x) < 0.5:
+    scale_render_x = target_w / float(pix_w)
+    scale_render_y = target_h / float(pix_h)
+
+    use_robust_x = robust_max_x > 0 and (robust_min_x / robust_max_x) < 0.5
+    use_robust_y = robust_max_y > 0 and (robust_min_y / robust_max_y) < 0.5
+
+    if use_robust_x:
+        span_x = robust_min_x + robust_max_x
+    elif max_x > 0 and (min_x / max_x) < 0.5:
         span_x = min_x + max_x
     else:
         span_x = max_x * 1.05
-    if max_y > 0 and (min_y / max_y) < 0.5:
+    if use_robust_y:
+        span_y = robust_min_y + robust_max_y
+    elif max_y > 0 and (min_y / max_y) < 0.5:
         span_y = min_y + max_y
     else:
         span_y = max_y * 1.05
@@ -142,7 +182,15 @@ def detect_scale(items, target_w: float, target_h: float,
     span_x = min(span_x, float(pix_w))
     span_y = min(span_y, float(pix_h))
 
-    return target_w / span_x, target_h / span_y
+    scale_x = target_w / span_x
+    scale_y = target_h / span_y
+
+    if scale_x < scale_render_x * 0.72 or scale_x > scale_render_x * 1.55:
+        scale_x = scale_render_x
+    if scale_y < scale_render_y * 0.72 or scale_y > scale_render_y * 1.55:
+        scale_y = scale_render_y
+
+    return scale_x, scale_y
 
 
 def main() -> int:
@@ -236,6 +284,7 @@ def main() -> int:
                         use_font = "vi"
                     except Exception:
                         pass
+                ascender, descender = font_metrics(fitz, font_path if use_font == "vi" else None, use_font)
 
                 # ── 6) Chèn lớp chữ ẩn (render_mode=3 = invisible) ────────────
                 for item in items:
@@ -262,7 +311,7 @@ def main() -> int:
                     fontsize = fit_fontsize_to_rect(fitz, text, text_rect, use_font)
                     scale_h = horizontal_scale_for_rect(fitz, text, r, use_font, fontsize)
                     try:
-                        baseline = min(page_h_pt, max(0.0, r.y0 + r.height * 0.78))
+                        baseline = baseline_for_rect(r, fontsize, ascender, descender, page_h_pt)
                         pt = fitz.Point(r.x0, baseline)
                         new_page.insert_text(
                             pt, text,
@@ -274,7 +323,8 @@ def main() -> int:
                     except Exception:
                         try:
                             fallback_fontsize = max(3.0, min(fontsize, r.height * 0.64))
-                            pt = fitz.Point(r.x0, min(page_h_pt, max(0.0, r.y0 + r.height * 0.76)))
+                            fallback_baseline = baseline_for_rect(r, fallback_fontsize, ascender, descender, page_h_pt)
+                            pt = fitz.Point(r.x0, fallback_baseline)
                             new_page.insert_text(
                                 pt, text,
                                 fontname=use_font,
