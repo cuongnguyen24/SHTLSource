@@ -165,7 +165,7 @@ internal sealed class OcrZoneFieldFillService
 
     private static string? ExtractFromOcrItems(IReadOnlyList<OcrTextItem> items, OcrZoneRow zone)
     {
-        const float padding = 0.02f;
+        const float padding = 0.004f;
         var xMin = (float)zone.XRatio - padding;
         var xMax = (float)(zone.XRatio + zone.WidthRatio) + padding;
         var yMin = (float)zone.YRatio - padding;
@@ -174,8 +174,13 @@ internal sealed class OcrZoneFieldFillService
         var matched = items
             .Where(x => x.PageNumber == zone.PageNumber)
             .Where(x => !string.IsNullOrWhiteSpace(x.Text))
-            .Where(x => x.XEndRatio >= xMin && x.XStartRatio <= xMax)
-            .Where(x => x.YBottomRatio >= yMin && x.YTopRatio <= yMax)
+            .Where(x =>
+            {
+                var centerX = (x.XStartRatio + x.XEndRatio) / 2f;
+                var centerY = (x.YTopRatio + x.YBottomRatio) / 2f;
+                return centerX >= xMin && centerX <= xMax
+                    && centerY >= yMin && centerY <= yMax;
+            })
             .OrderBy(x => x.YTopRatio)
             .ThenBy(x => x.XStartRatio)
             .ToList();

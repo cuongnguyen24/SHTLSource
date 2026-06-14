@@ -9,7 +9,7 @@ namespace SHTL.Modules.Core.Application.Services.Axe;
 
 internal static class PdfOcrRegionTextExtractor
 {
-    private const float RegionPaddingRatio = 0.03f;
+    private const float RegionPaddingRatio = 0.006f;
     private const float StrictRegionPaddingRatio = 0.002f;
 
     public static string? Extract(PdfPage page, decimal xRatio, decimal yRatio, decimal widthRatio, decimal heightRatio)
