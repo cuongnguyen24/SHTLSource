@@ -30,6 +30,42 @@ def quad_to_rect(box, fitz_mod, scale_x: float = 1.0, scale_y: float = 1.0):
     return fitz_mod.Rect(min(xs), min(ys), max(xs), max(ys))
 
 
+def expand_rect_for_text(rect, fitz_mod, page_w: float, page_h: float):
+    pad_x = max(0.5, rect.height * 0.08)
+    pad_y = max(0.5, rect.height * 0.18)
+    return fitz_mod.Rect(
+        max(0.0, rect.x0 - pad_x),
+        max(0.0, rect.y0 - pad_y),
+        min(page_w, rect.x1 + pad_x),
+        min(page_h, rect.y1 + pad_y),
+    )
+
+
+def estimate_text_width(fitz_mod, text: str, fontname: str, fontsize: float) -> float:
+    try:
+        return float(fitz_mod.get_text_length(text, fontname=fontname, fontsize=fontsize))
+    except Exception:
+        return len(text) * fontsize * 0.52
+
+
+def fit_fontsize_to_rect(fitz_mod, text: str, rect, fontname: str) -> float:
+    height_size = rect.height * 0.72
+    if not text:
+        return max(4.0, min(36.0, height_size))
+
+    width_at_1 = estimate_text_width(fitz_mod, text, fontname, 1.0)
+    width_size = (rect.width * 1.08 / width_at_1) if width_at_1 > 0 else height_size
+    return max(3.0, min(36.0, height_size, width_size))
+
+
+def horizontal_scale_for_rect(fitz_mod, text: str, rect, fontname: str, fontsize: float) -> float:
+    text_width = estimate_text_width(fitz_mod, text, fontname, fontsize)
+    if text_width <= 0:
+        return 1.0
+
+    return max(0.75, min(2.8, (rect.width * 1.02) / text_width))
+
+
 def detect_scale(items, target_w: float, target_h: float,
                  pix_w: int, pix_h: int) -> tuple[float, float]:
     """Suy luận scale OCR-box → POINT.
@@ -222,27 +258,27 @@ def main() -> int:
                         "baselineY": float(r.y1),
                     })
                     # Font size dựa trên chiều cao box theo POINT (1 pt ≈ 1/72 in).
-                    fontsize = max(4, min(36, r.height * 0.9))
-                    placed = False
+                    text_rect = expand_rect_for_text(r, fitz, page_w_pt, page_h_pt)
+                    fontsize = fit_fontsize_to_rect(fitz, text, text_rect, use_font)
+                    scale_h = horizontal_scale_for_rect(fitz, text, r, use_font, fontsize)
                     try:
-                        rc = new_page.insert_textbox(
-                            r,
-                            text,
+                        baseline = min(page_h_pt, max(0.0, r.y0 + r.height * 0.78))
+                        pt = fitz.Point(r.x0, baseline)
+                        new_page.insert_text(
+                            pt, text,
                             fontname=use_font,
                             fontsize=fontsize,
-                            align=fitz.TEXT_ALIGN_LEFT,
+                            morph=(pt, fitz.Matrix(scale_h, 1.0)),
                             render_mode=3,  # invisible (text dùng để select/search)
                         )
-                        placed = rc is None or rc >= 0
                     except Exception:
-                        pass
-                    if not placed:
                         try:
-                            pt = fitz.Point(r.x0, min(r.y1, page_h_pt) - 1)
+                            fallback_fontsize = max(3.0, min(fontsize, r.height * 0.64))
+                            pt = fitz.Point(r.x0, min(page_h_pt, max(0.0, r.y0 + r.height * 0.76)))
                             new_page.insert_text(
                                 pt, text,
                                 fontname=use_font,
-                                fontsize=fontsize,
+                                fontsize=fallback_fontsize,
                                 render_mode=3,
                             )
                         except Exception:
