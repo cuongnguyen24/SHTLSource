@@ -6,6 +6,7 @@ from __future__ import annotations
 import os
 import sys
 import tempfile
+import json
 from typing import Set
 
 
@@ -121,6 +122,7 @@ def main() -> int:
     if max_pages < 0:
         max_pages = 0
     selected_pages_raw = sys.argv[5] if len(sys.argv) > 5 else ""
+    json_out = sys.argv[6] if len(sys.argv) > 6 else ""
     selected_pages: Set[int] = set()
     if selected_pages_raw.strip():
         for token in selected_pages_raw.split(","):
@@ -148,6 +150,7 @@ def main() -> int:
     font_path = find_font()
     src = fitz.open(inp)
     out = fitz.open()
+    ocr_json_items = []
     try:
         # Matrix chỉ để render ảnh nét; KHÔNG dùng để định cỡ trang mới.
         render_mat = fitz.Matrix(dpi / 72.0, dpi / 72.0)
@@ -209,6 +212,15 @@ def main() -> int:
                     r = quad_to_rect(box, fitz, scale_x=scale_x, scale_y=scale_y)
                     if r.is_empty or r.is_infinite:
                         continue
+                    ocr_json_items.append({
+                        "pageNumber": i + 1,
+                        "text": text,
+                        "xStartRatio": max(0.0, min(1.0, float(r.x0) / page_w_pt)),
+                        "xEndRatio": max(0.0, min(1.0, float(r.x1) / page_w_pt)),
+                        "yTopRatio": max(0.0, min(1.0, float(r.y0) / page_h_pt)),
+                        "yBottomRatio": max(0.0, min(1.0, float(r.y1) / page_h_pt)),
+                        "baselineY": float(r.y1),
+                    })
                     # Font size dựa trên chiều cao box theo POINT (1 pt ≈ 1/72 in).
                     fontsize = max(4, min(36, r.height * 0.9))
                     placed = False
@@ -243,6 +255,9 @@ def main() -> int:
                         pass
 
         out.save(outp, garbage=4, deflate=True)
+        if json_out:
+            with open(json_out, "w", encoding="utf-8") as f:
+                json.dump(ocr_json_items, f, ensure_ascii=False)
     finally:
         src.close()
         out.close()

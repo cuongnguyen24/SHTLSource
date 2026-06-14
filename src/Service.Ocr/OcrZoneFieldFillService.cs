@@ -20,6 +20,70 @@ internal sealed class OcrZoneFieldFillService
         _logger = logger;
     }
 
+    public async Task<OcrZoneFillResult> FillFromOcrItemsAsync(
+        long documentId,
+        int docTypeId,
+        IReadOnlyList<OcrTextItem> ocrItems,
+        CancellationToken cancellationToken)
+    {
+        var zones = await _repo.GetOcrZonesAsync(docTypeId, cancellationToken).ConfigureAwait(false);
+        if (zones.Count == 0)
+            return OcrZoneFillResult.Empty("NO_ZONES");
+        if (ocrItems.Count == 0)
+            return OcrZoneFillResult.Empty("NO_OCR_ITEMS");
+
+        var existing = await _repo.GetDocumentExistingFieldValuesAsync(documentId, cancellationToken).ConfigureAwait(false);
+        var updateValues = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+        var stats = new OcrZoneFillStats(zones.Count);
+
+        foreach (var zone in zones)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (zone.PageNumber <= 0)
+            {
+                stats.InvalidPage++;
+                continue;
+            }
+
+            var key = ResolveTargetColumn(zone.FieldId, zone.FieldName);
+            if (string.IsNullOrWhiteSpace(key) || updateValues.ContainsKey(key))
+            {
+                stats.UnmappedField++;
+                continue;
+            }
+            if (HasExistingValue(existing, key))
+            {
+                stats.AlreadyHasValue++;
+                continue;
+            }
+
+            var text = ExtractFromOcrItems(ocrItems, zone);
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                stats.EmptyText++;
+                continue;
+            }
+
+            var normalized = NormalizeValue(zone.DataType, key, text);
+            var typed = ConvertToColumnValue(key, normalized);
+            if (typed is null)
+            {
+                stats.ConvertFailed++;
+                continue;
+            }
+
+            updateValues[key] = typed;
+            stats.Filled++;
+        }
+
+        if (updateValues.Count == 0)
+            return OcrZoneFillResult.Empty(stats.ToReason());
+
+        await _repo.UpdateDocumentFieldsAsync(documentId, updateValues, cancellationToken).ConfigureAwait(false);
+        _logger.LogInformation("Ocr field fill from raw OCR done. DocumentId={DocumentId}, Fields={Count}", documentId, updateValues.Count);
+        return OcrZoneFillResult.Ok(updateValues.Count, stats.ToReason() + ";source=raw_ocr");
+    }
+
     public async Task<OcrZoneFillResult> FillAsync(long documentId, int docTypeId, string searchablePdfFullPath, CancellationToken cancellationToken)
     {
         var zones = await _repo.GetOcrZonesAsync(docTypeId, cancellationToken).ConfigureAwait(false);
@@ -92,8 +156,84 @@ internal sealed class OcrZoneFieldFillService
         if (!values.TryGetValue(key, out var value) || value is null)
             return false;
         if (value is string s)
-            return !string.IsNullOrWhiteSpace(s);
+            return !string.IsNullOrWhiteSpace(s) && !LooksGarbled(s);
         return true;
+    }
+
+    private static bool LooksGarbled(string value)
+        => value.Contains('\uFFFD', StringComparison.Ordinal);
+
+    private static string? ExtractFromOcrItems(IReadOnlyList<OcrTextItem> items, OcrZoneRow zone)
+    {
+        const float padding = 0.02f;
+        var xMin = (float)zone.XRatio - padding;
+        var xMax = (float)(zone.XRatio + zone.WidthRatio) + padding;
+        var yMin = (float)zone.YRatio - padding;
+        var yMax = (float)(zone.YRatio + zone.HeightRatio) + padding;
+
+        var matched = items
+            .Where(x => x.PageNumber == zone.PageNumber)
+            .Where(x => !string.IsNullOrWhiteSpace(x.Text))
+            .Where(x => x.XEndRatio >= xMin && x.XStartRatio <= xMax)
+            .Where(x => x.YBottomRatio >= yMin && x.YTopRatio <= yMax)
+            .OrderBy(x => x.YTopRatio)
+            .ThenBy(x => x.XStartRatio)
+            .ToList();
+
+        if (matched.Count == 0)
+            return null;
+
+        var lines = new List<List<OcrTextItem>>();
+        foreach (var item in matched)
+        {
+            var line = lines.LastOrDefault();
+            if (line is null || Math.Abs(line[0].YTopRatio - item.YTopRatio) > 0.018f)
+                lines.Add(new List<OcrTextItem> { item });
+            else
+                line.Add(item);
+        }
+
+        var output = new List<string>();
+        foreach (var line in lines)
+        {
+            var ordered = line.OrderBy(x => x.XStartRatio).ToList();
+            var parts = new List<string>();
+            OcrTextItem? previous = null;
+            foreach (var item in ordered)
+            {
+                var text = item.Text.Trim();
+                if (text.Length == 0)
+                    continue;
+
+                if (previous is not null)
+                {
+                    var gap = item.XStartRatio - previous.XEndRatio;
+                    if (gap > 0.006f && !text.StartsWith(",", StringComparison.Ordinal) && !text.StartsWith(".", StringComparison.Ordinal))
+                        parts.Add(" ");
+                }
+
+                parts.Add(text);
+                previous = item;
+            }
+
+            var lineText = string.Concat(parts).Trim();
+            if (!string.IsNullOrWhiteSpace(lineText))
+                output.Add(lineText);
+        }
+
+        return NormalizeExtractedText(string.Join(" ", output));
+    }
+
+    private static string? NormalizeExtractedText(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return null;
+
+        var normalized = text.Replace('\r', ' ').Replace('\n', ' ').Trim();
+        while (normalized.Contains("  ", StringComparison.Ordinal))
+            normalized = normalized.Replace("  ", " ", StringComparison.Ordinal);
+
+        return string.IsNullOrWhiteSpace(normalized) ? null : normalized;
     }
 
     private static string ResolveTargetColumn(int fieldId, string? fieldName)

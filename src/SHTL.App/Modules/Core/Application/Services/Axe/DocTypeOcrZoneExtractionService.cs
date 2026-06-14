@@ -1,4 +1,6 @@
 using System.Globalization;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using iText.Kernel.Pdf;
 using Microsoft.Extensions.Logging;
@@ -78,6 +80,10 @@ public sealed class DocTypeOcrZoneExtractionService : IDocTypeOcrZoneExtractionS
             return false;
         }
 
+        var ocrItems = await TryReadOcrItemsAsync(doc, cancellationToken);
+        if (ocrItems.Count > 0)
+            return await TryPrefillFromOcrItemsAsync(doc, zones, ocrItems, cancellationToken);
+
         var pdfBytes = await StoragePdfFileReader.ReadAllBytesAsync(
             _storage,
             _storageOptions,
@@ -141,6 +147,17 @@ public sealed class DocTypeOcrZoneExtractionService : IDocTypeOcrZoneExtractionS
                         zone.FieldSettingId,
                         fieldKey,
                         pageNumber);
+                    continue;
+                }
+                if (LooksGarbled(text))
+                {
+                    _logger.LogWarning(
+                        "OCR zone skipped because extracted text is garbled. DocumentId={DocumentId}, FieldSettingId={FieldSettingId}, FieldKey={FieldKey}, Page={PageNumber}, Text={Text}",
+                        documentId,
+                        zone.FieldSettingId,
+                        fieldKey,
+                        pageNumber,
+                        TruncateForLog(text));
                     continue;
                 }
 
@@ -209,6 +226,29 @@ public sealed class DocTypeOcrZoneExtractionService : IDocTypeOcrZoneExtractionS
         if (string.IsNullOrWhiteSpace(fieldKey))
             return ApiResult<OcrZoneExtractResultDto>.Fail("Khong xac dinh duoc cot du lieu can map.");
 
+        var ocrItems = await TryReadOcrItemsAsync(doc, cancellationToken);
+        if (ocrItems.Count > 0)
+        {
+            var textFromJson = ExtractFromOcrItems(
+                ocrItems,
+                request.PageNumber,
+                ClampRatio(request.XRatio),
+                ClampRatio(request.YRatio),
+                ClampRatio(request.WidthRatio),
+                ClampRatio(request.HeightRatio));
+            if (string.IsNullOrWhiteSpace(textFromJson))
+                return ApiResult<OcrZoneExtractResultDto>.Fail("Khong boc duoc chu tu vung OCR nay. Hay keo rong vung hon hoac chay lai OCR tai lieu.");
+
+            var normalizedFromJson = NormalizeValueForField(fieldKey, field, textFromJson);
+            return ApiResult<OcrZoneExtractResultDto>.Ok(new OcrZoneExtractResultDto
+            {
+                FieldSettingId = request.FieldSettingId,
+                FieldId = fieldId,
+                FieldKey = fieldKey,
+                Value = normalizedFromJson
+            }, "Da OCR lai vung va dua du lieu vao o nhap.");
+        }
+
         var pdfBytes = await StoragePdfFileReader.ReadAllBytesAsync(
             _storage,
             _storageOptions,
@@ -233,6 +273,8 @@ public sealed class DocTypeOcrZoneExtractionService : IDocTypeOcrZoneExtractionS
 
             if (string.IsNullOrWhiteSpace(text))
                 return ApiResult<OcrZoneExtractResultDto>.Fail("Khong boc duoc chu tu vung OCR nay. Hay keo rong vung hon hoac kiem tra PDF 2 lop.");
+            if (LooksGarbled(text))
+                return ApiResult<OcrZoneExtractResultDto>.Fail("Du lieu OCR trong PDF 2 lop bi loi ma hoa. Hay chay lai OCR bang service moi.");
 
             var normalized = NormalizeValueForField(fieldKey, field, text);
             return ApiResult<OcrZoneExtractResultDto>.Ok(new OcrZoneExtractResultDto
@@ -248,6 +290,177 @@ public sealed class DocTypeOcrZoneExtractionService : IDocTypeOcrZoneExtractionS
             _logger.LogError(ex, "Temporary OCR zone extract failed. DocumentId={DocumentId}, FieldSettingId={FieldSettingId}", documentId, request.FieldSettingId);
             return ApiResult<OcrZoneExtractResultDto>.Fail("Loi khi OCR lai vung hien tai.");
         }
+    }
+
+    private async Task<bool> TryPrefillFromOcrItemsAsync(
+        Document doc,
+        IReadOnlyList<DocTypeOcrZoneDto> zones,
+        IReadOnlyList<OcrTextItem> ocrItems,
+        CancellationToken cancellationToken)
+    {
+        var settings = await _docTypeRepo.GetFieldSettingsByTypeAsync(doc.DocTypeId);
+        var fields = await _docTypeRepo.GetAllFieldsAsync();
+        var settingById = settings.ToDictionary(s => s.Id);
+        var fieldById = fields.ToDictionary(f => f.Id);
+        var currentValues = StgFieldToDocumentMapper.ExtractValues(doc);
+        var changed = false;
+
+        foreach (var zone in zones)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (!TryResolveField(zone, settingById, fieldById, out var field, out var fieldKey))
+            {
+                _logger.LogWarning(
+                    "OCR JSON zone skipped: field mapping missing. DocumentId={DocumentId}, FieldSettingId={FieldSettingId}, FieldId={FieldId}",
+                    doc.Id,
+                    zone.FieldSettingId,
+                    zone.FieldId);
+                continue;
+            }
+
+            if (HasExistingValue(currentValues, fieldKey))
+                continue;
+
+            var text = ExtractFromOcrItems(
+                ocrItems,
+                Math.Max(1, zone.PageNumber),
+                ClampRatio(zone.XRatio),
+                ClampRatio(zone.YRatio),
+                ClampRatio(zone.WidthRatio),
+                ClampRatio(zone.HeightRatio));
+            if (string.IsNullOrWhiteSpace(text))
+                continue;
+
+            var normalized = NormalizeValueForField(fieldKey, field, text);
+            if (!TryApplyValue(doc, currentValues, fieldKey, field.Name, normalized, out var appliedKey))
+                continue;
+
+            changed = true;
+            _logger.LogInformation(
+                "OCR JSON zone prefilled. DocumentId={DocumentId}, FieldKey={FieldKey}, Page={PageNumber}, Length={Length}",
+                doc.Id,
+                appliedKey,
+                zone.PageNumber,
+                normalized.Length);
+        }
+
+        if (!changed)
+            return false;
+
+        doc.Updated = DateTime.UtcNow;
+        await _docRepo.UpdateAsync(doc);
+        return true;
+    }
+
+    private async Task<IReadOnlyList<OcrTextItem>> TryReadOcrItemsAsync(Document doc, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(doc.PathPdfSearchable))
+            return Array.Empty<OcrTextItem>();
+
+        var jsonPath = BuildOcrJsonPath(doc.PathPdfSearchable);
+        try
+        {
+            await using var stream = StoragePdfFileReader.OpenRead(_storage, _storageOptions, jsonPath);
+            if (stream is null)
+                return Array.Empty<OcrTextItem>();
+
+            var items = await JsonSerializer.DeserializeAsync<List<OcrTextItem>>(stream, cancellationToken: cancellationToken);
+            return items is { Count: > 0 } ? items : Array.Empty<OcrTextItem>();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Cannot read OCR JSON sidecar. DocumentId={DocumentId}, JsonPath={JsonPath}", doc.Id, jsonPath);
+            return Array.Empty<OcrTextItem>();
+        }
+    }
+
+    private static string BuildOcrJsonPath(string searchablePdfPath)
+    {
+        var rel = searchablePdfPath.Replace('\\', '/').TrimStart('/');
+        var dir = Path.GetDirectoryName(rel)?.Replace('\\', '/') ?? string.Empty;
+        var fileName = Path.GetFileNameWithoutExtension(rel);
+        var jsonFile = $"{fileName}_ocr.json";
+        return string.IsNullOrWhiteSpace(dir) ? jsonFile : $"{dir}/{jsonFile}";
+    }
+
+    private static string? ExtractFromOcrItems(
+        IReadOnlyList<OcrTextItem> items,
+        int pageNumber,
+        decimal xRatio,
+        decimal yRatio,
+        decimal widthRatio,
+        decimal heightRatio)
+    {
+        const float padding = 0.02f;
+        var xMin = (float)xRatio - padding;
+        var xMax = (float)(xRatio + widthRatio) + padding;
+        var yMin = (float)yRatio - padding;
+        var yMax = (float)(yRatio + heightRatio) + padding;
+
+        var matched = items
+            .Where(x => x.PageNumber == pageNumber)
+            .Where(x => !string.IsNullOrWhiteSpace(x.Text))
+            .Where(x => x.XEndRatio >= xMin && x.XStartRatio <= xMax)
+            .Where(x => x.YBottomRatio >= yMin && x.YTopRatio <= yMax)
+            .OrderBy(x => x.YTopRatio)
+            .ThenBy(x => x.XStartRatio)
+            .ToList();
+
+        if (matched.Count == 0)
+            return null;
+
+        var lines = new List<List<OcrTextItem>>();
+        foreach (var item in matched)
+        {
+            var line = lines.LastOrDefault();
+            if (line is null || Math.Abs(line[0].YTopRatio - item.YTopRatio) > 0.018f)
+                lines.Add(new List<OcrTextItem> { item });
+            else
+                line.Add(item);
+        }
+
+        var output = new List<string>();
+        foreach (var line in lines)
+        {
+            var ordered = line.OrderBy(x => x.XStartRatio).ToList();
+            var parts = new List<string>();
+            OcrTextItem? previous = null;
+            foreach (var item in ordered)
+            {
+                var text = item.Text.Trim();
+                if (text.Length == 0)
+                    continue;
+
+                if (previous is not null)
+                {
+                    var gap = item.XStartRatio - previous.XEndRatio;
+                    if (gap > 0.006f && !text.StartsWith(",", StringComparison.Ordinal) && !text.StartsWith(".", StringComparison.Ordinal))
+                        parts.Add(" ");
+                }
+
+                parts.Add(text);
+                previous = item;
+            }
+
+            var lineText = string.Concat(parts).Trim();
+            if (!string.IsNullOrWhiteSpace(lineText))
+                output.Add(lineText);
+        }
+
+        return NormalizeExtractedText(string.Join(" ", output));
+    }
+
+    private static string? NormalizeExtractedText(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return null;
+
+        var normalized = text.Replace('\r', ' ').Replace('\n', ' ').Trim();
+        while (normalized.Contains("  ", StringComparison.Ordinal))
+            normalized = normalized.Replace("  ", " ", StringComparison.Ordinal);
+
+        return string.IsNullOrWhiteSpace(normalized) ? null : normalized;
     }
 
     private static bool TryResolveField(
@@ -363,6 +576,8 @@ public sealed class DocTypeOcrZoneExtractionService : IDocTypeOcrZoneExtractionS
 
         if (string.IsNullOrWhiteSpace(value))
             return false;
+        if (LooksGarbled(value))
+            return false;
 
         return !string.Equals(fieldKey, "dc_title", StringComparison.OrdinalIgnoreCase)
             && !string.Equals(fieldKey, "title", StringComparison.OrdinalIgnoreCase)
@@ -371,4 +586,31 @@ public sealed class DocTypeOcrZoneExtractionService : IDocTypeOcrZoneExtractionS
 
     private static string TruncateForLog(string value)
         => value.Length <= 120 ? value : value[..120] + "...";
+
+    private static bool LooksGarbled(string value)
+        => value.Contains('\uFFFD', StringComparison.Ordinal);
+}
+
+internal sealed class OcrTextItem
+{
+    [JsonPropertyName("pageNumber")]
+    public int PageNumber { get; set; }
+
+    [JsonPropertyName("text")]
+    public string Text { get; set; } = string.Empty;
+
+    [JsonPropertyName("xStartRatio")]
+    public float XStartRatio { get; set; }
+
+    [JsonPropertyName("xEndRatio")]
+    public float XEndRatio { get; set; }
+
+    [JsonPropertyName("yTopRatio")]
+    public float YTopRatio { get; set; }
+
+    [JsonPropertyName("yBottomRatio")]
+    public float YBottomRatio { get; set; }
+
+    [JsonPropertyName("baselineY")]
+    public float BaselineY { get; set; }
 }
