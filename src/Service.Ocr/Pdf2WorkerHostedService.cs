@@ -109,7 +109,7 @@ internal sealed class OcrWorkerHostedService : BackgroundService
                 while (activeTasks.Count(t => !t.IsCompleted) < target
                        && !stoppingToken.IsCancellationRequested)
                 {
-                    var id = await _repo.TryClaimOcrSearchablePdfJobAsync(stoppingToken).ConfigureAwait(false);
+                    var id = await _repo.TryClaimOcrSearchablePdfJobAsync(target, stoppingToken).ConfigureAwait(false);
                     if (!id.HasValue || id.Value <= 0)
                         break; // Không còn job nào trong queue
 

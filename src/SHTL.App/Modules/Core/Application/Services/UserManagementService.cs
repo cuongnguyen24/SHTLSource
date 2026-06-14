@@ -1,4 +1,4 @@
-using SHTL.Modules.Core.Domain.Contracts;
+﻿using SHTL.Modules.Core.Domain.Contracts;
 using SHTL.Modules.Core.Domain.Entities.Acc;
 using SHTL.Modules.Infrastructure.Data.Repositories.Acc;
 using SHTL.Modules.Infrastructure.Identity;
@@ -75,10 +75,15 @@ public class UserManagementService : IUserManagementService
         if (existing is not null)
             return ApiResult<int>.Fail("Tên đăng nhập đã tồn tại");
 
+        var email = req.Email.Trim().ToLower();
+        var existingEmail = await _userRepo.GetByEmailAsync(email);
+        if (existingEmail is not null)
+            return ApiResult<int>.Fail("Email đã được sử dụng");
+
         var user = new User
         {
             UserName = req.UserName.Trim().ToLower(),
-            Email = req.Email.Trim().ToLower(),
+            Email = email,
             FullName = req.FullName.Trim(),
             PasswordHash = _hasher.Hash(req.Password),
             PasswordSalt = string.Empty,
@@ -86,7 +91,7 @@ public class UserManagementService : IUserManagementService
             PositionId = req.PositionId,
             IsActive = true,
             IsAdmin = false,
-            Phone = req.Phone,
+            Phone = string.IsNullOrWhiteSpace(req.Phone) ? null : req.Phone.Trim(),
             Created = DateTime.UtcNow,
             CreatedBy = currentUser.Id,
             SearchMeta = $"{req.FullName} {req.UserName} {req.Email}"
@@ -184,3 +189,4 @@ public class UserManagementService : IUserManagementService
         LastLogin = u.LastLogin
     };
 }
+

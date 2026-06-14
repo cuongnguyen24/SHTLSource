@@ -12,7 +12,7 @@ public static class AppServiceExtensions
         services.AddScoped<ISearchablePdfPythonRunner, SearchablePdfPythonRunner>();
         services.AddScoped<ISearchablePdfProcessor, SearchablePdfProcessor>();
         var pdfOpts = configuration.GetSection(SearchablePdfOptions.SectionName).Get<SearchablePdfOptions>() ?? new SearchablePdfOptions();
-        if (pdfOpts.RunWorkerInWebProcess)
+        if (pdfOpts.Enabled && pdfOpts.RunWorkerInWebProcess)
             services.AddHostedService<SearchablePdfHostedService>();
 
         services.AddScoped<IDocumentService, DocumentService>();

@@ -93,7 +93,7 @@ internal sealed class Pdf2WorkerHostedService : BackgroundService
                 }
 
                 // ── Dynamic concurrency ──────────────────────────────────────
-                var target = SystemResourceMonitor.ComputeTargetWorkers(opt);
+                var target = Math.Min(5, SystemResourceMonitor.ComputeTargetWorkers(opt));
 
                 // Log resource status định kỳ (1 phút/lần)
                 if (DateTime.UtcNow - lastResourceLog > TimeSpan.FromMinutes(1))
@@ -109,7 +109,7 @@ internal sealed class Pdf2WorkerHostedService : BackgroundService
                 while (activeTasks.Count(t => !t.IsCompleted) < target
                        && !stoppingToken.IsCancellationRequested)
                 {
-                    var id = await _repo.TryClaimSearchablePdfJobAsync(stoppingToken).ConfigureAwait(false);
+                    var id = await _repo.TryClaimSearchablePdfJobAsync(target, stoppingToken).ConfigureAwait(false);
                     if (!id.HasValue || id.Value <= 0)
                         break; // Không còn job nào trong queue
 

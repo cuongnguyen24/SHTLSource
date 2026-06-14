@@ -3,7 +3,7 @@
 @using SHTL.Modules.Shared.Contracts
 @{
     ViewData["Title"] = "Xem PDF — " + Model.Name;
-    var pdfUrl = Url.Content("~/scan/pdf/" + Model.Id);
+    var pdfUrl = Url.Content("~/scan/pdf/" + Model.Id) + "?ocr=" + ((int)Model.OcrStatus).ToString() + "&v=" + Uri.EscapeDataString(Model.PathPdfSearchable ?? Model.FilePath ?? "");
     var downloadUrl = Url.Content("~/scan/download/" + Model.Id);
     var sp = Model.SearchablePdfStatusText;
     var checkKind = Convert.ToInt32(ViewData["PreviewCheckScanKind"] ?? 0);

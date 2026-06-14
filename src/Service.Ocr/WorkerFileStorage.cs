@@ -34,6 +34,24 @@ internal sealed class WorkerFileStorage
         return Path.Combine(safeSub, safeFileName).Replace('\\', '/');
     }
 
+    public async Task<string> SaveExactFileAsync(Stream stream, string relativePath, CancellationToken cancellationToken = default)
+    {
+        var normalized = relativePath.Replace('\\', '/').TrimStart('/');
+        var safeSub = SanitizeRelativeSubPath(Path.GetDirectoryName(normalized)?.Replace('\\', '/') ?? string.Empty);
+        var safeFileName = SanitizeFileName(Path.GetFileName(normalized));
+        if (string.IsNullOrWhiteSpace(safeFileName))
+            throw new ArgumentException("Storage file name is empty.", nameof(relativePath));
+
+        var fullDir = Path.Combine(_options.RootPath, safeSub);
+        Directory.CreateDirectory(fullDir);
+
+        var fullPath = Path.Combine(fullDir, safeFileName);
+        await using var fs = new FileStream(fullPath, FileMode.Create, FileAccess.Write, FileShare.None);
+        await stream.CopyToAsync(fs, cancellationToken).ConfigureAwait(false);
+
+        return Path.Combine(safeSub, safeFileName).Replace('\\', '/');
+    }
+
     private static string SanitizeRelativeSubPath(string subPath)
     {
         if (string.IsNullOrWhiteSpace(subPath))

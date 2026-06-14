@@ -12,7 +12,7 @@ public sealed class SearchablePdfOptions
     /// Khi <c>false</c>, không đăng ký <see cref="SHTL.Modules.Core.Application.Services.SearchablePdfHostedService"/> trong tiến trình web —
     /// dùng Windows Service riêng (ví dụ <c>Service.Pdf2Layer</c>) cùng DB và <c>Storage:RootPath</c>.
     /// </summary>
-    public bool RunWorkerInWebProcess { get; set; } = true;
+    public bool RunWorkerInWebProcess { get; set; } = false;
 
     /// <summary>Thời gian nghỉ giữa các lần kiểm tra hàng đợi (giây).</summary>
     public int PollIntervalSeconds { get; set; } = 5;

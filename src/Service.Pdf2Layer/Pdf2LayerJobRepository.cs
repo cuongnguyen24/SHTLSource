@@ -27,27 +27,56 @@ internal sealed class Pdf2LayerJobRepository
             new CommandDefinition(sql, new { Id = id }, cancellationToken: cancellationToken)).ConfigureAwait(false);
     }
 
-    public async Task<long?> TryClaimSearchablePdfJobAsync(CancellationToken cancellationToken = default)
+    public async Task<long?> TryClaimSearchablePdfJobAsync(int maxConcurrentProcessing, CancellationToken cancellationToken = default)
     {
         const string sql = """
-            UPDATE TOP (1) dbo.stg_documents
-            SET ocr_status = @Processing,
-                updated = SYSUTCDATETIME(),
-                updated_by = @SystemUser
-            OUTPUT INSERTED.id
-            WHERE ocr_status = @Queued
-              AND status = @Active
-              AND (
-                    LOWER(LTRIM(RTRIM(ISNULL(extension, N'')))) IN (N'pdf', N'.pdf')
-                    OR LOWER(ISNULL(file_name, N'')) LIKE N'%.pdf'
-                    OR LOWER(ISNULL(file_path, N'')) LIKE N'%.pdf'
-                  );
+            DECLARE @LockResult int;
+
+            BEGIN TRANSACTION;
+
+            EXEC @LockResult = sys.sp_getapplock
+                @Resource = N'SHTL_OCR_CLAIM_GATE',
+                @LockMode = N'Exclusive',
+                @LockOwner = N'Transaction',
+                @LockTimeout = 5000;
+
+            IF @LockResult >= 0 AND (
+                SELECT COUNT_BIG(1)
+                FROM dbo.stg_documents WITH (UPDLOCK, HOLDLOCK)
+                WHERE ocr_status = @Processing
+                  AND status = @Active
+            ) < @MaxConcurrentProcessing
+            BEGIN
+                ;WITH next_job AS
+                (
+                    SELECT TOP (1) id
+                    FROM dbo.stg_documents WITH (UPDLOCK, READPAST)
+                    WHERE ocr_status = @Queued
+                      AND status = @Active
+                      AND (
+                            LOWER(LTRIM(RTRIM(ISNULL(extension, N'')))) IN (N'pdf', N'.pdf')
+                            OR LOWER(ISNULL(file_name, N'')) LIKE N'%.pdf'
+                            OR LOWER(ISNULL(file_path, N'')) LIKE N'%.pdf'
+                          )
+                    ORDER BY updated ASC, id ASC
+                )
+                UPDATE d
+                SET ocr_status = @Processing,
+                    updated = SYSUTCDATETIME(),
+                    updated_by = @SystemUser
+                OUTPUT INSERTED.id
+                FROM dbo.stg_documents d
+                INNER JOIN next_job j ON j.id = d.id;
+            END
+
+            COMMIT TRANSACTION;
             """;
         await using var conn = new SqlConnection(_connectionString);
         await conn.OpenAsync(cancellationToken).ConfigureAwait(false);
         return await conn.QueryFirstOrDefaultAsync<long?>(
             new CommandDefinition(sql, new
             {
+                MaxConcurrentProcessing = Math.Max(1, maxConcurrentProcessing),
                 Processing = (byte)Pdf2OcrStatus.SearchablePdfProcessing,
                 Queued = (byte)Pdf2OcrStatus.SearchablePdfQueued,
                 Active = (byte)Pdf2DocumentStatus.Active,

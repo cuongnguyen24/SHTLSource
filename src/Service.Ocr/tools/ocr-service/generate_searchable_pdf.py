@@ -6,6 +6,7 @@ from __future__ import annotations
 import os
 import sys
 import tempfile
+import json
 from typing import Set
 
 
@@ -27,6 +28,56 @@ def quad_to_rect(box, fitz_mod, scale_x: float = 1.0, scale_y: float = 1.0):
     xs = [float(pt[0]) * scale_x for pt in box]
     ys = [float(pt[1]) * scale_y for pt in box]
     return fitz_mod.Rect(min(xs), min(ys), max(xs), max(ys))
+
+
+def expand_rect_for_text(rect, fitz_mod, page_w: float, page_h: float):
+    pad_x = max(0.5, rect.height * 0.08)
+    pad_y = max(0.5, rect.height * 0.18)
+    return fitz_mod.Rect(
+        max(0.0, rect.x0 - pad_x),
+        max(0.0, rect.y0 - pad_y),
+        min(page_w, rect.x1 + pad_x),
+        min(page_h, rect.y1 + pad_y),
+    )
+
+
+def estimate_text_width(fitz_mod, text: str, fontname: str, fontsize: float) -> float:
+    try:
+        return float(fitz_mod.get_text_length(text, fontname=fontname, fontsize=fontsize))
+    except Exception:
+        return len(text) * fontsize * 0.52
+
+
+def fit_fontsize_to_rect(fitz_mod, text: str, rect, fontname: str) -> float:
+    height_size = rect.height * 0.72
+    if not text:
+        return max(4.0, min(36.0, height_size))
+
+    width_at_1 = estimate_text_width(fitz_mod, text, fontname, 1.0)
+    width_size = (rect.width * 1.08 / width_at_1) if width_at_1 > 0 else height_size
+    return max(3.0, min(36.0, height_size, width_size))
+
+
+def horizontal_scale_for_rect(fitz_mod, text: str, rect, fontname: str, fontsize: float) -> float:
+    text_width = estimate_text_width(fitz_mod, text, fontname, fontsize)
+    if text_width <= 0:
+        return 1.0
+
+    return max(0.75, min(2.8, (rect.width * 1.02) / text_width))
+
+
+def font_metrics(fitz_mod, font_path: str | None, fontname: str) -> tuple[float, float]:
+    try:
+        font = fitz_mod.Font(fontfile=font_path) if font_path else fitz_mod.Font(fontname=fontname)
+        return float(font.ascender), float(font.descender)
+    except Exception:
+        return 0.9, -0.22
+
+
+def baseline_for_rect(rect, fontsize: float, ascender: float, descender: float, page_h: float) -> float:
+    font_height = max(0.1, (ascender - descender) * fontsize)
+    baseline = rect.y0 + max(0.0, (rect.height - font_height) / 2.0) + ascender * fontsize
+    return min(page_h, max(0.0, baseline))
 
 
 def detect_scale(items, target_w: float, target_h: float,
@@ -53,6 +104,8 @@ def detect_scale(items, target_w: float, target_h: float,
     if not items or target_w <= 0 or target_h <= 0 or pix_w <= 0 or pix_h <= 0:
         return 1.0, 1.0
 
+    xs_all = []
+    ys_all = []
     max_x = 0.0
     max_y = 0.0
     min_x = float("inf")
@@ -67,6 +120,8 @@ def detect_scale(items, target_w: float, target_h: float,
                 y = float(pt[1])
             except (TypeError, ValueError, IndexError):
                 continue
+            xs_all.append(x)
+            ys_all.append(y)
             if x > max_x:
                 max_x = x
             if y > max_y:
@@ -78,6 +133,18 @@ def detect_scale(items, target_w: float, target_h: float,
 
     if max_x <= 0 or max_y <= 0 or not (min_x < float("inf")):
         return 1.0, 1.0
+
+    def percentile(values, p: float) -> float:
+        if not values:
+            return 0.0
+        ordered = sorted(values)
+        idx = int(round((len(ordered) - 1) * p))
+        return ordered[max(0, min(len(ordered) - 1, idx))]
+
+    robust_min_x = percentile(xs_all, 0.05)
+    robust_max_x = percentile(xs_all, 0.95)
+    robust_min_y = percentile(ys_all, 0.05)
+    robust_max_y = percentile(ys_all, 0.95)
 
     # Nhánh A — OCR đã ở POINT space.
     if max_x <= target_w * 1.2 and max_y <= target_h * 1.2:
@@ -91,11 +158,21 @@ def detect_scale(items, target_w: float, target_h: float,
     # sách, công văn…). Khi `min/max` quá lớn (> 0.5) → content lệch (header
     # logo, chỉ có chữ một bên), heuristic không tin cậy → dùng `max * 1.05`
     # làm fallback an toàn (chấp nhận highlight có thể tràn 5% mép phải).
-    if max_x > 0 and (min_x / max_x) < 0.5:
+    scale_render_x = target_w / float(pix_w)
+    scale_render_y = target_h / float(pix_h)
+
+    use_robust_x = robust_max_x > 0 and (robust_min_x / robust_max_x) < 0.5
+    use_robust_y = robust_max_y > 0 and (robust_min_y / robust_max_y) < 0.5
+
+    if use_robust_x:
+        span_x = robust_min_x + robust_max_x
+    elif max_x > 0 and (min_x / max_x) < 0.5:
         span_x = min_x + max_x
     else:
         span_x = max_x * 1.05
-    if max_y > 0 and (min_y / max_y) < 0.5:
+    if use_robust_y:
+        span_y = robust_min_y + robust_max_y
+    elif max_y > 0 and (min_y / max_y) < 0.5:
         span_y = min_y + max_y
     else:
         span_y = max_y * 1.05
@@ -105,7 +182,15 @@ def detect_scale(items, target_w: float, target_h: float,
     span_x = min(span_x, float(pix_w))
     span_y = min(span_y, float(pix_h))
 
-    return target_w / span_x, target_h / span_y
+    scale_x = target_w / span_x
+    scale_y = target_h / span_y
+
+    if scale_x < scale_render_x * 0.72 or scale_x > scale_render_x * 1.55:
+        scale_x = scale_render_x
+    if scale_y < scale_render_y * 0.72 or scale_y > scale_render_y * 1.55:
+        scale_y = scale_render_y
+
+    return scale_x, scale_y
 
 
 def main() -> int:
@@ -121,6 +206,7 @@ def main() -> int:
     if max_pages < 0:
         max_pages = 0
     selected_pages_raw = sys.argv[5] if len(sys.argv) > 5 else ""
+    json_out = sys.argv[6] if len(sys.argv) > 6 else ""
     selected_pages: Set[int] = set()
     if selected_pages_raw.strip():
         for token in selected_pages_raw.split(","):
@@ -148,6 +234,7 @@ def main() -> int:
     font_path = find_font()
     src = fitz.open(inp)
     out = fitz.open()
+    ocr_json_items = []
     try:
         # Matrix chỉ để render ảnh nét; KHÔNG dùng để định cỡ trang mới.
         render_mat = fitz.Matrix(dpi / 72.0, dpi / 72.0)
@@ -197,6 +284,7 @@ def main() -> int:
                         use_font = "vi"
                     except Exception:
                         pass
+                ascender, descender = font_metrics(fitz, font_path if use_font == "vi" else None, use_font)
 
                 # ── 6) Chèn lớp chữ ẩn (render_mode=3 = invisible) ────────────
                 for item in items:
@@ -209,28 +297,38 @@ def main() -> int:
                     r = quad_to_rect(box, fitz, scale_x=scale_x, scale_y=scale_y)
                     if r.is_empty or r.is_infinite:
                         continue
+                    ocr_json_items.append({
+                        "pageNumber": i + 1,
+                        "text": text,
+                        "xStartRatio": max(0.0, min(1.0, float(r.x0) / page_w_pt)),
+                        "xEndRatio": max(0.0, min(1.0, float(r.x1) / page_w_pt)),
+                        "yTopRatio": max(0.0, min(1.0, float(r.y0) / page_h_pt)),
+                        "yBottomRatio": max(0.0, min(1.0, float(r.y1) / page_h_pt)),
+                        "baselineY": float(r.y1),
+                    })
                     # Font size dựa trên chiều cao box theo POINT (1 pt ≈ 1/72 in).
-                    fontsize = max(4, min(36, r.height * 0.9))
-                    placed = False
+                    text_rect = expand_rect_for_text(r, fitz, page_w_pt, page_h_pt)
+                    fontsize = fit_fontsize_to_rect(fitz, text, text_rect, use_font)
+                    scale_h = horizontal_scale_for_rect(fitz, text, r, use_font, fontsize)
                     try:
-                        rc = new_page.insert_textbox(
-                            r,
-                            text,
+                        baseline = baseline_for_rect(r, fontsize, ascender, descender, page_h_pt)
+                        pt = fitz.Point(r.x0, baseline)
+                        new_page.insert_text(
+                            pt, text,
                             fontname=use_font,
                             fontsize=fontsize,
-                            align=fitz.TEXT_ALIGN_LEFT,
+                            morph=(pt, fitz.Matrix(scale_h, 1.0)),
                             render_mode=3,  # invisible (text dùng để select/search)
                         )
-                        placed = rc is None or rc >= 0
                     except Exception:
-                        pass
-                    if not placed:
                         try:
-                            pt = fitz.Point(r.x0, min(r.y1, page_h_pt) - 1)
+                            fallback_fontsize = max(3.0, min(fontsize, r.height * 0.64))
+                            fallback_baseline = baseline_for_rect(r, fallback_fontsize, ascender, descender, page_h_pt)
+                            pt = fitz.Point(r.x0, fallback_baseline)
                             new_page.insert_text(
                                 pt, text,
                                 fontname=use_font,
-                                fontsize=fontsize,
+                                fontsize=fallback_fontsize,
                                 render_mode=3,
                             )
                         except Exception:
@@ -243,6 +341,9 @@ def main() -> int:
                         pass
 
         out.save(outp, garbage=4, deflate=True)
+        if json_out:
+            with open(json_out, "w", encoding="utf-8") as f:
+                json.dump(ocr_json_items, f, ensure_ascii=False)
     finally:
         src.close()
         out.close()

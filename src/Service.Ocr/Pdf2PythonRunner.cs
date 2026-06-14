@@ -33,6 +33,7 @@ internal sealed class OcrPythonRunner
         int renderDpi,
         int maxPages,
         IReadOnlyCollection<int>? selectedPages,
+        string? jsonOutputFullPath,
         CancellationToken cancellationToken = default)
     {
         var opt = _options.Value;
@@ -75,6 +76,7 @@ internal sealed class OcrPythonRunner
             selectedPages is { Count: > 0 }
                 ? string.Join(",", selectedPages.OrderBy(x => x))
                 : string.Empty);
+        proc.StartInfo.ArgumentList.Add(jsonOutputFullPath ?? string.Empty);
         proc.StartInfo.UseShellExecute = false;
         proc.StartInfo.CreateNoWindow = true;
         proc.StartInfo.RedirectStandardOutput = true;

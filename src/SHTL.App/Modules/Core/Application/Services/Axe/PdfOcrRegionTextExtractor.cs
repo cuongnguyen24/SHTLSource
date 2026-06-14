@@ -9,15 +9,16 @@ namespace SHTL.Modules.Core.Application.Services.Axe;
 
 internal static class PdfOcrRegionTextExtractor
 {
-    private const float RegionPaddingRatio = 0.03f;
+    private const float RegionPaddingRatio = 0.006f;
+    private const float StrictRegionPaddingRatio = 0.002f;
 
     public static string? Extract(PdfPage page, decimal xRatio, decimal yRatio, decimal widthRatio, decimal heightRatio)
     {
-        var segments = PageTextSegmentCollector.Collect(page);
+        var segments = PageTextSegmentCollector.Collect(page, splitCharacters: false);
         if (segments.Count > 0)
         {
-            var ratioText = NormalizeExtractedText(MatchSegments(segments, xRatio, yRatio, widthRatio, heightRatio, yFromTop: true))
-                ?? NormalizeExtractedText(MatchSegments(segments, xRatio, yRatio, widthRatio, heightRatio, yFromTop: false));
+            var ratioText = NormalizeExtractedText(MatchSegments(segments, xRatio, yRatio, widthRatio, heightRatio, RegionPaddingRatio, yFromTop: true))
+                ?? NormalizeExtractedText(MatchSegments(segments, xRatio, yRatio, widthRatio, heightRatio, RegionPaddingRatio, yFromTop: false));
             if (!string.IsNullOrWhiteSpace(ratioText))
                 return ratioText;
         }
@@ -34,35 +35,98 @@ internal static class PdfOcrRegionTextExtractor
         return null;
     }
 
+    public static string? ExtractStrict(PdfPage page, decimal xRatio, decimal yRatio, decimal widthRatio, decimal heightRatio)
+    {
+        var segments = PageTextSegmentCollector.Collect(page, splitCharacters: true);
+        if (segments.Count == 0)
+            return null;
+
+        return NormalizeExtractedText(MatchSegments(segments, xRatio, yRatio, widthRatio, heightRatio, StrictRegionPaddingRatio, yFromTop: true))
+            ?? NormalizeExtractedText(MatchSegments(segments, xRatio, yRatio, widthRatio, heightRatio, StrictRegionPaddingRatio, yFromTop: false));
+    }
+
     private static string? MatchSegments(
         IReadOnlyList<PageTextSegmentCollector.Segment> segments,
         decimal xRatio,
         decimal yRatio,
         decimal widthRatio,
         decimal heightRatio,
+        float paddingRatio,
         bool yFromTop)
     {
-        var xMin = (float)xRatio - RegionPaddingRatio;
-        var xMax = (float)(xRatio + widthRatio) + RegionPaddingRatio;
-        var yMin = (float)yRatio - RegionPaddingRatio;
-        var yMax = (float)(yRatio + heightRatio) + RegionPaddingRatio;
+        var xMin = (float)xRatio - paddingRatio;
+        var xMax = (float)(xRatio + widthRatio) + paddingRatio;
+        var yMin = (float)yRatio - paddingRatio;
+        var yMax = (float)(yRatio + heightRatio) + paddingRatio;
 
         var matched = segments
-            .Where(s => s.XRatio >= xMin && s.XRatio <= xMax)
+            .Where(s => s.XEndRatio >= xMin && s.XStartRatio <= xMax)
             .Where(s =>
             {
-                var y = yFromTop ? s.YRatioFromTop : s.YRatioFromBottom;
-                return y >= yMin && y <= yMax;
+                if (yFromTop)
+                {
+                    var segTopFromTop = 1f - s.YTopRatio;
+                    var segBottomFromTop = 1f - s.YBottomRatio;
+                    return segBottomFromTop >= yMin && segTopFromTop <= yMax;
+                }
+
+                return s.YTopRatio >= yMin && s.YBottomRatio <= yMax;
             })
             .OrderByDescending(s => s.BaselineY)
             .ThenBy(s => s.XRatio)
-            .Select(s => s.Text)
             .ToList();
 
         if (matched.Count == 0)
             return null;
 
-        return string.Concat(matched);
+        return BuildText(matched);
+    }
+
+    private static string BuildText(IReadOnlyList<PageTextSegmentCollector.Segment> matched)
+    {
+        var lines = matched
+            .GroupBy(s => Math.Round(s.BaselineY, 1))
+            .OrderByDescending(g => g.Key)
+            .Select(g => g.OrderBy(s => s.XRatio).ToList())
+            .ToList();
+
+        var output = new List<string>();
+        foreach (var line in lines)
+        {
+            var parts = new List<string>();
+            PageTextSegmentCollector.Segment? previous = null;
+            foreach (var segment in line)
+            {
+                if (string.IsNullOrEmpty(segment.Text))
+                    continue;
+
+                var gap = previous is null ? 0 : segment.XRatio - previous.XEndRatio;
+                if (previous is not null
+                    && !string.IsNullOrWhiteSpace(previous.Text)
+                    && !string.IsNullOrWhiteSpace(segment.Text)
+                    && gap > EstimateSpaceGap(previous, segment))
+                {
+                    parts.Add(" ");
+                }
+
+                parts.Add(segment.Text);
+                previous = segment;
+            }
+
+            var text = string.Concat(parts).Trim();
+            if (!string.IsNullOrWhiteSpace(text))
+                output.Add(text);
+        }
+
+        return string.Join(" ", output);
+    }
+
+    private static float EstimateSpaceGap(PageTextSegmentCollector.Segment previous, PageTextSegmentCollector.Segment current)
+    {
+        var previousWidth = Math.Max(0.0001f, previous.XEndRatio - previous.XStartRatio);
+        var currentWidth = Math.Max(0.0001f, current.XEndRatio - current.XStartRatio);
+        var avgCharWidth = Math.Max(0.0001f, (previousWidth + currentWidth) / 2f);
+        return Math.Max(0.006f, avgCharWidth * 1.8f);
     }
 
     private static IEnumerable<Rectangle> BuildRegionCandidates(
@@ -180,16 +244,18 @@ internal static class PdfOcrRegionTextExtractor
     private sealed class PageTextSegmentCollector : IEventListener
     {
         private readonly Rectangle _crop;
+        private readonly bool _splitCharacters;
         private readonly List<Segment> _segments = new();
 
-        private PageTextSegmentCollector(PdfPage page)
+        private PageTextSegmentCollector(PdfPage page, bool splitCharacters)
         {
             _crop = page.GetCropBox();
+            _splitCharacters = splitCharacters;
         }
 
-        public static IReadOnlyList<Segment> Collect(PdfPage page)
+        public static IReadOnlyList<Segment> Collect(PdfPage page, bool splitCharacters)
         {
-            var collector = new PageTextSegmentCollector(page);
+            var collector = new PageTextSegmentCollector(page, splitCharacters);
             var processor = new PdfCanvasProcessor(collector);
             processor.ProcessPageContent(page);
             return collector._segments;
@@ -202,7 +268,25 @@ internal static class PdfOcrRegionTextExtractor
 
             var renderInfo = (TextRenderInfo)data;
             var text = renderInfo.GetText();
-            if (string.IsNullOrWhiteSpace(text))
+            if (string.IsNullOrEmpty(text))
+                return;
+
+            if (_splitCharacters)
+            {
+                foreach (var characterInfo in renderInfo.GetCharacterRenderInfos())
+                    AddSegment(characterInfo);
+                return;
+            }
+
+            AddSegment(renderInfo);
+        }
+
+        private void AddSegment(TextRenderInfo renderInfo)
+        {
+            var text = renderInfo.GetText();
+            if (string.IsNullOrEmpty(text))
+                return;
+            if (!_splitCharacters && string.IsNullOrWhiteSpace(text))
                 return;
 
             var bounds = GetTextBounds(renderInfo);
@@ -216,14 +300,22 @@ internal static class PdfOcrRegionTextExtractor
 
             var centerX = bounds.GetX() + bounds.GetWidth() / 2f;
             var centerY = bounds.GetY() + bounds.GetHeight() / 2f;
+            var xStartRatio = (bounds.GetX() - _crop.GetX()) / width;
             var xRatio = (centerX - _crop.GetX()) / width;
+            var xEndRatio = (bounds.GetX() + bounds.GetWidth() - _crop.GetX()) / width;
+            var yBottomRatio = (bounds.GetY() - _crop.GetY()) / height;
+            var yTopRatio = (bounds.GetY() + bounds.GetHeight() - _crop.GetY()) / height;
             var yFromBottom = (centerY - _crop.GetY()) / height;
             var yFromTop = 1f - yFromBottom;
             var baselineY = renderInfo.GetBaseline().GetStartPoint().Get(Vector.I2);
 
             _segments.Add(new Segment(
                 text,
+                xStartRatio,
                 xRatio,
+                xEndRatio,
+                yBottomRatio,
+                yTopRatio,
                 yFromTop,
                 yFromBottom,
                 baselineY));
@@ -233,7 +325,11 @@ internal static class PdfOcrRegionTextExtractor
 
         internal sealed record Segment(
             string Text,
+            float XStartRatio,
             float XRatio,
+            float XEndRatio,
+            float YBottomRatio,
+            float YTopRatio,
             float YRatioFromTop,
             float YRatioFromBottom,
             float BaselineY);
