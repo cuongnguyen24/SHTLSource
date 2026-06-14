@@ -13,7 +13,7 @@
     var ocrTemporaryZoneUrl = Url.Action("OcrTemporaryZone", "Extract", new { area = "sohoa", id = doc.Id })!;
     var previewUrl = Url.Content("~/scan/preview/" + doc.Id);
     var indexUrl = Url.Action("Index", "Extract", new { area = "sohoa" })!;
-    var pdfRawUrl = Url.Content("~/scan/pdf/" + doc.Id);
+    var pdfRawUrl = Url.Content("~/scan/pdf/" + doc.Id) + "?ocr=" + ((int)doc.OcrStatus).ToString() + "&v=" + Uri.EscapeDataString(doc.PathPdfSearchable ?? doc.FilePath ?? "");
     var pdfViewerUrl = Url.Content("~/sohoa-assets/pdf/viewer.html") + "?file=" + Uri.EscapeDataString(pdfRawUrl);
     var compatibilityJsUrl = Url.Content("~/sohoa-assets/pdf/compatibility.js");
     var pdfJsUrl = Url.Content("~/sohoa-assets/pdf/build/pdf.js");
@@ -157,6 +157,17 @@
             background: #f8f9fa;
             position: relative;
         }
+        .extract-pdf-native-frame {
+            width: 100%;
+            height: 100%;
+            min-height: 520px;
+            border: 0;
+            display: block;
+            background: #fff;
+        }
+        .extract-view-hidden {
+            display: none !important;
+        }
         .extract-ocr-page {
             position: relative;
             width: max-content;
@@ -167,9 +178,26 @@
         .extract-ocr-page canvas {
             display: block;
         }
+        .extract-pdf-text-layer {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+            opacity: .01;
+            line-height: 1;
+            z-index: 1;
+            user-select: text;
+        }
+        .extract-pdf-text-layer span {
+            position: absolute;
+            color: transparent;
+            white-space: pre;
+            transform-origin: 0 0;
+            cursor: text;
+        }
         .extract-ocr-zone-layer {
             position: absolute;
             inset: 0;
+            z-index: 2;
             pointer-events: none;
         }
         .extract-ocr-zone {
@@ -400,13 +428,22 @@
                             }
                         </div>
                         <div class="extract-pdf-toolbar">
+                            <button type="button" class="btn-figma btn-figma-primary btn-sm" id="extractPdfNativeMode">PDF 2 lớp</button>
+                            <button type="button" class="btn-figma btn-figma-outline btn-sm" id="extractPdfOcrMode">Vùng OCR</button>
+                            <span class="border-left mx-1" style="height:20px;"></span>
                             <button type="button" class="btn-figma btn-figma-outline btn-sm" id="extractPdfPrevPage"><i class="fas fa-chevron-left"></i></button>
                             <span class="small text-muted">Trang <span id="extractPdfPageNo">0</span>/<span id="extractPdfPageCount">0</span></span>
                             <button type="button" class="btn-figma btn-figma-outline btn-sm" id="extractPdfNextPage"><i class="fas fa-chevron-right"></i></button>
+                            <span class="border-left mx-1" style="height:20px;"></span>
+                            <button type="button" class="btn-figma btn-figma-outline btn-sm" id="extractPdfZoomOut" title="Thu nhỏ"><i class="fas fa-search-minus"></i></button>
+                            <span class="small text-muted" id="extractPdfZoomLabel">125%</span>
+                            <button type="button" class="btn-figma btn-figma-outline btn-sm" id="extractPdfZoomIn" title="Phóng to"><i class="fas fa-search-plus"></i></button>
                         </div>
                         <div id="extractOcrViewer" class="extract-ocr-viewer">
-                            <div id="extractOcrPage" class="extract-ocr-page">
+                            <iframe id="extractPdfNativeFrame" src="@pdfRawUrl" title="PDF 2 lớp" class="extract-pdf-native-frame"></iframe>
+                            <div id="extractOcrPage" class="extract-ocr-page extract-view-hidden">
                                 <canvas id="extractOcrCanvas"></canvas>
+                                <div id="extractPdfTextLayer" class="extract-pdf-text-layer"></div>
                                 <div id="extractOcrZoneLayer" class="extract-ocr-zone-layer"></div>
                             </div>
                         </div>
@@ -655,8 +692,12 @@
             var extractPdfDoc = null;
             var extractPdfCurrentPage = 1;
             var extractPdfRendering = false;
+            var extractPdfPendingPage = null;
+            var extractPdfScale = 1.25;
+            var extractPdfMode = 'native';
             var resizeState = null;
             initSplitLayout('extractSplitLayout');
+            initExtractViewMode();
             initExtractPdfViewer();
             initOcrZoneHighlight();
 
@@ -737,6 +778,48 @@
                 });
             }
 
+            function initExtractViewMode() {
+                var nativeBtn = document.getElementById('extractPdfNativeMode');
+                var ocrBtn = document.getElementById('extractPdfOcrMode');
+                if (nativeBtn) nativeBtn.onclick = function () { setExtractPdfMode('native'); };
+                if (ocrBtn) ocrBtn.onclick = function () { setExtractPdfMode('ocr'); };
+                setExtractPdfMode('native');
+            }
+
+            function setExtractPdfMode(mode) {
+                extractPdfMode = mode === 'ocr' ? 'ocr' : 'native';
+                var nativeFrame = document.getElementById('extractPdfNativeFrame');
+                var ocrPage = document.getElementById('extractOcrPage');
+                var nativeBtn = document.getElementById('extractPdfNativeMode');
+                var ocrBtn = document.getElementById('extractPdfOcrMode');
+                var canvasControls = [
+                    document.getElementById('extractPdfPrevPage'),
+                    document.getElementById('extractPdfNextPage'),
+                    document.getElementById('extractPdfZoomOut'),
+                    document.getElementById('extractPdfZoomIn')
+                ];
+                var zoomLabel = document.getElementById('extractPdfZoomLabel');
+
+                if (nativeFrame) nativeFrame.classList.toggle('extract-view-hidden', extractPdfMode !== 'native');
+                if (ocrPage) ocrPage.classList.toggle('extract-view-hidden', extractPdfMode !== 'ocr');
+                if (nativeBtn) {
+                    nativeBtn.classList.toggle('btn-figma-primary', extractPdfMode === 'native');
+                    nativeBtn.classList.toggle('btn-figma-outline', extractPdfMode !== 'native');
+                }
+                if (ocrBtn) {
+                    ocrBtn.classList.toggle('btn-figma-primary', extractPdfMode === 'ocr');
+                    ocrBtn.classList.toggle('btn-figma-outline', extractPdfMode !== 'ocr');
+                }
+                canvasControls.forEach(function (btn) {
+                    if (btn) btn.disabled = extractPdfMode !== 'ocr';
+                });
+                if (zoomLabel) zoomLabel.classList.toggle('text-muted', extractPdfMode !== 'ocr');
+
+                if (extractPdfMode === 'ocr' && extractPdfDoc && !extractPdfRendering) {
+                    renderExtractPdfPage(extractPdfCurrentPage, true);
+                }
+            }
+
             function initExtractPdfViewer() {
                 var viewer = document.getElementById('extractOcrViewer');
                 if (!viewer || !pdfUrl) return;
@@ -757,6 +840,8 @@
                         var total = document.getElementById('extractPdfPageCount');
                         if (total) total.textContent = String(pdfDoc.numPages);
                         bindExtractPdfPager();
+                        bindExtractPdfZoom();
+                        updateExtractPdfZoomLabel();
                         renderExtractPdfPage(1);
                     })
                     .catch(function (err) {
@@ -791,10 +876,43 @@
                 }
             }
 
-            function renderExtractPdfPage(pageNumber) {
-                if (!extractPdfDoc || extractPdfRendering) return Promise.resolve();
+            function bindExtractPdfZoom() {
+                var zoomOut = document.getElementById('extractPdfZoomOut');
+                var zoomIn = document.getElementById('extractPdfZoomIn');
+                if (zoomOut) {
+                    zoomOut.onclick = function () {
+                        setExtractPdfScale(extractPdfScale - 0.25);
+                    };
+                }
+                if (zoomIn) {
+                    zoomIn.onclick = function () {
+                        setExtractPdfScale(extractPdfScale + 0.25);
+                    };
+                }
+            }
+
+            function setExtractPdfScale(scale) {
+                var nextScale = Math.max(0.5, Math.min(3, Math.round(scale * 4) / 4));
+                if (Math.abs(nextScale - extractPdfScale) < 0.001) return;
+                extractPdfScale = nextScale;
+                updateExtractPdfZoomLabel();
+                renderExtractPdfPage(extractPdfCurrentPage, true);
+            }
+
+            function updateExtractPdfZoomLabel() {
+                var label = document.getElementById('extractPdfZoomLabel');
+                if (label) label.textContent = Math.round(extractPdfScale * 100) + '%';
+            }
+
+            function renderExtractPdfPage(pageNumber, force) {
+                if (!extractPdfDoc) return Promise.resolve();
                 pageNumber = Math.max(1, Math.min(extractPdfDoc.numPages, parseInt(pageNumber, 10) || 1));
+                if (extractPdfRendering) {
+                    extractPdfPendingPage = pageNumber;
+                    return Promise.resolve();
+                }
                 extractPdfRendering = true;
+                extractPdfPendingPage = null;
                 extractPdfCurrentPage = pageNumber;
                 var pageNo = document.getElementById('extractPdfPageNo');
                 if (pageNo) pageNo.textContent = String(pageNumber);
@@ -802,19 +920,51 @@
                 return extractPdfDoc.getPage(pageNumber).then(function (page) {
                     var canvas = document.getElementById('extractOcrCanvas');
                     var layer = document.getElementById('extractOcrZoneLayer');
-                    if (!canvas || !layer) return;
-                    var viewport = page.getViewport(1.25);
+                    var textLayer = document.getElementById('extractPdfTextLayer');
+                    if (!canvas || !layer || !textLayer) return;
+                    var viewport = page.getViewport(extractPdfScale);
                     canvas.width = viewport.width;
                     canvas.height = viewport.height;
                     layer.style.width = viewport.width + 'px';
                     layer.style.height = viewport.height + 'px';
-                    return page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
+                    textLayer.style.width = viewport.width + 'px';
+                    textLayer.style.height = viewport.height + 'px';
+                    textLayer.innerHTML = '';
+                    return page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise
+                        .then(function () { return renderExtractPdfTextLayer(page, viewport, textLayer); });
                 }).then(function () {
                     extractPdfRendering = false;
                     drawOcrZone(activeOcrZone);
+                    if (extractPdfPendingPage) {
+                        var pending = extractPdfPendingPage;
+                        extractPdfPendingPage = null;
+                        renderExtractPdfPage(pending, true);
+                    }
                 }).catch(function (err) {
                     extractPdfRendering = false;
                     showExtractPdfFallback(err && err.message ? err.message : 'render page failed');
+                });
+            }
+
+            function renderExtractPdfTextLayer(page, viewport, textLayer) {
+                if (!page || !textLayer || !PDFJS || !PDFJS.Util) return Promise.resolve();
+                return page.getTextContent().then(function (textContent) {
+                    textLayer.innerHTML = '';
+                    (textContent.items || []).forEach(function (item) {
+                        if (!item || !item.str) return;
+                        var tx = PDFJS.Util.transform(viewport.transform, item.transform);
+                        var fontHeight = Math.sqrt((tx[2] * tx[2]) + (tx[3] * tx[3]));
+                        if (!fontHeight || !isFinite(fontHeight)) fontHeight = Math.abs(tx[3]) || 10;
+                        var angle = Math.atan2(tx[1], tx[0]);
+                        var span = document.createElement('span');
+                        span.textContent = item.str;
+                        span.style.left = tx[4] + 'px';
+                        span.style.top = (tx[5] - fontHeight) + 'px';
+                        span.style.fontSize = fontHeight + 'px';
+                        span.style.fontFamily = item.fontName || 'sans-serif';
+                        if (angle) span.style.transform = 'rotate(' + angle + 'rad)';
+                        textLayer.appendChild(span);
+                    });
                 });
             }
 
@@ -838,6 +988,7 @@
             }
 
             function activateOcrZone(group, zone) {
+                setExtractPdfMode('ocr');
                 activeOcrZone = zone;
                 activeOcrGroup = group;
                 document.querySelectorAll('.ext-field-group.is-ocr-zone-active').forEach(function (el) {

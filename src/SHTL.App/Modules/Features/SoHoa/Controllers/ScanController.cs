@@ -336,7 +336,7 @@ public class ScanController : BaseController
         if (doc is null || !IsPdf(doc) || string.IsNullOrWhiteSpace(pdfRel))
             return NotFound();
 
-        var stream = _storage.OpenRead(pdfRel);
+        var stream = _storage.OpenRead(pdfRel) ?? TryOpenPdfStreamFallback(pdfRel);
         if (stream is null) return NotFound();
 
         var downloadName = string.IsNullOrWhiteSpace(doc.FileName) ? $"tai-lieu-{id}.pdf" : doc.FileName;
@@ -349,15 +349,20 @@ public class ScanController : BaseController
         if (!IsPdf(doc)) return null;
         if (!string.IsNullOrWhiteSpace(doc.PathPdfSearchable))
         {
-            var probe = _storage.OpenRead(doc.PathPdfSearchable);
-            if (probe is not null)
-            {
-                probe.Dispose();
+            if (CanOpenPdfStoragePath(doc.PathPdfSearchable))
                 return doc.PathPdfSearchable;
-            }
         }
 
         return string.IsNullOrWhiteSpace(doc.FilePath) ? null : doc.FilePath;
+    }
+
+    private bool CanOpenPdfStoragePath(string? relativePath)
+    {
+        if (string.IsNullOrWhiteSpace(relativePath))
+            return false;
+
+        using var probe = _storage.OpenRead(relativePath) ?? TryOpenPdfStreamFallback(relativePath);
+        return probe is not null;
     }
 
     private static bool IsPdf(DocumentDto doc)

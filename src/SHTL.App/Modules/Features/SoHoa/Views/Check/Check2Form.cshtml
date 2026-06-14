@@ -9,7 +9,7 @@
     var submitUrl = Url.Action("DoCheck2", "Check", new { area = "sohoa" })!;
     var previewUrl = Url.Content("~/scan/preview/" + doc.Id);
     var indexUrl = Url.Action("Check2", "Check", new { area = "sohoa" })!;
-    var pdfViewerUrl = Url.Content("~/scan/pdf/" + doc.Id);
+    var pdfViewerUrl = Url.Content("~/scan/pdf/" + doc.Id) + "?ocr=" + ((int)doc.OcrStatus).ToString() + "&v=" + Uri.EscapeDataString(doc.PathPdfSearchable ?? doc.FilePath ?? "");
     var showPdfViewer = SearchablePdfDisplay.LooksLikePdf(doc.Extension, doc.FileName, doc.FilePath);
     var spLabel = doc.SearchablePdfStatusText;
     var sameRecordDocs = Model.SameRecordDocuments ?? Array.Empty<DocumentDto>();
