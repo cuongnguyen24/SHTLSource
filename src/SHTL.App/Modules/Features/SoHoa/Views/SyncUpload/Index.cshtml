@@ -154,7 +154,7 @@
             </div>
 
             <div class="d-flex justify-content-end" id="submitSection" style="display:none;">
-                <button type="submit" class="btn-figma btn-figma-primary" id="btnSubmit" disabled>
+                <button type="submit" class="btn-figma btn-figma-primary" id="btnSubmit">
                     <i class="fas fa-upload mr-1"></i>Upload (<span id="submitCount">0</span> file)
                 </button>
             </div>
@@ -301,14 +301,14 @@
                 
                 if (count === 0) {
                     document.getElementById('fileListContainer').style.display = 'none';
-                    document.getElementById('btnSubmit').disabled = true;
+                    document.getElementById('fileCount').textContent = count;
+                    document.getElementById('submitCount').textContent = count;
                     return;
                 }
                 
                 document.getElementById('fileListContainer').style.display = 'block';
                 document.getElementById('fileCount').textContent = count;
                 document.getElementById('submitCount').textContent = count;
-                document.getElementById('btnSubmit').disabled = false;
                 
                 var html = '';
                 for (var i = 0; i < files.length; i++) {
@@ -361,7 +361,7 @@
                 }
                 if (fileDataTransfer.files.length === 0) {
                     e.preventDefault();
-                    alert('Vui lòng chọn file');
+                    alert('Không có file nào để upload, upload thất bại.');
                     return false;
                 }
                 
