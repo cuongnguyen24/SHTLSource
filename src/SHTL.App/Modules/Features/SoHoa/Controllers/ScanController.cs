@@ -84,6 +84,19 @@ public class ScanController : BaseController
         return JsonResult(result);
     }
 
+    /// <summary>Thay thế file vật lý của tài liệu, file cũ được đổi tên hậu tố _deleteat thay vì xóa thật.</summary>
+    [HttpPost("/scan/replace-file")]
+    [ValidateAntiForgeryToken]
+    [AuthorizeModule(ModuleCode.ScanUpload)]
+    public async Task<IActionResult> ReplaceFile([FromForm] long id, [FromForm] IFormFile? file)
+    {
+        if (file is null)
+            return JsonResult(SHTL.Modules.Shared.Contracts.ApiResult.Fail("Vui lòng chọn file thay thế."));
+
+        var result = await _docService.ReplaceFileAsync(id, file, CurrentUser);
+        return JsonResult(result);
+    }
+
     /// <summary>Từ danh sách upload: đưa bản ghi đang Extract vào hàng đợi Scan (kiểm tra scan 1).</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]

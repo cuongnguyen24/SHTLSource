@@ -55,6 +55,8 @@ public class DocumentDto
     public DateTime? CheckedScan1At { get; set; }
     public StepResult CheckedScan1Result { get; set; }
     public bool IsCheckedScan2 { get; set; }
+    public DateTime? CheckedScan2At { get; set; }
+    public StepResult CheckedScan2Result { get; set; }
     public bool IsZoned { get; set; }
     public bool IsExtracted { get; set; }
     public bool IsChecked1 { get; set; }

@@ -12,6 +12,7 @@ public interface IDocumentRepository
     Task<long> CountAsync(DocumentFilterParams filter);
     Task<long> InsertAsync(Document doc);
     Task<int> UpdateAsync(Document doc);
+    Task<int> UpdateFileReplacementAsync(Document doc);
     Task<int> UpdateStepAsync(long id, WorkflowStep step, int updatedBy);
     Task<int> SoftDeleteAsync(long id, int deletedBy);
     Task<IEnumerable<Document>> GetByFolderAsync(long folderId, int pageIndex, int pageSize);
@@ -239,6 +240,44 @@ public class DocumentRepository : BaseRepository, IDocumentRepository
                 exported_at = @ExportedAt,
                 exported_by = @ExportedBy,
                 updated = @Updated, updated_by = @UpdatedBy
+            WHERE id = @Id";
+        return await ExecuteAsync(conn, sql, doc);
+    }
+
+    public async Task<int> UpdateFileReplacementAsync(Document doc)
+    {
+        var conn = await OpenConnectionAsync();
+        var sql = @"
+            UPDATE dbo.stg_documents SET
+                file_name = @FileName,
+                file_path = @FilePath,
+                path_pdf_searchable = @PathPdfSearchable,
+                thumb_path = @ThumbPath,
+                extension = @Extension,
+                file_size = @FileSize,
+                page_count = @PageCount,
+                ocr_status = @OcrStatus,
+                is_ocr_enabled = @IsOcrEnabled,
+                current_step = @CurrentStep,
+                locked_by_step = @LockedByStep,
+                locked_at = @LockedAt,
+                locked_by_user_id = @LockedByUserId,
+                is_checked_scan1 = @IsCheckedScan1,
+                checked_scan1at = @CheckedScan1At,
+                checked_scan1by = @CheckedScan1By,
+                checked_scan1result = @CheckedScan1Result,
+                is_checked_scan2 = @IsCheckedScan2,
+                checked_scan2at = @CheckedScan2At,
+                checked_scan2by = @CheckedScan2By,
+                checked_scan2result = @CheckedScan2Result,
+                page_count_a4 = @PageCountA4,
+                page_count_a3 = @PageCountA3,
+                page_count_a2 = @PageCountA2,
+                page_count_a1 = @PageCountA1,
+                page_count_a0 = @PageCountA0,
+                page_count_other = @PageCountOther,
+                updated = @Updated,
+                updated_by = @UpdatedBy
             WHERE id = @Id";
         return await ExecuteAsync(conn, sql, doc);
     }
