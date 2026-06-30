@@ -65,7 +65,7 @@ public class SyncUploadController : BaseController
         var paths = Request.Form["relativePaths"];
         if (posted.Count == 0)
         {
-            SetError("Chưa chọn file.");
+            SetError("Không có file nào để upload, upload thất bại.");
             return RedirectToAction(nameof(Index));
         }
 

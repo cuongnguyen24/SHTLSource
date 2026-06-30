@@ -106,7 +106,7 @@
                                 <th style="width:120px;">Trạng thái</th>
                                 <th style="width:180px;">Đánh giá kết quả</th>
                                 <th style="width:150px;">Ngày thực hiện</th>
-                                <th style="width:120px;">Thao tác</th>
+                                <th style="width:160px;">Thao tác</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -114,8 +114,9 @@
                                 var stt = ((Model.PageIndex - 1) * Model.PageSize) + 1;
                                 foreach (var d in Model.Items)
                                 {
-                                    var eval = d.IsCheckedScan2 ? "Đã kiểm tra 2" : d.IsCheckedScan1 ? "Đã kiểm tra 1" : "Chưa đánh giá";
-                                    var evalAt = d.Checked2At ?? d.Checked1At;
+                                    var scanRejected = d.CheckedScan1Result == StepResult.Fail || d.CheckedScan2Result == StepResult.Fail;
+                                    var eval = scanRejected ? "Lỗi file" : d.IsCheckedScan2 ? "Đã kiểm tra 2" : d.IsCheckedScan1 ? "Đã kiểm tra 1" : "Chưa đánh giá";
+                                    var evalAt = d.CheckedScan2At ?? d.CheckedScan1At;
                                     <tr>
                                         <td class="text-center">@stt</td>
                                         <td class="text-center"><input type="checkbox" class="row-check" value="@d.Id" /></td>
@@ -140,6 +141,7 @@
                                         <td>
                                             <a asp-area="sohoa" asp-controller="Scan" asp-action="Detail" asp-route-id="@d.Id" class="btn btn-sm btn-outline-primary action-btn"><i class="fas fa-info-circle"></i></a>
                                             <a asp-area="sohoa" asp-controller="Scan" asp-action="Preview" asp-route-id="@d.Id" class="btn btn-sm btn-outline-warning action-btn"><i class="fas fa-file-pdf"></i></a>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary action-btn btn-replace-file" data-id="@d.Id" title="Thay thế file"><i class="fas fa-sync-alt"></i></button>
                                             <button type="button" class="btn btn-sm btn-outline-danger action-btn btn-delete" data-id="@d.Id"><i class="fas fa-trash"></i></button>
                                         </td>
                                     </tr>
@@ -156,15 +158,19 @@
 </div>
 
 <form id="antiScan" class="d-none">@Html.AntiForgeryToken()</form>
+<input type="file" id="replaceFileInput" class="d-none" />
 
 @section Scripts {
     <script>
         (function () {
             var deleteUrl = '@Url.Content("~/scan/delete")';
+            var replaceFileUrl = '@Url.Content("~/scan/replace-file")';
             var pluginStatusUrl = '@Url.Content("~/sohoa/scan/plugin-sync-status")';
             var pluginConfigUrl = '@Url.Content("~/sohoa/scan/plugin-sync-config")';
             var selectAll = document.getElementById('selectAll');
             var pluginSyncBtn = document.getElementById('btnPluginSync');
+            var replaceFileInput = document.getElementById('replaceFileInput');
+            var replaceFileDocId = null;
             if (selectAll) {
                 selectAll.addEventListener('change', function () {
                     document.querySelectorAll('.row-check').forEach(function (cb) { cb.checked = selectAll.checked; });
@@ -183,6 +189,29 @@
                     }
                 });
             });
+
+            document.querySelectorAll('.btn-replace-file').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    replaceFileDocId = this.getAttribute('data-id');
+                    if (!replaceFileDocId || !replaceFileInput) return;
+                    replaceFileInput.value = '';
+                    replaceFileInput.click();
+                });
+            });
+
+            if (replaceFileInput) {
+                replaceFileInput.addEventListener('change', function () {
+                    if (!replaceFileDocId || !replaceFileInput.files || !replaceFileInput.files.length) return;
+                    var file = replaceFileInput.files[0];
+                    var msg = 'File cũ sẽ được đổi tên hậu tố _deleteat và file mới sẽ thay vào vị trí cũ.';
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({ title: 'Thay thế file?', text: msg, icon: 'warning', showCancelButton: true, confirmButtonText: 'Thay thế', cancelButtonText: 'Hủy' })
+                            .then(function (r) { if (r.isConfirmed) doReplaceFile(replaceFileDocId, file); });
+                    } else if (confirm(msg)) {
+                        doReplaceFile(replaceFileDocId, file);
+                    }
+                });
+            }
 
             if (pluginSyncBtn) {
                 pluginSyncBtn.addEventListener('click', function (e) {
@@ -244,6 +273,24 @@
                             window.location.reload();
                         } else {
                             if (typeof toastr !== 'undefined') toastr.error(j.message || 'Không xóa được');
+                            else alert(j.message || 'Lỗi');
+                        }
+                    })
+                    .catch(function () { if (typeof toastr !== 'undefined') toastr.error('Lỗi mạng'); });
+            }
+            function doReplaceFile(id, file) {
+                var fd = new FormData();
+                fd.append('id', String(id));
+                fd.append('file', file);
+                fd.append('__RequestVerificationToken', token());
+                fetch(replaceFileUrl, { method: 'POST', body: fd, credentials: 'same-origin' })
+                    .then(function (r) { return r.json(); })
+                    .then(function (j) {
+                        if (j.success) {
+                            if (typeof toastr !== 'undefined') toastr.success(j.message || 'Đã thay thế file');
+                            window.location.reload();
+                        } else {
+                            if (typeof toastr !== 'undefined') toastr.error(j.message || 'Không thay thế được file');
                             else alert(j.message || 'Lỗi');
                         }
                     })

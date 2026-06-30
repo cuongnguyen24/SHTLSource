@@ -403,30 +403,9 @@
     <div class="split-layout" id="extractSplitLayout">
         <div class="split-pane-left mb-3 mb-lg-0">
             <div class="card-figma h-100">
-                <div class="card-header-figma d-flex align-items-center justify-content-between flex-wrap">
-                    <h3 class="card-title-figma mb-0">Tài liệu</h3>
-                    @if (showPdfViewer)
-                    {
-                        <a href="@previewUrl" class="btn-figma btn-figma-outline btn-sm" target="_blank" rel="noopener">Mở toàn màn hình</a>
-                    }
-                </div>
                 <div class="card-content-figma p-0">
                     @if (showPdfViewer)
                     {
-                        <div class="border-bottom bg-light px-2 py-1 small text-muted">
-                            @if (doc.OcrStatus == OcrStatus.SearchablePdfReady)
-                            {
-                                <span><i class="fas fa-copy mr-1"></i>PDF 2 lớp: chọn chữ trên tài liệu bên dưới, <strong>Ctrl+C</strong> rồi dán vào các ô nhập liệu.</span>
-                            }
-                            else if (!string.IsNullOrEmpty(spLabel))
-                            {
-                                <span>@spLabel — khi xong, làm tương tự để copy nhanh hơn.</span>
-                            }
-                            else
-                            {
-                                <span>Đang hiển thị bản scan. Sau khi hệ thống tạo PDF 2 lớp, bạn có thể copy chữ từ đây.</span>
-                            }
-                        </div>
                         <div class="extract-pdf-toolbar">
                             <button type="button" class="btn-figma btn-figma-primary btn-sm" id="extractPdfNativeMode">PDF 2 lớp</button>
                             <button type="button" class="btn-figma btn-figma-outline btn-sm" id="extractPdfOcrMode">Vùng OCR</button>
@@ -472,12 +451,6 @@
                 }
                 <li class="nav-item">
                     <a class="nav-link" id="tab-same-record-link" data-toggle="tab" href="#tab-same-record" role="tab">Tài liệu cùng bộ</a>
-                </li>
-                <li class="nav-item">
-                    <span class="nav-link disabled">Ghi chú</span>
-                </li>
-                <li class="nav-item">
-                    <span class="nav-link disabled">Cá nhân xử lý</span>
                 </li>
             </ul>
 
